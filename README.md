@@ -1,5 +1,7 @@
 Welcome to the Alarm Pi code.
 
+It's "A Simple Spoken Weather And News Clock" for your Raspberry Pi.
+
 Please feel free to take it, and do what you will with it.
 
 Watch the video here:  http://youtu.be/julETnOLkaU
