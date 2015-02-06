@@ -23,7 +23,7 @@ for section in Config.sections():
 
 count = 1
 
-
+path = Config.get('main', 'path')
 
 # key to getting text to speech
 head = Config.get('main','head')+" "
@@ -41,6 +41,7 @@ if Config.get('main','debug') == str(1):
 if Config.get('main','readaloud') == str(1):
   # strip any quotation marks
   wad = wad.replace('"', '').replace("'",'').strip()
+  wad = wad.replace(' ','%20')  #Replace spaces
 
   if Config.get('main','trygoogle') == str(1):
     # Google voice only accepts 100 characters or less, so split into chunks
@@ -52,7 +53,7 @@ if Config.get('main','readaloud') == str(1):
     # Send shorts to Google and return mp3s
     try:
       for sentence in shorts:
-        sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '" -O /mnt/ram/'])
+        sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '" -O '+str(path)+''])
         print(head + sendthis + str(count).zfill(2) + str(tail))
         print subprocess.call (head + sendthis + str(count).zfill(2) + str(tail), shell=True)
         count = count + 1
@@ -62,7 +63,7 @@ if Config.get('main','readaloud') == str(1):
         print subprocess.call ('python lighton_1.py', shell=True)
 
       # Play the mp3s returned
-      print subprocess.call ('mpg123 -g 100 -h 10 -d 11 /mnt/ram/*.mp3', shell=True)
+      print subprocess.call ('mpg123 -g 100 -h 10 -d 11 '+str(path)+'*.mp3', shell=True)
 
     # festival is now called in case of error reaching Google
     except subprocess.CalledProcessError:
@@ -70,7 +71,7 @@ if Config.get('main','readaloud') == str(1):
   
     # Cleanup any mp3 files created in this directory.
     print 'cleaning up now'
-    print subprocess.call ('rm /mnt/ram/*.mp3', shell=True)
+    print subprocess.call ('rm '+str(path)+'*.mp3', shell=True)
   else:
     print subprocess.call("echo " + wad + " | festival --tts ", shell=True)
 else:
