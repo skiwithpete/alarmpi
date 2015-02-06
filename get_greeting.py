@@ -32,7 +32,7 @@ gmt = 'Good ' + period + ', '
 # reads date and time 
 day = ' it\'s ' + now + '.  '
 
-greeting = gmt + Config.get('greeting','name') + day
+greeting = gmt + Config.get('greeting','name') + ", " + day
 
 if Config.get('main','debug') == str(1):
   print greeting
