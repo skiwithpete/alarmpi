@@ -52,7 +52,7 @@ if Config.get('main','readaloud') == str(1):
     # Send shorts to Google and return mp3s
     try:
       for sentence in shorts:
-        sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '" -O /mnt/ram/'])
+        sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '&client=t" -O /mnt/ram/'])
         print(head + sendthis + str(count).zfill(2) + str(tail))
         print subprocess.call (head + sendthis + str(count).zfill(2) + str(tail), shell=True)
         count = count + 1
