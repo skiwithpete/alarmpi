@@ -66,14 +66,14 @@ if Config.get('main','readaloud') == str(1):
 
     # festival is now called in case of error reaching Google
     except subprocess.CalledProcessError:
-      if Config.get('main','light') == str(1):
-        print subprocess.call ('python lighton_1.py', shell=True)
       print subprocess.call("echo " + wad + " | festival --tts ", shell=True)
   
     # Cleanup any mp3 files created in this directory.
     print 'cleaning up now'
     print subprocess.call ('rm /mnt/ram/*.mp3', shell=True)
   else:
+    if Config.get('main','light') == str(1):
+      print subprocess.call ('python lighton_1.py', shell=True)
     print subprocess.call("echo " + wad + " | festival --tts ", shell=True)
 else:
   print wad
