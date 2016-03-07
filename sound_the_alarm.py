@@ -1,5 +1,9 @@
-#!/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import sys
+os.chdir(os.path.dirname(sys.argv[0])) # When called from cron, we can find our code
+
 import ConfigParser
 import subprocess
 import time
@@ -52,7 +56,7 @@ if Config.get('main','readaloud') == str(1):
     # Send shorts to Google and return mp3s
     try:
       for sentence in shorts:
-        sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '&client=t" -O /mnt/ram/'])
+        sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '&client=tw-ob" -O /mnt/ram/'])
         print(head + sendthis + str(count).zfill(2) + str(tail))
         print subprocess.call (head + sendthis + str(count).zfill(2) + str(tail), shell=True)
         count = count + 1
