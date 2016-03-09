@@ -8,6 +8,8 @@ import ConfigParser
 import subprocess
 import time
 import textwrap
+import pyvona
+import pygame
 
 
 Config=ConfigParser.ConfigParser()
@@ -75,6 +77,34 @@ if Config.get('main','readaloud') == str(1):
     # Cleanup any mp3 files created in this directory.
     print 'cleaning up now'
     print subprocess.call ('rm /mnt/ram/*.mp3', shell=True)
+
+  #Only use Ivona if google isn't used and Ivona is enabled.
+  #Remember to update config file with accesskey and secretkey  
+  elif Config.get('main','tryivona') == str(1):
+    try:
+      #Connect to Ivona
+      v = pyvona.create_voice(Config.get('main','ivona_accesskey'),Config.get('main','ivona_secretkey'))
+      #Settings for ivona
+      v.voice_name = Config.get('main','ivona_voice')
+      v.speech_rate = Config.get('main','ivona_speed')
+      #Get ogg file with speech
+      v.fetch_voice(wad, '/mnt/ram/tempspeech.ogg')
+      
+      # Play the oggs returned
+      pygame.mixer.init()
+      pygame.mixer.music.load("/mnt/ram/tempspeech.ogg")
+      pygame.mixer.music.play()
+      while pygame.mixer.music.get_busy() == True:
+          continue
+        
+      # festival is now called in case of error reaching Google
+    except subprocess.CalledProcessError:
+      print subprocess.call("echo " + wad + " | festival --tts ", shell=True)
+      
+     # Cleanup any ogg files created in this directory.
+      print 'cleaning up now'
+      print subprocess.call ('rm /mnt/ram/*.ogg', shell=True)
+  
   else:
     if Config.get('main','light') == str(1):
       print subprocess.call ('python lighton_1.py', shell=True)
