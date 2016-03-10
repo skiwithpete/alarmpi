@@ -2,14 +2,26 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-os.chdir(os.path.dirname(sys.argv[0])) # When called from cron, we can find our code
+
+startpath=os.getcwd()
+stapath = os.path.dirname(sys.argv[0])
+if stapath:
+  os.chdir(stapath) # When called from cron, we can find our code
 
 import ConfigParser
 import subprocess
 import time
 import textwrap
-import pyvona
-import pygame
+
+optional_debug = ''
+
+cantryivona = 0
+try:
+  import pyvona
+  import pygame
+  cantryivona = 1
+except ImportError:
+  optional_debug = "Ivona imports failed.\n"
 
 
 Config=ConfigParser.ConfigParser()
@@ -28,7 +40,6 @@ for section in Config.sections():
       raise ImportError('Failed to load '+section)
 
 count = 1
-
 
 
 # key to getting text to speech
@@ -80,7 +91,7 @@ if Config.get('main','readaloud') == str(1):
 
   #Only use Ivona if google isn't used and Ivona is enabled.
   #Remember to update config file with accesskey and secretkey  
-  elif Config.get('main','tryivona') == str(1):
+  elif cantryivona and Config.get('main','tryivona') == str(1):
     try:
       #Connect to Ivona
       v = pyvona.create_voice(Config.get('main','ivona_accesskey'),Config.get('main','ivona_secretkey'))

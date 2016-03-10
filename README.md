@@ -21,6 +21,11 @@ And see the details of each of the three parts.
   sudo apt-get install python-feedparser mpg123 festival  pyvona
 
 
+*otional packages (not all commands will work in all environments):
+
+  sudo apt-get install pyvona
+
+
 ** YOU MUST USE RAMFS to avoid wear on your card and to enable Google Voice.
 
   sudo mkdir -p /mnt/ram
