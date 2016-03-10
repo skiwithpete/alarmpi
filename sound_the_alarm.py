@@ -1,5 +1,9 @@
-#!/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import sys
+os.chdir(os.path.dirname(sys.argv[0])) # When called from cron, we can find our code
+
 import ConfigParser
 import subprocess
 import time
@@ -53,6 +57,7 @@ if Config.get('main','readaloud') == str(1):
     # Send shorts to Google and return mp3s
     try:
       for sentence in shorts:
+<<<<<<< HEAD
         sendthis = sentence.join(['"http://translate.google.com/translate_tts?tl=en&q=', '" -O '+str(path)+''])
         print(head + sendthis + str(count).zfill(2) + str(tail))
         print subprocess.call (head + sendthis + str(count).zfill(2) + str(tail), shell=True)
@@ -73,6 +78,8 @@ if Config.get('main','readaloud') == str(1):
     print 'cleaning up now'
     print subprocess.call ('rm '+str(path)+'*.mp3', shell=True)
   else:
+    if Config.get('main','light') == str(1):
+      print subprocess.call ('python lighton_1.py', shell=True)
     print subprocess.call("echo " + wad + " | festival --tts ", shell=True)
 else:
   print wad
