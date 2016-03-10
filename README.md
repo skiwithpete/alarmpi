@@ -18,7 +18,7 @@ And see the details of each of the three parts.
 
 *required packages:
 
-  sudo apt-get install python-feedparser mpg123 festival  pyvona
+  sudo apt-get install python-feedparser mpg123 festival
 
 
 *otional packages (not all commands will work in all environments):
@@ -52,5 +52,7 @@ https://www.ivona.com/us/account/speechcloud/creation/
 
 
 Thanks again to Michael Kidd for adding the config file and giving this project a real structure.  
+Thanks also to Viktor Bjorklund for adding Ivona support.
+Thanks to Craig Pennington for some housekeeping.
 
 
