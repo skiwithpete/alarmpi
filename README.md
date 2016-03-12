@@ -21,7 +21,7 @@ And see the details of each of the three parts.
   sudo apt-get install python-feedparser python-dnspython mpg123 festival
 
 
-*otional packages (not all commands will work in all environments):
+*optional packages (not all commands will work in all environments):
 
   sudo pip install pyvona
 
