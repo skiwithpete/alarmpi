@@ -1,31 +1,30 @@
-#!/usr/bin/python
+
+#!/bin/python
+# -*- coding: utf-8 -*-
 import time
-import ConfigParser
+import better_spoken_numbers as bsn
+
+from apcontent import alarmpi_content
 
 #print int(time.strftime("%m%d"))
 
-Config=ConfigParser.ConfigParser()
-try:
-  Config.read('alarm.config')
-except:
-  raise Exception('Sorry, Failed reading alarm.config file.')
+class birthday(alarmpi_content):
 
-birthday = 'null'
+  def build(self):
+    birthday = None
 
-if int(time.strftime("%m%d")) == 929 :
-  birthday = 'Ski with Pete'
-#if int(time.strftime("%m%d")) == 129 :
-#  birthday = 'dummy'
+    if int(time.strftime("%m%d")) == 929 :
+      birthday = 'Ski with Pete'
+    #if int(time.strftime("%m%d")) == 129 :
+    #  birthday = 'dummy'
 
-print birthday
+    # reads out birthday
+    if birthday is None:
+      birthday = 'I dont know of anyone having a birthday today.  '
+    else:
+      birthday = 'Today is ' + birthday + 's birthday.  ' 
 
-# reads out birthday
-if birthday == 'null':
-  birthday = ''
-else:
-  birthday = 'Today is ' + birthday + 's birthday.  ' 
+    if self.debug:
+      print birthday
 
-if Config.get('main','debug') == str(1):
-  print birthday
-
-
+    self.content = birthday

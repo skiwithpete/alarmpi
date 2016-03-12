@@ -18,7 +18,13 @@ And see the details of each of the three parts.
 
 *required packages:
 
-  sudo apt-get install python-feedparser mpg123 festival
+  sudo apt-get install python-feedparser python-dnspython mpg123 festival
+
+
+*otional packages (not all commands will work in all environments):
+
+  sudo pip install pyvona
+
 
 ** YOU MUST USE RAMFS to avoid wear on your card and to enable Google Voice.
 
@@ -28,8 +34,25 @@ And see the details of each of the three parts.
 
   sudo mount -a
 
-*** and finally to set your alarm for 733AM Mon-Fri
+*** If you wish to use Ivona voice from Amazon you must get a beta test account at: 
+
+https://www.ivona.com/us/account/speechcloud/creation/
+
+1. Open an account 
+2. Generate credentials
+3. Put accesskey and secretkey in config file
+
+
+**** and finally to set your alarm for 733AM Mon-Fri
 
   crontab -e 33 7 * * 1-5 /home/pi/alarmpi/sound_the_alarm.py
 
+
+ 
+
+
 Thanks again to Michael Kidd for adding the config file and giving this project a real structure.  
+Thanks also to Viktor Bjorklund for adding Ivona support.
+Thanks to Craig Pennington for some housekeeping.
+
+
