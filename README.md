@@ -18,12 +18,12 @@ And see the details of each of the three parts.
 
 *required packages:
 
-  sudo apt-get install python-feedparser mpg123 festival
+  sudo apt-get install python-feedparser python-dnspython mpg123 festival
 
 
 *otional packages (not all commands will work in all environments):
 
-  sudo apt-get install pyvona
+  sudo pip install pyvona
 
 
 ** YOU MUST USE RAMFS to avoid wear on your card and to enable Google Voice.

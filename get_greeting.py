@@ -2,37 +2,31 @@
 # -*- coding: utf-8 -*-
 import time
 import better_spoken_numbers as bsn
-import ConfigParser
 
-Config=ConfigParser.ConfigParser()
-try:
-  Config.read('alarm.config')
-except:
-  raise Exception('Sorry, Failed reading alarm.config file.')
+from apcontent import alarmpi_content
 
-day_of_month=str(bsn.d2w(int(time.strftime("%d"))))
+class greeting(alarmpi_content):
+  def build(self):
+    day_of_month=str(bsn.d2w(int(time.strftime("%d"))))
 
-now = time.strftime("%A %B ") + day_of_month + ',' + time.strftime(" %I %M %p")
-# print now
+    now = time.strftime("%A %B ") + day_of_month + ',' + time.strftime(" %I %M %p")
 
+    if int(time.strftime("%H")) < 12:
+      period = 'morning'
+    if int(time.strftime("%H")) >= 12:
+      period = 'afternoon'
+    if int(time.strftime("%H")) >= 17:
+      period = 'evening'
 
-if int(time.strftime("%H")) < 12:
-  period = 'morning'
-if int(time.strftime("%H")) >= 12:
-  period = 'afternoon'
-if int(time.strftime("%H")) >= 17:
-  period = 'evening'
+    # reads out good morning + my name
+    gmt = 'Good ' + period + ', '
 
-#print time.strftime("%H")
-#print period
+    # reads date and time 
+    day = ' it\'s ' + now + '.  '
 
-# reads out good morning + my name
-gmt = 'Good ' + period + ', '
+    greeting = gmt + self.sconfig['name'] + day
 
-# reads date and time 
-day = ' it\'s ' + now + '.  '
+    if self.debug:
+      print greeting
 
-greeting = gmt + Config.get('greeting','name') + day
-
-if Config.get('main','debug') == str(1):
-  print greeting
+    self.content = greeting
