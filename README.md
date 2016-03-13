@@ -31,11 +31,13 @@ For pico2wave support (this does not work as of 2016/03/13, but may work in the 
 
 **YOU MUST USE RAMFS to avoid wear on your card and to enable Google Voice.**
 
-```sudo mkdir -p /mnt/ram
+```shell
+sudo mkdir -p /mnt/ram
 
   echo "ramfs       /mnt/ram ramfs   nodev,nosuid,nodiratime,size=64M,mode=1777   0 0" | sudo tee -a /etc/fstab 
 
-  sudo mount -a```
+  sudo mount -a
+```
 
 *If you wish to use Ivona voice from Amazon you must get a beta test account at:* 
 
@@ -58,9 +60,10 @@ If you need to build it yourself don't worry, it's easy. I thieved most of these
 
 First of all you need to open the file /etc/apt/sources.list and check it contains (the last line should be uncommented) the following lines:
 
-```deb http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free rpi
+```shell
+deb http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free rpi
 # Uncomment line below then 'apt-get update' to enable 'apt-get source'
-deb-src http://archive.raspbian.org/raspbian/ jessie main contrib non-free rpi```
+deb-src http://archive.raspbian.org/raspbian/ jessie main contrib non-free rpi```
 
 Then as it says in the comment, do:
 
@@ -68,10 +71,12 @@ Then as it says in the comment, do:
 
 Now, in the alarmpi project we are instructed to make a ramdrive and mount it on /mnt/ram -- I do a lot of my work here because it saves the SD card some wear and tear. This assumes that is already in place -- note that this should be mounted **without** the noexec option. Modify as you wish.
 
-```mkdir -p /mnt/ram/pico_build
+```shell
+mkdir -p /mnt/ram/pico_build
 cd /mnt/ram/pico_build
 apt-get source libttspico-utils
-cd svox-1.0+git*```
+cd svox-1.0+git*
+```
 
 In your favorite editer, modify the file debian/control such that it no longer specifies the automake version. That is change the line that looks like this:
 
@@ -83,18 +88,22 @@ So that it looks like this:
 
 And save it. Then you can do this:
 
-```sudo dpkg-buildpackage -rfakeroot -us -uc
+```shell
+sudo dpkg-buildpackage -rfakeroot -us -uc
 cd ..
 sudo dpkg -i libttspico-data_*
 sudo dpkg -i libttspico0_*
-sudo dpkg -i libttspico-utils_*```
+sudo dpkg -i libttspico-utils_*i
+```
 
 That should be it. Note that if you get a permission denied error, your /mnt/ram was mounted with the noexec option set in fstab. Build somewhere else.
 
 You can test your install like this:
 
-```pico2wave -w test.wav "it works! "
-aplay test.wav```
+```shell
+pico2wave -w test.wav "it works! "
+aplay test.wav
+```
 
 Cheers!
  
