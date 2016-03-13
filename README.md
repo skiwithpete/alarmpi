@@ -110,8 +110,8 @@ Cheers!
  
 
 
-Thanks again to Michael Kidd for adding the config file and giving this project a real structure.  
-Thanks also to Viktor Bjorklund for adding Ivona support.
-Thanks to Craig Pennington for adding pico2wave support and some housekeeping.
+- Thanks again to Michael Kidd for adding the config file and giving this project a real structure.  
+- Thanks also to Viktor Bjorklund for adding Ivona support.
+- Thanks to Craig Pennington for adding pico2wave support and some housekeeping.
 
 
