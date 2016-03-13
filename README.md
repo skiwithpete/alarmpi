@@ -29,14 +29,15 @@ For Ivona support:
 
 For pico2wave support (this does not work as of 2016/03/13, but may work in the future -- see below for alternate instructions)
 
+`sudo apt-get install libttspico-utils`
+
+
 **YOU MUST USE RAMFS to avoid wear on your card and to enable Google Voice.**
 
 ```shell
 sudo mkdir -p /mnt/ram
-
-  echo "ramfs       /mnt/ram ramfs   nodev,nosuid,nodiratime,size=64M,mode=1777   0 0" | sudo tee -a /etc/fstab 
-
-  sudo mount -a
+echo "ramfs       /mnt/ram ramfs   nodev,nosuid,nodiratime,size=64M,mode=1777   0 0" | sudo tee -a /etc/fstab 
+sudo mount -a
 ```
 
 *If you wish to use Ivona voice from Amazon you must get a beta test account at:* 
