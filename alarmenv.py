@@ -63,6 +63,7 @@ class alarmEnv:
     # We still want to alarm if the net is down
     self._testnet()
 
+
   # get a config file name, resolving relative path if needed
   def _getConfigFileName(self,fname):
     if fname:
@@ -97,3 +98,10 @@ class alarmEnv:
 
   def stype(self,s):
     return self.Config.get(s,'stype')
+
+  # This allows for multiple sections to use the same class
+  # (distinct instances) to handle the work
+  def handler(self,s):
+    if self.has_option(s,'handler'):
+      return self.get(s,'handler')
+    return s
