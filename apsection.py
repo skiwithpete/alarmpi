@@ -10,4 +10,6 @@ class alarmpi_section:
 
   def standalone(self):
     sconfig = self.sconfig
-    return 'standalone' in sconfig and sconfig['standalone'] == str(1)
+    if not 'standalone' in sconfig:
+      return 0
+    return int(sconfig['standalone'])

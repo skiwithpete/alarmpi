@@ -26,17 +26,18 @@ for section in AlmEnv.sections():
   if (section != 'main' and
       AlmEnv.hasAndIs(section, 'enabled', 1)):
     try:
-      getsec = 'get_' + section
+      handler = AlmEnv.handler(section)
+      getsec = 'get_' + handler
       # Section type -- one of 'effect' 'content' 'tts'
       stype = AlmEnv.stype(section)
       # AlmEnv options specific to this section
       items  = AlmEnv.items(section)
       # Get the constructor
-      construct = getattr(__import__(getsec, fromlist=[section]), section)
+      construct = getattr(__import__(getsec, fromlist=[handler]), handler)
       # Construct an instance and put it in out holder
       sections[stype][section]=construct(stype,items,AlmEnv.debug,mainitems)
       if stype == 'content':
-        wadparts.extend(sections[stype][section].get(AlmEnv.netup))
+        wadparts.extend(sections[stype][section].get(AlmEnv.netup) + "   ")
     except ImportError:
       raise ImportError('Failed to load '+section)
 

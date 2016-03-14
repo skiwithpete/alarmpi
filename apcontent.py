@@ -8,10 +8,15 @@ class alarmpi_content(alarmpi_section):
     self.build()
 
   def get(self, netup):
-    if(self.standalone() or self.main['netup']):
-      return self._get()
+    if(self.main['netup']):
+      if self.standalone() < 2:
+        return self._get()
+      else:
+        return ' ' # standalone > 1 means standalone only
     else:
-      return self._get_offline()
+      if self.standalone() < 2:
+        return self._get_offline()
+      return self._get() # standalone > 1 means standalone only
 
   def _get(self):
     return self.content
