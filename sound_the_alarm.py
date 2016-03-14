@@ -37,7 +37,7 @@ for section in AlmEnv.sections():
       # Construct an instance and put it in out holder
       sections[stype][section]=construct(stype,items,AlmEnv.debug,mainitems)
       if stype == 'content':
-        wadparts.extend(sections[stype][section].get(AlmEnv.netup))
+        wadparts.extend(sections[stype][section].get(AlmEnv.netup) + "   ")
     except ImportError:
       raise ImportError('Failed to load '+section)
 

@@ -16,7 +16,7 @@ class alarmpi_content(alarmpi_section):
     else:
       if self.standalone() < 2:
         return self._get_offline()
-      return self._get()
+      return self._get() # standalone > 1 means standalone only
 
   def _get(self):
     return self.content
