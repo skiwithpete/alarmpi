@@ -22,7 +22,7 @@ class alarmpi_content(alarmpi_section):
     return self.content
 
   def _get_offline(self):
-    return self.content + '  (offline).  '
+    return self.content + '  ().  '
 
   def build(self):
     self.content='Instance of ' + self.stype + ' class.'
