@@ -29,6 +29,12 @@ class stocks(alarmpi_content):
         #api = urllib2.urlopen('https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quote%20where%20symbol%20in%20(%27'+ticker+'%27)%20&format=json&env=store://datatables.org/alltableswithkeys', timeout=4)
         api = urllib2.urlopen(apiurl, timeout=4)
         response = api.read()
+        symbol = symbol.replace("&",' and ').strip()
+        symbol = symbol.replace("%",' percent ').strip()
+        symbol = symbol.replace("-",' ').strip()
+        symbol = symbol.replace("*",' star ').strip()
+        symbol = symbol.replace("#",' pound ').strip()
+        symbol = symbol.replace("@",' at ').strip()
         response_dictionary = json.loads(response)
 
         #print response_dictionary
