@@ -3,6 +3,7 @@
 import pyvona
 import pygame
 import subprocess
+import utilities
 
 from aptts import alarmpi_tts
 
@@ -19,6 +20,7 @@ class tryivona(alarmpi_tts):
       v.voice_name = self.sconfig['ivona_voice']
       v.speech_rate = self.sconfig['ivona_speed']
       #Get ogg file with speech
+      content = utilities.stripSymbols(content) # Removes symbols before sending to Ivona
       v.fetch_voice(content, ramdrive + 'tempspeech.ogg')
       
       # Play the oggs returned
