@@ -10,3 +10,4 @@ def stripSymbols(s):
     s = s.replace("@",' at ').strip()
     s = s.replace("'",'').strip()
     return s
+    
