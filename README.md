@@ -1,12 +1,8 @@
-Welcome to the Alarm Pi code.
+# Welcome to the AlarmPi project.
 
-It's "A Simple Spoken Weather And News Clock" for your Raspberry Pi.
+It's "A Simple Spoken Weather And News Clock" for your Raspberry Pi. Please feel free to take it, and do what you will with it. This project is the culmination of 3 separate projects, an overview can be seen here:  https://youtu.be/-Or5jmBqsNE
 
-Please feel free to take it, and do what you will with it.
-
-This project is the culmination of 3 separate projects:
-
-An overview can be seen here:  https://youtu.be/-Or5jmBqsNE
+*this project hasn't been updated in a while but still worked as of Jan 2018*
 
 And see the details of each of the three parts.
 
@@ -15,6 +11,9 @@ And see the details of each of the three parts.
 2) Light https://youtu.be/WpM1aq4B8-A
 
 3) NAS https://youtu.be/T5eKBfstpI0
+
+
+## Setup
 
 *required packages:*
 
@@ -64,7 +63,8 @@ First of all you need to open the file /etc/apt/sources.list and check it contai
 ```shell
 deb http://mirrordirector.raspbian.org/raspbian/ jessie main contrib non-free rpi
 # Uncomment line below then 'apt-get update' to enable 'apt-get source'
-deb-src http://archive.raspbian.org/raspbian/ jessie main contrib non-free rpi```
+deb-src http://archive.raspbian.org/raspbian/ jessie main contrib non-free rpi
+```
 
 Then as it says in the comment, do:
 
@@ -107,7 +107,6 @@ aplay test.wav
 ```
 
 Cheers!
- 
 
 
 - Thanks again to Michael Kidd for adding the config file and giving this project a real structure.  
