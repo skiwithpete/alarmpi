@@ -4,6 +4,9 @@ It's "A Simple Spoken Weather And News Clock" for your Raspberry Pi. Please feel
 
 *this project hasn't been updated in a while but still worked as of Jan 2018*
 
+**Update: May 2018**
+Ivona will no longer be available to this project as it is be depricated and replaced by Amazon Polly. You can no longer get new keys unless you had an existing account. 
+
 And see the details of each of the three parts.
 
 1) Alarm clock https://youtu.be/julETnOLkaU 
