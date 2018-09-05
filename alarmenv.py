@@ -1,107 +1,189 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import argparse
-import ConfigParser
-import dns.resolver
-import os
+import os.path
 import sys
-
-# Class that keeps track of the execution environment
-#   (configuration + system state)
-class alarmEnv:
-  defaults = {
-    ###################
-    # Config defaults #
-    ###################
-
-    # These can be overriden in the [main] config section
-    # Default config filename
-    'ConfigFile': 'alarm.config',
-
-    # Default host to try to test network connectivity
-    'nthost': 'translate.google.com',
-  }
-
-  def __init__(self):
-    # Change to our script directory if we can
-    self.startpath=os.getcwd()
-    stapath = os.path.dirname(sys.argv[0])
-    if stapath:
-      os.chdir(stapath) # When called from cron, we can find our code
-
-    self.Config=ConfigParser.SafeConfigParser()
-
-    # Take command line arguments
-    parser = argparse.ArgumentParser()
-
-    # Debug can be set in either the config file or in the command line.
-    parser.add_argument("--debug",
-                        help="output debug info",
-                        action="store_true")
-
-    # Use a config file other than the default (allows distinct alarms)
-    parser.add_argument("--config", help="specify the config file")
-
-    args = parser.parse_args()
-
-    ConfigFile = self._getConfigFileName(args.config)
-    try:
-      self.Config.read(ConfigFile)
-    except:
-      raise Exception('Sorry, Failed reading config file: ' + ConfigFile)
-
-    # Cheap partial inheritence. Blame Craig.
-    self.get = self.Config.get
-    self.has_option = self.Config.has_option
-    self.sections = self.Config.sections
-    self.items = self.Config.items
-
-    # Debug can be set in either the config file or in the command line.
-    self.debug = args.debug or self.hasAndIs('main','debug',1)
-
-    # We still want to alarm if the net is down
-    self._testnet()
+import configparser
+import dns.resolver
+import dns.exception
 
 
-  # get a config file name, resolving relative path if needed
-  def _getConfigFileName(self,fname):
-    if fname:
-      if not os.path.isabs(fname):
-        return os.path.abspath(os.path.join(self.startpath,fname))
-      return fname
-    else:
-      return self.defaults['ConfigFile']
+# Parses the configuration file (by default alarmpi.config) to a dict
 
-  def _getDefault(self,o,s='main'):
-    if self.Config.has_option(s,o):
-      return self.Config.get(s,o)
-    return self.defaults[o]
-  
-  def _testnet(self):
-    # Test for connectivity
-    nthost = self._getDefault('nthost')
-    try:
-      dns.resolver.query(nthost)
-      self.netup=True
-    except:
-      self.netup = False                                                              
-      if self.debug:
-        print('Could not resolve "' +
-              nthost +
-              '". Assuming the network is down.')
+class AlarmEnv:
 
-  # Boolean, returns False unless Config has a Section/Option that
-  # matches the value
-  def hasAndIs(self,s,o,v):
-    return self.has_option(s,o) and (self.get(s,o) == str(v))
+    def __init__(self, config_file, debug=False):
+        """Read configurations from file."""
+        # Create a ConfigParser and read the config file
+        self.config = configparser.ConfigParser()
 
-  def stype(self,s):
-    return self.Config.get(s,'stype')
+        # make sure config_file is an absolute path for cron
+        # TODO cron's current working directory is home folder -> this won't work
+        config_file = os.path.abspath(config_file)  # does nothing is already an absolute path
+        filenames = self.config.read(config_file)
+        # config.read modifies the config object in place and returns list of file names read succesfully
+        if not filenames:
+            raise RuntimeError('Failed reading config file: {}'.format(config_file))
 
-  # This allows for multiple sections to use the same class
-  # (distinct instances) to handle the work
-  def handler(self,s):
-    if self.has_option(s,'handler'):
-      return self.get(s,'handler')
-    return s
+        self.validate_config()
+
+        # Check if debug option was specified either thought the config file of command line
+        self.debug = debug or self.config_has_match('main', 'debug', '1')
+
+        # We still want to alarm if the net is down
+        self._testnet()
+
+    def _testnet(self):
+        # Test for connectivity using the hostname in the config file
+        nthost = self.config.get("main", "nthost")
+        try:
+            dns.resolver.query(nthost)
+            self.netup = True
+        except (dns.resolver.NXDOMAIN, dns.exception.DNSException):
+            self.netup = False
+            if self.debug:
+                print('Could not resolve "{}". Assuming the network is down.'.format(nthost))
+
+    def config_has_match(self, section, option, value):
+        """Check if config has a section and a key/value pair matching input."""
+        try:
+            section_value = self.config.get(section, option)
+            return section_value == value
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            return False
+        except ValueError:
+            raise ValueError("Invalid configuration for {} in section {}".format(option, section))
+
+    def validate_config(self):
+        """Validate configuration file: checks that other than [main] each section
+        has 'type' and 'enabled' keys and that contents have a 'handler'.
+        """
+        try:
+            for section in self.get_sections(exclude_main=True):
+                section_type = self.get_value(section, "type")
+                self.get_value(section, "enabled")
+
+                if section_type == "content":
+                    self.get_value(section, "handler")
+
+        except (configparser.NoSectionError, configparser.NoOptionError) as e:
+            raise RuntimeError("Invalid configuration: ", e)
+
+        return True
+
+    def write_default_configuration(self):
+        """Create a default configuration set and write as alarm.config."""
+        path = os.path.abspath("alarm.config")
+        if os.path.isfile(path):
+            ans = input("Overwrite existing configuration?")
+            if ans.lower() != "y":
+                sys.exit()
+
+        # default config as a single string
+        config = """
+        [main]
+        debug=0
+        readaloud=1
+        nthost=translate.google.com
+        # Keep the trailing '/' on ramfldr
+        ramfldr=/mnt/ram/
+        end=Thats all for now. Have a nice day.
+
+        ###################
+        # Content sources #
+        ###################
+        # Note: items are processed in listed order, ie. greeting should come first
+
+        [greeting]
+        enabled=1
+        type=content
+        standalone=1
+        handler=get_greeting.py
+        # Name for personalized greeting, leave empty for a generalized 'Goog morning' message
+        name=
+
+        [yahoo_weather]
+        enabled=1
+        type=content
+        handler=get_yahoo_weather.py
+        # Find your location here: http://woeid.rosselliot.co.nz/
+        location=564617
+        unit=c
+        # Change temperature unit to Fahrenheit with 'f'
+        wind=1
+        wind_chill=1
+
+        [BBC_news]
+        enabled=1
+        type=content
+        handler=get_bbc_news.py
+
+        ###############
+        # TTS engines #
+        ###############
+        # Notes:
+        # 1 order implies preference for enabled tts engines
+        # 2 at most one tts engine is used
+        # 3 if readaloud=0 in the [main] section, no tts engine will be used
+
+        [google_translate_tts]
+        enabled=1
+        type=tts
+        handler=get_google_translate_tts.py
+
+        [festival_tts]
+        enabled=1
+        type=tts
+        handler=get_festival_tts.py
+
+
+        #############
+        # Misc taks #
+        #############
+        [radio]
+        enabled=1
+        type=radio
+        url=https://www.yle.fi/livestream/radiosuomi.asx
+        """
+        with open(path, "w") as f:
+            f.write(config)
+
+    # ========================================================================#
+    # The following get_ functions are mostly wrappers to get various values from
+    # the configuration file (ie. self.config)
+
+    def get_sections(self, exclude_main=False):
+        """Return a list of sections in the configuration file with or without
+        the 'main' section.
+        """
+        sections = self.config.sections()
+        if exclude_main:
+            return [s for s in sections if s != "main"]
+
+        return sections
+
+    def get_enabled_content_sections(self):
+        """Return names of enabled sections whose 'type' is 'content'."""
+        sections = [s for s in self.get_sections(exclude_main=True) if
+                    self.config_has_match(s, "type", "content") and
+                    self.config_has_match(s, "enabled", "1")
+                    ]
+        return sections
+
+    def get_section(self, section):
+        """Return a configuration section by name."""
+        return self.config[section]
+
+    def get_section_type(self, section):
+        """Get the 'type' option of the given section."""
+        return self.config.get(section, 'type')
+
+    def get_value(self, section, option):
+        return self.config.get(section, option)
+
+    def get_handler(self, section):
+        """Return the name of the module responsible for processing this section."""
+        try:
+            return self.config.get(section, 'handler')
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            return False

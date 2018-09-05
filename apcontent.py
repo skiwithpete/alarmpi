@@ -1,28 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from apsection import alarmpi_section
 
-class alarmpi_content(alarmpi_section):
-  def __init__(self, stype, sconfig, debug, main):
-    alarmpi_section.__init__(self, stype, sconfig, debug, main)
-    self.build()
 
-  def get(self, netup):
-    if(self.main['netup']):
-      if self.standalone() < 2:
-        return self._get()
-      else:
-        return ' ' # standalone > 1 means standalone only
-    else:
-      if self.standalone() < 2:
-        return self._get_offline()
-      return self._get() # standalone > 1 means standalone only
+class AlarmpiContent:
+    """Helper base class for all handlers. Defines functions for creating an actual
+    handler from a particular section read from the configuration file. The build
+    function should be implemented in each subclass.
+    """
 
-  def _get(self):
-    return self.content
+    def __init__(self, section_data):
+        """Create a an abstract content handler.
+        Args:
+            section_data (configparser.SectionProxy): a section of the configuration file
+                as parsed by a configparser, ie. config["greeting"]
+            debug (boolean): whether to print debug messages
+        """
+        self.section_data = section_data
+        self.content = None
 
-  def _get_offline(self):
-    return self.content + '  ().  '
+    def get(self):
+        """convenience method for returning the contents."""
+        return self.content
 
-  def build(self):
-    self.content='Instance of ' + self.stype + ' class.'
+    def build(self):
+        """This function should store the value to pass to the TTS client as the
+        'content' attribute as a string. For reference, see handlers/get_greeting.py.
+        """
+        raise NotImplementedError
