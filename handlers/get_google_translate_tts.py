@@ -9,8 +9,8 @@ import pydub.playback
 
 
 class GoogleTranslateTTSManager:
-    """Use the Google Translate API's texto-to-speech feature to generate speech.
-    Note this API is unofficial and undocumented and may break at any time. The
+    """A Google Translate API's text-to-speech client.
+    Note the Translate API is unofficial and undocumented and may break at any time. The
     parameters are mostly gathered from various StackOverflow posts, such as
     https://stackoverflow.com/questions/35002003/how-to-use-google-translate-tts-with-the-new-v2-api
     """

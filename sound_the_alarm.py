@@ -16,6 +16,7 @@ import alarmenv
 
 # Create mapping between a handler module name and class names for those handlers
 handler_map = {
+    "get_gcp_tts": "GoogleCloudTTS",
     "get_google_translate_tts": "GoogleTranslateTTSManager",
     "get_festival_tts": "FestivalTTSManager",
     "get_greeting": "Greeting",
