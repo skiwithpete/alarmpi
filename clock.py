@@ -38,7 +38,7 @@ class Clock:
         self.alarm_button = tk.Button(self.root, text="Set alarm", command=self.show_alarm_window)
         self.alarm_button.grid(row=2, column=0, sticky=tk.E+tk.W+tk.S+tk.N)
 
-        self.exit_button = tk.Button(self.root, text="Close", command=sys.exit)
+        self.exit_button = tk.Button(self.root, text="Close", command=self.root.destroy)
         self.exit_button.grid(row=2, column=1, sticky=tk.E+tk.W+tk.S+tk.N)
 
         self.cron = CronWriter()
@@ -150,12 +150,12 @@ class Clock:
             return
 
         # define a cron entry with absolute paths to the executable and alarm script
-        entry = "{min} {hour} * * 1-5 {python_exec} {path_to_alarm}".format(
+        entry = "{min} {hour} * * 1-5 {python_exec} {path_to_alarm} {path_to_config}".format(
             hour=t.tm_hour,
             min=t.tm_min,
             python_exec=sys.executable,
-            path_to_alarm=self.cron.alarm_path
-        )
+            path_to_alarm=self.cron.alarm_path,
+            path_to_config=self.cron.alarm_config_path)
         self.cron.add_cron_entry(entry)
         self.alarm_status_info_container.set("Alarm set for {}".format(entry_time))
         self.alarm_indicator.grid(row=0, column=11)
@@ -175,6 +175,7 @@ class CronWriter:
     def __init__(self):
         # format an absolute path to sound_the_alarm.py
         self.alarm_path = os.path.abspath("sound_the_alarm.py")
+        self.alarm_config_path = os.path.abspath("alarm.config")  # TODO parametrize?
 
     def get_crontab(self):
         """Return the current crontab"""
