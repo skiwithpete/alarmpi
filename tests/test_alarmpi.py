@@ -61,7 +61,7 @@ class AlarmEnvTestCase(unittest.TestCase):
 
     def testGetSectionsWithoutMain(self):
         """Does get_sections return section names without the main section"""
-        names = ["greeting", "yahoo_weather", "BBC_news",
+        names = ["greeting", "yahoo_weather", "BBC_news", "google_gcp_tts",
                  "google_translate_tts", "festival_tts", "radio"]
         read_sections = self.env.get_sections(True)
         self.assertEqual(names, read_sections)
@@ -89,10 +89,10 @@ class AlarmProcessingTestCase(unittest.TestCase):
         test_config_file = "./tests/alarm_test.config"
         self.env = alarmenv.AlarmEnv(test_config_file)
 
-    def testCorrectTTSClientChosen(self):
+    def testFirstTTSClientChosen(self):
         """Does get_tts_client choose the first enabled TTS client?"""
         tts = sound_the_alarm.get_tts_client(self.env)
-        self.assertIsInstance(tts, handlers.get_google_translate_tts.GoogleTranslateTTSManager)
+        self.assertIsInstance(tts, handlers.get_gcp_tts.GoogleCloudTTS)
 
     def testDefaultTTSClientChosenIfNoneSet(self):
         """Is the Festival client chosen when none is explicitly enaled?"""
@@ -103,6 +103,11 @@ class AlarmProcessingTestCase(unittest.TestCase):
 
         tts = sound_the_alarm.get_tts_client(self.env)
         self.assertIsInstance(tts, handlers.get_festival_tts.FestivalTTSManager)
+
+        # re-enable for other tests to not fail because of disabled status
+        for section in self.env.config.sections():
+            if section.lower().endswith("_tts"):
+                self.env.config[section]["enabled"] = "1"
 
     def testCorrectHandlerCreated(self):
         """Is the correct class chosen for each content in the config file?"""
