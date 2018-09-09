@@ -63,10 +63,14 @@ def get_tts_client(alarm_env):
            alarm_env.config_has_match(s, "type", "tts") and
            alarm_env.config_has_match(s, "enabled", "1")
            ]
+
+    # Instantiate the correct class
     if tts:
         tts_section = tts[0]
         class_ = get_content_parser_class(alarm_env, tts_section)
-        client = class_()
+        # read the path to the keyfile if provided/applicable
+        key_file = alarm_env.get_value_with_fallback(tts_section, "private_key_file", None)
+        client = class_(keyfile=key_file)
 
     # by default, use the festival tts client
     else:

@@ -179,7 +179,16 @@ class AlarmEnv:
         return self.config.get(section, 'type')
 
     def get_value(self, section, option):
+        """Get a value matching a section and option. Throws either NoSectionError or
+        NoOptionError on invalid input.
+        """
         return self.config.get(section, option)
+
+    def get_value_with_fallback(self, section, option, fallback):
+        """Get a value matching a section and option, but return a fallback value on
+        invalid input instead of raising an error.
+        """
+        return self.config.get(section, option, fallback=fallback)
 
     def get_handler(self, section):
         """Return the name of the module responsible for processing this section."""

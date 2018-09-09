@@ -7,8 +7,10 @@ import io
 import pydub
 import pydub.playback
 
+import aptts
 
-class GoogleTranslateTTSManager:
+
+class GoogleTranslateTTSManager(aptts.AlarmpiTTS):
     """A Google Translate API's text-to-speech client.
     Note the Translate API is unofficial and undocumented and may break at any time. The
     parameters are mostly gathered from various StackOverflow posts, such as

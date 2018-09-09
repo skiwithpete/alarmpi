@@ -6,9 +6,12 @@ import pydub
 import pydub.playback
 
 from google.cloud import texttospeech
+from google.oauth2 import service_account
+
+import aptts
 
 
-class GoogleCloudTTS:
+class GoogleCloudTTS(aptts.AlarmpiTTS):
     """A Google Cloud Text-to-Speech client. This uses a WaveNet voice for more human-like
     speech and higher costs. However, the monthly free tier of 1 million charaters
     should easily cover the requirements for running the alarm once a day.
@@ -18,11 +21,19 @@ class GoogleCloudTTS:
     https://cloud.google.com/text-to-speech/pricing
     """
 
+    def get_client(self):
+        """Create an API client using a path to a service account key_file."""
+        try:
+            credentials = service_account.Credentials.from_service_account_file(self.keyfile)
+            client = texttospeech.TextToSpeechClient(credentials=credentials)
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Error using Google Speech: couldn't read keyfile {}".format(self.keyfile))
+        return client
+
     def play(self, text):
         """Create a TTS client and speak input text using pydub."""
-
-        # Instantiates a client
-        client = texttospeech.TextToSpeechClient()
+        client = self.get_client()
         synthesis_input = texttospeech.types.SynthesisInput(text=text)
 
         # Build the voice request and specify a WaveNet voice for more human like speech
