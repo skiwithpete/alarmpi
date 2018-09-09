@@ -126,13 +126,20 @@ class AlarmEnv:
         # 2 at most one tts engine is used
         # 3 if readaloud=0 in the [main] section, no tts engine will be used
 
+        [google_gcp_tts]
+        enabled=0
+        type=tts
+        # generate your own service key from Google Cloud console and set path to it
+        private_key_file=Alarmpi-cdb50622e298.json
+        handler=get_gcp_tts.py
+
         [google_translate_tts]
         enabled=1
         type=tts
         handler=get_google_translate_tts.py
 
         [festival_tts]
-        enabled=1
+        enabled=0
         type=tts
         handler=get_festival_tts.py
 
