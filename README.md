@@ -8,13 +8,16 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
  * A greeting based on time of day
  * Tells the day's weather using Yahoo Weather
  * Reads latest news from BBC World RSS feeds
-
- These are largely the same as the corresponding features in the original project. Additionally I've added two new one for my own use case:
- * A GUI for displaying current time as well as for scheduling the alarm.
-
-  * The GUI is rather primitive due to hardware limitations: I build this project to run on a Raspberry Pi together with the official touch screen display with no additional input device. Since Raspbian is not a touch screen OS, it's support is limited to emulating mouse clicks. The alarm is therefore set using a binary based system for the hour and minute. TODO: image
-
  * Stream a radio station using `mplayer`
+ * A GUI for displaying current time and setting the alarm.
+
+The first 3 largely corresponds to the features in the original project. The latter two I build for to match my own use cases.
+
+The GUI for the clock is rather primitive due to hardware limitations: I build this project to run on a Raspberry Pi together with the official touch screen display with no additional input device. Since Raspbian is not a touch screen OS, it's support is limited to emulating mouse clicks. The alarm is therefore set using a binary based system for the hour and minute.
+
+![Main window](resources/clock_main.png)
+![schedule window](resources/clock_schedule.png)
+
 
 
 I've made a number of changed to the original project:
