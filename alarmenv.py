@@ -181,10 +181,6 @@ class AlarmEnv:
         """Return a configuration section by name."""
         return self.config[section]
 
-    def get_section_type(self, section):
-        """Get the 'type' option of the given section."""
-        return self.config.get(section, 'type')
-
     def get_value(self, section, option):
         """Get a value matching a section and option. Throws either NoSectionError or
         NoOptionError on invalid input.
@@ -196,10 +192,3 @@ class AlarmEnv:
         invalid input instead of raising an error.
         """
         return self.config.get(section, option, fallback=fallback)
-
-    def get_handler(self, section):
-        """Return the name of the module responsible for processing this section."""
-        try:
-            return self.config.get(section, 'handler')
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            return False
