@@ -97,7 +97,6 @@ class AlarmEnv:
         [greeting]
         enabled=1
         type=content
-        standalone=1
         handler=get_greeting.py
         # Name for personalized greeting, leave empty for a generalized 'Goog morning' message
         name=
