@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import requests
 import datetime
 
@@ -43,6 +42,10 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
             # TODO: change syntax from 8.5 pm to 20:50
             sunrise = response_dictionary['query']['results']['channel']['astronomy']['sunrise']
             sunset = response_dictionary['query']['results']['channel']['astronomy']['sunset']
+
+            # convert single digit minute to double digit for better speech synthesis
+            sunrise = self.format_time_string(sunrise)
+            sunset = self.format_time_string(sunset)
 
             if wind:
                 wind = round(float(wind), 1)
@@ -100,3 +103,8 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
             weather_yahoo = "Failed to read Yahoo Weather. "
 
         self.content = weather_yahoo
+
+    def format_time_string(self, s):
+        """Format API response sunset/sunrise time from 8:3 am to 8:03 am."""
+        p = datetime.datetime.strptime(s, "%H:%M %p")
+        return p.strftime("%H:%M %p")

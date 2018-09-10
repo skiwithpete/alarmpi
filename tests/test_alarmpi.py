@@ -121,10 +121,31 @@ class AlarmProcessingTestCase(unittest.TestCase):
         self.assertEqual(news_class, handlers.get_bbc_news.NewsParser)
 
 
+class HandlerTestCases(unittest.TestCase):
+    """Test cases for content handlers."""
+
+    @classmethod
+    def setUpClass(self):
+        test_config_file = "./tests/alarm_test.config"
+        self.env = alarmenv.AlarmEnv(test_config_file)
+
+    def testSunsetTimeFormattedWithDoubleMinuteDigits(self):
+        """Is weather API returned sunset & sunrise timestring correctly formatted
+        with double digit minute reading.
+        """
+        section_data = self.env.get_section("yahoo_weather")
+        weather_client = handlers.get_yahoo_weather.YahooWeatherClient(section_data)
+        formatted = weather_client.format_time_string("8:3 am")
+        self.assertEqual(formatted, "08:03 AM")
+
+
 if __name__ == "__main__":
     """Create test suites from both classes and run tests."""
     suite = unittest.TestLoader().loadTestsFromTestCase(AlarmEnvTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(AlarmProcessingTestCase)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(HandlerTestCases)
     unittest.TextTestRunner(verbosity=2).run(suite)
