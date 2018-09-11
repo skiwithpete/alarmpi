@@ -12,7 +12,7 @@ import dns.exception
 
 class AlarmEnv:
 
-    def __init__(self, config_file, debug=False):
+    def __init__(self, config_file):
         """Read configurations from file."""
         # Create a ConfigParser and read the config file
         self.config = configparser.ConfigParser()
@@ -27,9 +27,6 @@ class AlarmEnv:
 
         self.validate_config()
 
-        # Check if debug option was specified either thought the config file of command line
-        self.debug = debug or self.config_has_match('main', 'debug', '1')
-
         # We still want to alarm if the net is down
         self._testnet()
 
@@ -41,8 +38,7 @@ class AlarmEnv:
             self.netup = True
         except (dns.resolver.NXDOMAIN, dns.exception.DNSException):
             self.netup = False
-            if self.debug:
-                print('Could not resolve "{}". Assuming the network is down.'.format(nthost))
+            print('Could not resolve "{}". Assuming the network is down.'.format(nthost))
 
     def config_has_match(self, section, option, value):
         """Check if config has a section and a key/value pair matching input."""
@@ -82,7 +78,6 @@ class AlarmEnv:
         # default config as a single string
         config = """
         [main]
-        debug=0
         readaloud=1
         nthost=translate.google.com
         # Keep the trailing '/' on ramfldr
@@ -129,7 +124,7 @@ class AlarmEnv:
         enabled=0
         type=tts
         # generate your own service key from Google Cloud console and set path to it
-        private_key_file=Alarmpi-cdb50622e298.json
+        private_key_file=
         handler=get_gcp_tts.py
 
         [google_translate_tts]

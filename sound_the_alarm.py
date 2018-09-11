@@ -47,10 +47,8 @@ def generate_content(alarm_env):
     # add ending phrase from the config file
     contents.append(alarm_env.get_value("main", "end"))
 
-    if alarm_env.debug:
-        for section in contents:
-            print(section)
-            print()
+    for section in contents:
+        print(section)
 
     return contents
 
@@ -97,6 +95,12 @@ def get_content_parser_class(alarm_env, section_name):
     return class_
 
 
+def play_beep():
+    """Play a beeping sound effect."""
+    beep = pydub.AudioSegment.from_mp3("resources/Cool-alarm-tone-notification-sound.mp3")
+    pydub.playback.play(beep)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Play the alarm using a specified configuration file')
@@ -104,37 +108,36 @@ if __name__ == "__main__":
                         default='alarm.config', help='path to the config file')
     parser.add_argument('--init-config', action="store_true",
                         help="re-create the default configuration file alarm.config. Overwrites existing file.")
-    parser.add_argument('debug', action='store_true', help='prints debug messages during execution')
     args = parser.parse_args()
 
-    alarm_env = alarmenv.AlarmEnv(args.config, args.debug)
+    alarm_env = alarmenv.AlarmEnv(args.config)
     if args.init_config:
         alarm_env.write_default_configuration()
 
     # Check status for internet connection. If no connection detected,
     # play a beeping sound instead of making API calls.
     if not alarm_env.netup:
-        beep = pydub.AudioSegment.from_mp3("resources/Cool-alarm-tone-notification-sound.mp3")
-        pydub.playback.play(beep)
+        play_beep()
 
     content = generate_content(alarm_env)
-
     tts_enabled = alarm_env.config_has_match("main", "readaloud", "1")
     if tts_enabled:
         tts_client = get_tts_client(alarm_env)
         text = "\n".join(content)
         tts_client.play(text)
 
-    # If TTS is not enabled, print the contents, unless debug mode is set,
-    # in which case the contents are already printed.
-    # TODO should beeper play if readaloud disabled?
-    elif not alarm_env.debug:
-        for section in content:
-            print(section)
-            print()
+    # play a beeping sound if no readaloud is not enabled
+    else:
+        play_beep()
 
+    # open a radio stream if enabled
     radio_enabled = alarm_env.config_has_match("radio", "enabled", "1")
     if radio_enabled:
         url = alarm_env.get_value("radio", "url")
         cmd = "/usr/bin/mplayer -nolirc -playlist {}".format(url).split()
-        subprocess.run(cmd)
+        try:
+            timeout = int(alarm_env.get_value("radio", "timeout"))
+        except ValueError:  # raised if empty timeouty in the configuration file
+            timeout = None
+
+        subprocess.run(cmd, timeout=timeout)

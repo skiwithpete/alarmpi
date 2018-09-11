@@ -13,7 +13,6 @@ class AlarmpiContent:
         Args:
             section_data (configparser.SectionProxy): a section of the configuration file
                 as parsed by a configparser, ie. config["greeting"]
-            debug (boolean): whether to print debug messages
         """
         self.section_data = section_data
         self.content = None
