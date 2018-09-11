@@ -45,15 +45,12 @@ Optionally, run unit tests with `python -m unittest tests/test_alarm.py`
 ### Usage
 Run the program with `python main.py`. This opens the GUI for displaying current time and scheduling the alarm.
 
-If you have a headless Raspberry Pi environment (ie. no display attached) running the clock module will fail as Tkinter cannot be imported. In such cases you can also run the alarm directly with `python sound_the_alarm.py <path-to-configuration-file>`. This parses the configuration file (by default `alarm.config`), creates an appropriate alarm and plays it.
-
-To schedule the alarm, create a cron entry manually with `crontab -e`, remember to use absolute paths to both the python interpreter to use (again, virtualenvs are handy) as well as to the configuration file. Remember to use absolute paths.
+If you have a headless Raspberry Pi environment (ie. no display attached) running the clock module will fail as Tkinter cannot be imported. In such cases you can also run the alarm directly with `python sound_the_alarm.py <path-to-configuration-file>`. This parses the configuration file (by default `alarm.config`), creates an appropriate alarm and plays it. To schedule the alarm, create a cron entry manually.
 
 The interface to `sound_the_alarm` is:
 ```
 positional arguments:
   config         path to the config file
-  debug          prints debug messages during execution
 
 optional arguments:
   -h, --help     show this help message and exit
@@ -61,32 +58,43 @@ optional arguments:
                  Overwrites existing file.
 ```
 
+**Note:** if the radio stream is enabled and the alarm is run via cron, the stream cannot be keyboard interrupted via `Ctr-c` and will play indefinitely by default. Either use the provided `stop.sh` script to kill the alarm (and the stream) or consider using the `timeout` feature of the configuration, see below. 
+
 #### alarm.config description
-The alarm depends on a configuration file which specifies the content the alarm should play and which text-to-speech (tts) client should be used.
+The configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used (if any).
 
- * **[main]** here you can disable all tts processing with `readaloud=0`. Enabling debug mode prints the speech content on screen.
- * The content sections, ie. those with `type=content` define enabled alarm content (greeting, weather and news).
- * The tts sections with `type=tts` define which tts client should be used. 3 choices are provided:
-   1. Google Cloud Text-to-Speech engine. This provides the most human-like speech, but requires some additional setup. Since this is a Google Cloud platform API, you need to setup a Google Cloud project and enable billing.
+**[main]**  
+  * `readaloud=0` disables TTS. The contents of the enabled sections will still be printed to stdout.
+  * `nthost` determines which url should be tested for network connectivity. If the network connection is detected to be down a beeping sound effect is played instead of performing any API requests (ie. only the beeping alarm is played).
+  * `end` an ending greeting to be used by the TTS client
 
-    Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. Instead of setting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable, specify the path to your key as the `private_key_file` option in the configuration file.
+**content**  
+  * section with `type=content` determine the actual content (apart from the radio stream) of the alarm. Handlers point to files in the `/handlers` directory responsible for creating the content.
+  * `[yahoo_weather]` specify your own region's WOEID code for weather predictions. See http://woeid.rosselliot.co.nz/. You can also enable extra wind related processing (with some conditions: wind chill is only reported for windy enough winter months)
 
-    While this is a paid API, there is a free tier of 1 million characters per month. This should easily cover the alarm's needs: a single run of the script generates about 1100 characters worth of text, running the script once per day therefore only generates a total of some 33 000 characters. See https://cloud.google.com/text-to-speech/pricing and https://cloud.google.com/text-to-speech/quotas for more information.
+**tts engines**  
+Three for TTS engines are supported:
+ 1. `[google_gcp_tts]` Google Cloud Text-to-Speech engine. This provides the most human-like speech, but requires some additional setup. Since this is a Google Cloud platform API, you need to setup a Google Cloud project and enable billing.
 
-  2. Google Translate Text-to-Speech engine. This is an undocumented and unofficial API used in Google Translate. Has a limit of 200 characters per requests which results in slight, but noticeable pauses for longer texts. Google may prevent using this API at any time. This is the enabled choice by default.
+    Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, instead of setting the `GOOGLE_APPLICATION_CREDENTIALS` environment variable, specify the path to your key as the `private_key_file` option in the configuration file.
 
-  3. Festival. Does not require internet access and provides by far the most robotic voice.
+    While this is a paid API, there is a free tier of 1 million characters per month. This should easily cover the alarm's needs: a single run of the script generates about 1100 characters worth of text; running the script once per day therefore only generates a total of some 33 000 characters. See https://cloud.google.com/text-to-speech/pricing and https://cloud.google.com/text-to-speech/quotas for more information.
 
- * **[radio]** Determines the url to the radio stream to play after all sections have been processed.
+ 2. `[google_translate_tts]` Google Translate Text-to-Speech engine. This uses an undocumented and unofficial API used in Google Translate. Has a limit of 200 characters per requests which results in noticeable pauses between chunks of text. Google may prevent using this API at any time. This is the enabled choice by default.
 
+ 3. `[festival_tts]` Festival is a general purpose externally installed TTS system. Does not require an internet access and provides by far the most robotic voice.
+
+**[radio]**  
+Determines the url to the radio stream. Uses `mplayer` system package. The stream is payed after all TTS content has been processed. The `timeout` option can be used to specify a time in seconds after the stream should close. This is handy when the script is run from cron, in which case the script cannot be keyboard interrupted.
+
+#### Using a custom configuration
 You can either modify the provided configuration file `alarm.config` or create a new file and pass that to `sound_the_alarm.py` via the `config` argument. To re-create the original configuration file, use the `--init-config` switch.
-
 
 #### Extending alarm.config with more content
 Extending the alarm with more content is simple:
 Each content section needs to have `enabled`, `type` and `handler` keys in the configuration file.
 
- Create a handler for your new content and place it in the `/handlers` folder. It should subclass `AlarmpiContent` and implement the `build` function. This function is where the magic happens: it should store whatever content to pass to the alrm as the `content` attribute. A minimal handler implementation is something like:
+ Create a handler for your new content and place it in the `/handlers` folder. It should subclass `apcontent.AlarmpiContent` and implement the `build` method. This function is where the magic happens: it should store whatever content to pass to the alrm as the `content` attribute. A minimal handler implementation is something like:
  ```
  import apcontent
 
@@ -95,6 +103,8 @@ Each content section needs to have `enabled`, `type` and `handler` keys in the c
      def build(self):
          self.content = "Text-to-Speech content goes here"
 ```
-See any of the existing handlers for reference. Set the `handler` option in the configuration file to your new handler without the folder name. Finally set `type` to `content`.
+See any of the existing handlers for reference. Set the `handler` option in the configuration file to your new handler without the folder name. Finally set `type=content` in the configuration.
 
-Extending beyond adding new content requires writing new processing logic in `sound_the_alarm.py`.
+Adding a new TTS engine can be done simialrly. Create a new section with `type=tts` and place a handler in the handlers folder. The handler should subclass `aptts.AlarmpiTTS` class and implement the `play` method. You can use the `private_key_file` option to pass a file path to an API access token file to the constructor if required.
+
+Extending beyond these requires writing new processing logic in `sound_the_alarm.py`.
