@@ -24,7 +24,7 @@ class Greeting(apcontent.AlarmpiContent):
         # current date and time as a spoken sentance,
         # eg. Wednesday August Twenty Second, 22:37
         current_date = "{}{}".format(time.strftime("%A %B "), day_of_month)
-        current_time = time.strftime("%-I:%M %p")  # eg. 6:36 pm
+        current_time = time.strftime("%I:%M %p")  # eg. 6:36 pm
 
         if today.hour < 12:
             period = 'morning'

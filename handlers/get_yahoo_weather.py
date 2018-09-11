@@ -3,6 +3,7 @@
 
 import requests
 import datetime
+import time
 
 import apcontent
 
@@ -106,5 +107,5 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
 
     def format_time_string(self, s):
         """Format API response sunset/sunrise time from 8:3 am to 8:03 am."""
-        p = datetime.datetime.strptime(s, "%H:%M %p")
-        return p.strftime("%H:%M %p")
+        p = datetime.datetime.strptime(s, "%I:%M %p")
+        return p.strftime("%I:%M %p")
