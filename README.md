@@ -1,8 +1,6 @@
 # Alarmpi
 
 A clock radio for a Raspberry Pi with customizable alarm.
-<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/498943884&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe>
-
 ```
 Good afternoon, it's Wednesday September twelfth. The time is 07:29 PM.
 
@@ -25,6 +23,8 @@ The ritual killing of animals such as goats could soon be outlawed at Sri Lanka'
 
 Thats all for now. Have a nice day.
 ```
+[Play on SoundCloud](https://soundcloud.com/lajanki/pialarm_sample)
+
 
 This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/alarmpi. After seeing it on [YouTube](https://youtu.be/julETnOLkaU), I thought it was awsome and knew I wanted to use it to replace my old night table clock radio.
 
