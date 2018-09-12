@@ -1,15 +1,40 @@
 # Alarmpi
 
-A clock radio for a Raspberry Pi with a display, work in progress.
+A clock radio for a Raspberry Pi with customizable alarm.
+<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/498943884&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe>
 
-This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/alarmpi. After seeing it on [YouTube](https://youtu.be/julETnOLkaU), I knew wanted to build a similar system to replace my existing bedside clock radio. I had already bought the official touchscreen with a new Pi but other than messing around with it, I had no real use for it until this project.
+```
+Good afternoon, it's Wednesday September twelfth. The time is 07:29 PM.
+
+Weather for today is Mostly Cloudy becoming rainy. It is currently 16 degrees  with a fresh breeze. The high for today is 17 and the low at 11 degrees. The sun rises at 06:43 AM and sets at 07:50 PM.
+
+And now, The latest stories from the World section of the BBC News.
+
+EU parliament votes to punish Hungary over 'breaches' of core values.
+The European Parliament votes to punish Hungary for allegedly flouting EU values and the rule of law.
+
+Hurricane Florence: Mass evacuation from 'storm of a lifetime'.
+South Carolina authorities turn four motorways into one-way routes away from the coast.
+
+Morocco bans forced marriage and sexual violence.
+The new law criminalises sexual harassment and imposes tougher penalties on perpetrators.
+
+Sri Lanka to ban Hindu animal sacrifice.
+The ritual killing of animals such as goats could soon be outlawed at Sri Lanka's Hindu temples.
+
+
+Thats all for now. Have a nice day.
+```
+
+This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/alarmpi. After seeing it on [YouTube](https://youtu.be/julETnOLkaU), I thought it was awsome and knew I wanted to use it to replace my old night table clock radio.
+
 
 ### Main Features
  * A greeting based on time of day
  * Tells the day's weather using Yahoo Weather
- * Reads latest news from BBC World RSS feeds
+ * Reads latest news from BBC World RSS feed
  * Stream a radio station using `mplayer`
- * A GUI for displaying current time and setting the alarm.
+ * A GUI for displaying current time and setting the alarm
 
 The first 3 largely corresponds to the features in the original project. The latter two I build for to match my own use cases.
 
@@ -21,11 +46,13 @@ The GUI for the clock is rather primitive due to hardware limitations: I build t
 
 
 I've made a number of changed to the original project:
- * Ported the project Python 3 (Python 2 is unsupported)
- * changed naming conventions to be more PEP 8 compliant and other minor cleanups
- * Cleaned up file structure
+ * Ported to Python 3 (Python 2 is unsupported)
+ * Changed naming conventions to be more PEP 8 compliant with other minor cleanups
+ * Added a GUI for a clock
+ * Added option to stream radio
  * Removed some modules I deemed unnecessary (mainly due to removed features, see the next point)
  * Removed features not applicable to my use case (including turning lights on and off, playing songs and reading stocks from Yahoo Finance, which has been discontinued)
+ * Reorganized the file structure
  * Changed which text-to-speech engines are available, see below
  * Changed audio processing to use in-memory objects, thus removing the need to setup a ramdrive
  * Added unit tests (although the test suite is a bit light)
@@ -34,20 +61,36 @@ I've made a number of changed to the original project:
 
 ### Setup
 First, install required system packages with
-`apt install festival mplayer portaudio19-dev python-all-dev`
-This includes the Festival text-to-speech engine, the command line movie player mplayer for playing radio streams and audio libraries enabling playback of mp3 files directly in Python.
 
-Next, install requires Python packages with `pip install -r requirements.txt`. Using a virtualenv is recommended.
+```apt install festival mplayer portaudio19-dev python-all-dev```
 
-Optionally, run unit tests with `python -m unittest tests/test_alarm.py`
+This includes the Festival text-to-speech engine, the command line movie player mplayer and audio libraries enabling playback of mp3 files directly in Python.
+
+Next, install required Python packages:
+
+```pip install -r requirements.txt```
+
+A virtualenv is recommended.
+
+Optionally, run unit tests with
+
+```python -m unittest tests/test_alarm.py```
 
 
 ### Usage
-Run the program with `python main.py`. This opens the GUI for displaying current time and scheduling the alarm.
+If you have display attached to your Pi, run the script with
 
-If you have a headless Raspberry Pi environment (ie. no display attached) running the clock module will fail as Tkinter cannot be imported. In such cases you can also run the alarm directly with `python sound_the_alarm.py <path-to-configuration-file>`. This parses the configuration file (by default `alarm.config`), creates an appropriate alarm and plays it. To schedule the alarm, create a cron entry manually.
+```python main.py```
 
-The interface to `sound_the_alarm` is:
+This opens the GUI for displaying current time and scheduling the alarm.
+
+In a headless environment this will fail since Tkinter cannot be imported. Instead run the alarm directly with
+
+```python sound_the_alarm.py <path-to-configuration-file>```
+
+This parses the configuration file (by default `alarm.config`), creates a corresponding alarm and runs it. Use cron to schedule the alarm manually.
+
+The interface to `sound_the_alarm.py` is:
 ```
 positional arguments:
   config         path to the config file
@@ -58,19 +101,21 @@ optional arguments:
                  Overwrites existing file.
 ```
 
-**Note:** if the radio stream is enabled and the alarm is run via cron, the stream cannot be keyboard interrupted via `Ctr-c` and will play indefinitely by default. Either use the provided `stop.sh` script to kill the alarm (and the stream) or consider using the `timeout` feature of the configuration, see below. 
-
 #### alarm.config description
 The configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used (if any).
 
 **[main]**  
-  * `readaloud=0` disables TTS. The contents of the enabled sections will still be printed to stdout.
+  * `readaloud=0` disables TTS. The contents of the enabled sections will still be printed to stdout and a beeping alarm will play.
   * `nthost` determines which url should be tested for network connectivity. If the network connection is detected to be down a beeping sound effect is played instead of performing any API requests (ie. only the beeping alarm is played).
   * `end` an ending greeting to be used by the TTS client
 
 **content**  
   * section with `type=content` determine the actual content (apart from the radio stream) of the alarm. Handlers point to files in the `/handlers` directory responsible for creating the content.
   * `[yahoo_weather]` specify your own region's WOEID code for weather predictions. See http://woeid.rosselliot.co.nz/. You can also enable extra wind related processing (with some conditions: wind chill is only reported for windy enough winter months)
+
+  **A note on content preference**  
+  Content sections are parsed in the order they appear in the configuration. The greeting should come first.
+
 
 **tts engines**  
 Three for TTS engines are supported:
@@ -84,17 +129,24 @@ Three for TTS engines are supported:
 
  3. `[festival_tts]` Festival is a general purpose externally installed TTS system. Does not require an internet access and provides by far the most robotic voice.
 
+ **A note on TTS preference**  
+  The first TTS engine is used even if several are enabled. If all TTS engines are disabled but `readaloud=1` is set, Festival will be used.
+
+  If `readaloud` is disabled, a beeping sound effect will be played.
+
 **[radio]**  
 Determines the url to the radio stream. Uses `mplayer` system package. The stream is payed after all TTS content has been processed. The `timeout` option can be used to specify a time in seconds after the stream should close. This is handy when the script is run from cron, in which case the script cannot be keyboard interrupted.
+
+ **Note**  
+ If the radio is enabled and the alarm is run via cron, the stream cannot be keyboard interrupted via `Ctr-c` and will play indefinitely by default. Either use the provided `stop.sh` script to kill the alarm (and the stream) or consider setting a `timeout`.
 
 #### Using a custom configuration
 You can either modify the provided configuration file `alarm.config` or create a new file and pass that to `sound_the_alarm.py` via the `config` argument. To re-create the original configuration file, use the `--init-config` switch.
 
 #### Extending alarm.config with more content
 Extending the alarm with more content is simple:
-Each content section needs to have `enabled`, `type` and `handler` keys in the configuration file.
 
- Create a handler for your new content and place it in the `/handlers` folder. It should subclass `apcontent.AlarmpiContent` and implement the `build` method. This function is where the magic happens: it should store whatever content to pass to the alrm as the `content` attribute. A minimal handler implementation is something like:
+ 1. Create a handler for your new content and place it in the `/handlers` folder. It should subclass `apcontent.AlarmpiContent` and implement the `build` method. This function is where the magic happens: it should store whatever string content to pass to the alarm as the `content` attribute. A minimal handler implementation is something like:
  ```
  import apcontent
 
@@ -103,8 +155,33 @@ Each content section needs to have `enabled`, `type` and `handler` keys in the c
      def build(self):
          self.content = "Text-to-Speech content goes here"
 ```
-See any of the existing handlers for reference. Set the `handler` option in the configuration file to your new handler without the folder name. Finally set `type=content` in the configuration.
+See any of the existing handlers for reference.
 
-Adding a new TTS engine can be done simialrly. Create a new section with `type=tts` and place a handler in the handlers folder. The handler should subclass `aptts.AlarmpiTTS` class and implement the `play` method. You can use the `private_key_file` option to pass a file path to an API access token file to the constructor if required.
+ 2. Register your handler in `sound_the_alarm.py`:
+ ```
+ handler_map = {
+     "get_gcp_tts": "GoogleCloudTTS",
+     "get_google_translate_tts": "GoogleTranslateTTSManager",
+     "get_festival_tts": "FestivalTTSManager",
+     "get_greeting": "Greeting",
+     "get_bbc_news": "NewsParser",
+     "get_textfile": "TextFileParser",
+     "get_yahoo_weather": "YahooWeatherClient",
+     "my_new_module": "my_new_class"
+ }
+ ```
+
+ 2. Set the `handler` option in the configuration file to your new handler without the folder name.
+
+ 3. Set `type=content` and `enabled=1` in the configuration.
+
+Adding a new TTS engine can be done simialrly:
+
+ 1. Write the handler. It should should subclass `aptts.AlarmpiTTS` and implement the `play` method.
+
+ 2. Create a configuration section with `type=tts`
+
+  * You can use the `private_key_file` option to set reference an API access token file to the constructor if required. This will be then passed to the initializer.
+
 
 Extending beyond these requires writing new processing logic in `sound_the_alarm.py`.
