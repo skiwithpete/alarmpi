@@ -62,7 +62,7 @@ I've made a number of changed to the original project:
 ### Setup
 First, install required system packages with
 
-```apt install festival mplayer portaudio19-dev python-all-dev```
+```apt install festival mplayer ffmpeg portaudio19-dev python-all-dev```
 
 This includes the Festival text-to-speech engine, the command line movie player mplayer and audio libraries enabling playback of mp3 files directly in Python.
 
