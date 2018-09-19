@@ -82,9 +82,9 @@ If you have display attached to your Pi, run the script with
 
 ```python main.py```
 
-This opens the GUI for displaying current time and scheduling the alarm.
+This opens the GUI for displaying current time and scheduling the alarm. The scheduling is done by adding a new cron entry to `sound_the_alarm.py`. **This means the alarm will play regardless of whether the GUI is running or not!**. While the time of the alarm can be set from the GUI, the date cannot. The alarm is hard coded to occur every monday to friday at the specified time. Of course, you can change it by editing crontab manually.
 
-In a headless environment this will fail since Tkinter cannot be imported. Instead run the alarm directly with
+In a headless environment running `main.py` will fail since Tkinter cannot be imported. Instead run the alarm directly with
 
 ```python sound_the_alarm.py <path-to-configuration-file>```
 
@@ -165,7 +165,6 @@ See any of the existing handlers for reference.
      "get_festival_tts": "FestivalTTSManager",
      "get_greeting": "Greeting",
      "get_bbc_news": "NewsParser",
-     "get_textfile": "TextFileParser",
      "get_yahoo_weather": "YahooWeatherClient",
      "my_new_module": "my_new_class"
  }

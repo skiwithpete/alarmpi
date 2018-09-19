@@ -17,38 +17,23 @@ class AlarmEnv:
         # Create a ConfigParser and read the config file
         self.config = configparser.ConfigParser()
 
-        # make sure config_file is an absolute path for cron
-        # TODO cron's current working directory is home folder -> this won't work
-        config_file = os.path.abspath(config_file)  # does nothing is already an absolute path
         filenames = self.config.read(config_file)
         # config.read modifies the config object in place and returns list of file names read succesfully
         if not filenames:
-            raise RuntimeError('Failed reading config file: {}'.format(config_file))
+            raise RuntimeError("Failed reading config file: {}".format(config_file))
 
-        self.validate_config()
-
-        # We still want to alarm if the net is down
-        self._testnet()
+        # Test for network connection, contents of the alarm depends on whether there is connection
+        self.netup = self._testnet()
 
     def _testnet(self):
         # Test for connectivity using the hostname in the config file
         nthost = self.config.get("main", "nthost")
         try:
             dns.resolver.query(nthost)
-            self.netup = True
+            return True
         except (dns.resolver.NXDOMAIN, dns.exception.DNSException):
-            self.netup = False
-            print('Could not resolve "{}". Assuming the network is down.'.format(nthost))
-
-    def config_has_match(self, section, option, value):
-        """Check if config has a section and a key/value pair matching input."""
-        try:
-            section_value = self.config.get(section, option)
-            return section_value == value
-        except (configparser.NoSectionError, configparser.NoOptionError):
+            print("Could not resolve '{}'. Assuming the network is down.".format(nthost))
             return False
-        except ValueError:
-            raise ValueError("Invalid configuration for {} in section {}".format(option, section))
 
     def validate_config(self):
         """Validate configuration file: checks that other than [main] each section
@@ -148,6 +133,16 @@ class AlarmEnv:
         """
         with open(path, "w") as f:
             f.write(config)
+
+    def config_has_match(self, section, option, value):
+        """Check if config has a section and a key/value pair matching input."""
+        try:
+            section_value = self.config.get(section, option)
+            return section_value == value
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            return False
+        except ValueError:
+            raise ValueError("Invalid configuration for {} in section {}".format(option, section))
 
     # ========================================================================#
     # The following get_ functions are mostly wrappers to get various values from
