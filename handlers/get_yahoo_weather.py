@@ -3,7 +3,6 @@
 
 import requests
 import datetime
-import time
 
 import apcontent
 
@@ -40,7 +39,7 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
             forecast_conditions = response_dictionary['query']['results']['channel']['item']['forecast'][0]['text']
             wind = response_dictionary['query']['results']['channel']['wind']['speed']
             wind_chill = response_dictionary['query']['results']['channel']['wind']['chill']
-            # TODO: change syntax from 8.5 pm to 20:50
+
             sunrise = response_dictionary['query']['results']['channel']['astronomy']['sunrise']
             sunset = response_dictionary['query']['results']['channel']['astronomy']['sunset']
 
