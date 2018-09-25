@@ -20,7 +20,7 @@ class Clock:
         """Create the root window for displaying time."""
         self.root = tk.Tk()
         self.root.title("Clock")
-        self.root.geometry("600x410")
+        self.root.geometry("600x320")
         for x in range(2):
             tk.Grid.columnconfigure(self.root, x, weight=1)
 
@@ -30,7 +30,7 @@ class Clock:
         # self.root.resizable(0, 0) #Don't allow resizing in the x or y direction
 
         # Define a Label for displaying the time
-        self.clock = tk.Label(self.root, font=('times', 36, 'bold'), bg='#342966', fg='white')
+        self.clock = tk.Label(self.root, font=('times', 36, 'bold'), bg='#090201', fg='#840303')
         self.clock.grid(row=0, column=0, ipadx=50, columnspan=2, rowspan=2,
                         sticky=tk.E+tk.W+tk.S+tk.N)
 
@@ -56,7 +56,19 @@ class Clock:
         settings_root = tk.Toplevel()
         settings_root.title("Set Alarm")
 
-        settings_root.geometry("500x160")
+        # set window dimensions and place to the center of screen
+        w = 500
+        h = 160
+
+        ws = settings_root.winfo_screenwidth()  # width of the screen
+        hs = settings_root.winfo_screenheight()  # height of the screen
+
+        # calculate x and y coordinates for the Toplevel
+        x = (ws/2) - (w/2)
+        y = (hs/2) - (h/2)
+
+        settings_root.geometry("{}x{}+{}+{}".format(w, h, int(x), int(y)))
+
         for x in range(11):
             tk.Grid.columnconfigure(settings_root, x, weight=1)
 
