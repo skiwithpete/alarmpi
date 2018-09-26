@@ -126,7 +126,7 @@ class Clock:
         self.alarm_indicator = tk.Label(settings_root, image=photo)
         self.alarm_indicator.image = photo  # keep a reference to prevent garbage collection
 
-        if self.cron.active_alarm():
+        if self.cron.get_current_alarm():
             self.alarm_indicator.grid(row=0, column=10)
 
         # Make Labels for hour and minute titles
@@ -236,10 +236,22 @@ class CronWriter:
         # check_output returns a byte string
         return subprocess.check_output(["crontab", "-l"]).decode()
 
-    def active_alarm(self):
-        """Check whether there is a valid alarm entry currently in crontab."""
+    def get_current_alarm(self):
+        """If an alarm has been set, return its time in HH:MM format. If not set
+        return None.
+        """
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
-        return self.alarm_path in crontab
+        lines = crontab.split("\n")
+        alarm_line = [line for line in lines if self.alarm_path in line]
+
+        if alarm_line:
+            split = alarm_line[0].split()
+            minute = split[0]
+            hour = split[1]
+
+            return hour.zfill(2) + ":" + minute.zfill(2)
+
+        return
 
     def get_crontab_lines_without_alarm(self):
         """Return the crontab as a newline delimited list without alarm entries."""
@@ -261,11 +273,10 @@ class CronWriter:
         self.write_crontab(crontab)
 
     def add_cron_entry(self, entry):
-        """Add an entry for sound_the_alarm.py. Existing entries are removed."""
+        """Add an entry for sound_the_alarm.py. Existing crontab is overwritten."""
         crontab_lines = self.get_crontab_lines_without_alarm()
 
         # Add new entry and overwrite the crontab file
-        # crontab_lines.append("\n")
         crontab_lines.append(entry)
         crontab_lines.append("\n")  # need a newline at the end
         self.write_crontab(crontab_lines)
