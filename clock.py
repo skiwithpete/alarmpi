@@ -19,15 +19,14 @@ class Clock:
     def __init__(self):
         """Create the root window for displaying time."""
         self.root = tk.Tk()
-        self.root.title("Clock")
-        self.root.geometry("600x320")
+        self.format_window(self.root, "Clock", 600, 320)
+        # self.root.resizable(0, 0) #Don't allow resizing
+
         for x in range(2):
             tk.Grid.columnconfigure(self.root, x, weight=1)
 
         for y in range(3):
             tk.Grid.rowconfigure(self.root, y, weight=1)
-
-        # self.root.resizable(0, 0) #Don't allow resizing in the x or y direction
 
         # Define a Label for displaying the time
         self.clock = tk.Label(self.root, font=('times', 36, 'bold'), bg='#090201', fg='#840303')
@@ -35,7 +34,9 @@ class Clock:
                         sticky=tk.E+tk.W+tk.S+tk.N)
 
         # Attach buttons for setting the alarm and exiting
-        self.alarm_button = tk.Button(self.root, text="Set alarm", command=self.show_alarm_window)
+        self.alarm_button = tk.Button(self.root, text="Set alarm",
+                                      command=self.show_alarm_window)
+        #self.alarm_button = tk.Button(self.root, text="Set alarm", command=self.temp_open_alarm_window)
         self.alarm_button.grid(row=2, column=0, sticky=tk.E+tk.W+tk.S+tk.N)
 
         self.exit_button = tk.Button(self.root, text="Close", command=self.root.destroy)
@@ -51,23 +52,50 @@ class Clock:
             self.clock["text"] = s
         self.clock.after(1000, self.tick)
 
+    def temp_open_alarm_window(self):
+        """rows: 4 columns: 7"""
+        top = tk.Toplevel()
+        self.format_window(top, "Set Alarm", 500, 160)
+
+        for x in range(9):
+            tk.Grid.columnconfigure(top, x, weight=1)
+
+        for y in range(4):
+            tk.Grid.rowconfigure(top, y, weight=1)
+
+        # hour selectors to the left side of the window
+        tk.Label(top, text="Hour").grid(row=1, column=2)
+        for col in range(1, 4):
+            tk.Button(top, text=str(col)).grid(row=2, column=col, sticky=tk.E+tk.W+tk.S+tk.N)
+        for col in range(1, 3):
+            tk.Button(top, text=str(3 + col)).grid(row=3, column=col, sticky=tk.E+tk.W+tk.S+tk.N)
+
+        # label for showing the alarm time
+        alarm_time_container = tk.StringVar()
+        alarm_time_container.set("8:05")
+        tk.Label(top, textvariable=alarm_time_container).grid(row=2, column=4)
+
+        # minute selectors on the right
+        tk.Label(top, text="Minute").grid(row=1, column=6)
+        for col in range(5, 8):
+            tk.Button(top, text=str(col)).grid(row=2, column=col, sticky=tk.E+tk.W+tk.S+tk.N)
+        for col in range(5, 8):
+            tk.Button(top, text=str(3 + col)).grid(row=3, column=col, sticky=tk.E+tk.W+tk.S+tk.N)
+
+        # label for displaying status messages
+        tk.Label(top, text="Alarm set for 7:10").grid(row=4, column=2, columnspan=4)
+
+        # Set alarm, clear alarm and close buttons at the bottom
+        tk.Button(top, text="Set alarm").grid(
+            row=5, column=1, rowspan=2, sticky=tk.E+tk.W+tk.S+tk.N)
+        tk.Button(top, text="Clear alarm").grid(
+            row=5, column=4, rowspan=2, sticky=tk.E+tk.W+tk.S+tk.N)
+        tk.Button(top, text="Close").grid(row=5, column=7, rowspan=2, sticky=tk.E+tk.W+tk.S+tk.N)
+
     def show_alarm_window(self):
         """Create a new window for setting the alarm time."""
         settings_root = tk.Toplevel()
-        settings_root.title("Set Alarm")
-
-        # set window dimensions and place to the center of screen
-        w = 500
-        h = 160
-
-        ws = settings_root.winfo_screenwidth()  # width of the screen
-        hs = settings_root.winfo_screenheight()  # height of the screen
-
-        # calculate x and y coordinates for the Toplevel
-        x = (ws/2) - (w/2)
-        y = (hs/2) - (h/2)
-
-        settings_root.geometry("{}x{}+{}+{}".format(w, h, int(x), int(y)))
+        self.format_window(settings_root, "Set Alarm", 500, 160)
 
         for x in range(11):
             tk.Grid.columnconfigure(settings_root, x, weight=1)
@@ -179,6 +207,20 @@ class Clock:
         self.cron.delete_cron_entry()
         self.alarm_status_info_container.set("Alarm cleared")
         self.alarm_indicator.grid_remove()
+
+    def format_window(self, widget, title, width, height):
+        """Given a Tk or Toplevel element set a width and height and assign it to the
+        center of the screen.
+        """
+        widget.title(title)
+        w_width = widget.winfo_screenwidth()  # width of the screen
+        w_height = widget.winfo_screenheight()  # height of the screen
+
+        # compute offsets from the edges of the screen
+        dx = (w_width/2) - (width/2)
+        dy = (w_height/2) - (height/2)
+
+        widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
 
 
 class CronWriter:
