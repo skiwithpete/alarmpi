@@ -60,21 +60,27 @@ I've made a number of changed to the original project:
 
 
 ### Setup
-First, install required system packages with
+ 1. First, install required system packages with
 
-```apt install festival mplayer ffmpeg portaudio19-dev python-all-dev```
+  ```apt install ffmpeg festival mplayer portaudio19-dev python-all-dev```
 
-This includes the Festival text-to-speech engine, the command line movie player mplayer and audio libraries enabling playback of mp3 files directly in Python.
+  This includes the Festival text-to-speech engine, the command line movie player mplayer and audio libraries enabling playback of mp3 files directly in Python.
 
-Next, install required Python packages:
+ 2. Next, install required Python packages:
 
-```pip install -r requirements.txt```
+  ```pip install -r requirements.txt```
 
-A virtualenv is recommended.
+  A virtualenv is recommended.
 
-Optionally, run unit tests with
+ 3. If you haven't done so already, initialize a crontab with
 
-```python -m unittest tests/test_alarm.py```
+ ```crontab -e```
+
+  and follow the instructions.
+
+ 4. Optionally, run unit tests with
+
+  ```python -m unittest tests/test_alarm.py```
 
 
 ### Usage
