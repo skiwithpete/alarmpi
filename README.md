@@ -72,15 +72,17 @@ I've made a number of changed to the original project:
 
   A virtualenv is recommended.
 
- 3. If you haven't done so already, initialize a crontab with
+ 3. If you haven't done so already, initialize a new crontab with
 
  ```crontab -e```
 
   and follow the instructions.
 
+   * If a crontab already exists, you may want to create a backup with `crontab -l > cron.backup`. It can be restored with `crontab cron.backup`.
+
  4. Optionally, run unit tests with
 
-  ```python -m unittest tests/test_alarm.py```
+  ```python -m unittest -v tests/test_*.py```
 
 
 ### Usage
