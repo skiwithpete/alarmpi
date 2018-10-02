@@ -11,10 +11,6 @@ import sound_the_alarm
 import handlers
 
 
-def print_foo():
-    return "foo"
-
-
 class AlarmEnvTestCase(TestCase):
     """Test cases for alarmenv: are properties read from the configuration file
     correctly?
@@ -31,6 +27,12 @@ class AlarmEnvTestCase(TestCase):
         """
         self.assertRaises(RuntimeError, alarmenv.AlarmEnv, "foo.config")
 
+    @patch("alarmenv.AlarmEnv")
+    def test_foo(self, mock_env):
+        env = mock_env.return_value
+        env.validate_config = MagicMock(side_effect=RuntimeError)
+        self.assertRaises(RuntimeError, env.validate_config)
+
     def test_validate_config_raises_error_on_invalid(self):
         """Does validate_config raise RuntimeError on
             1 missing 'type' key,
@@ -38,25 +40,6 @@ class AlarmEnvTestCase(TestCase):
         """
         # create a new AlarmEnv and remove enabled key
         env = alarmenv.AlarmEnv("./tests/alarm_test.config")
-        del env.config["yahoo_weather"]["enabled"]
-        self.assertRaises(RuntimeError, env.validate_config)
-
-        # create a new AlarmEnv and remove type key
-        env = alarmenv.AlarmEnv("./tests/alarm_test.config")
-        del env.config["yahoo_weather"]["type"]
-        self.assertRaises(RuntimeError, env.validate_config)
-
-    @unittest.skip("broken")
-    def test_mock_validate_config_raises_error_on_invalid(self):
-        """Does validate_config raise RuntimeError on
-            1 missing 'type' key,
-            2 missing handler for content section
-        """
-        # create a new AlarmEnv and remove enabled key
-        mock_config_file = MagicMock()
-        env = alarmenv.AlarmEnv(mock_config_file)
-        env = MagicMock(name="mock_env")
-
         del env.config["yahoo_weather"]["enabled"]
         self.assertRaises(RuntimeError, env.validate_config)
 
@@ -85,6 +68,7 @@ class AlarmEnvTestCase(TestCase):
         match = self.env.config_has_match("greeting", "handler", "get_greeting.py")
         self.assertTrue(match)
 
+    @unittest.skip("Mainly tests that configparser.sections works as advertised. Probably not useful?")
     def test_get_sections_without_main(self):
         """Does get_sections return section names without the main section"""
         names = ["greeting", "yahoo_weather", "BBC_news", "google_gcp_tts",
@@ -162,11 +146,6 @@ class AlarmProcessingTestCase(TestCase):
         sound_the_alarm.main(self.env)
         mock_play_beep.assert_called()
         self.env.netup = True
-
-    @patch('sound_the_alarm.main', side_effect=print_foo)
-    def test_print_foo(self, main):
-        res = main()
-        self.assertEqual(res, "foo")
 
 
 class HandlerTestCases(TestCase):
