@@ -3,6 +3,7 @@
 import subprocess
 import argparse
 import importlib
+import os.path
 
 import pydub
 import pydub.playback
@@ -122,7 +123,19 @@ def get_content_parser_class(alarm_env, section_name):
 
 def play_beep():
     """Play a beeping sound effect."""
-    beep = pydub.AudioSegment.from_mp3("resources/Cool-alarm-tone-notification-sound.mp3")
+    # Create a path to the mp3 file. If this script was called via cron, we need
+    # an absolute path. Since cron runs this script with absolute paths as
+    # /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config
+    # use the sys.argv to format an absolute path to the sound file.
+    # This is a bit of a hack, there's probably a better way...
+    import sys
+
+    path = os.path.abspath("resources/Cool-alarm-tone-notification-sound.mp3")
+    if len(sys.argv) > 1:
+        base = os.path.dirname(sys.argv[0])
+        path = os.path.join(base, "resources", "Cool-alarm-tone-notification-sound.mp3")
+
+    beep = pydub.AudioSegment.from_mp3(path)
     pydub.playback.play(beep)
 
 
