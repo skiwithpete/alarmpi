@@ -18,7 +18,7 @@ class Clock:
 
     def __init__(self):
         """Create the root window for displaying time."""
-        RED = "#840303"
+        RED = "#FF1414"
         BLACK = "#090201"
 
         self.cron = CronWriter()
@@ -36,7 +36,7 @@ class Clock:
             tk.Grid.rowconfigure(self.root, y, weight=1)
 
         # Row 0: label for displaying current time
-        self.clock_label = tk.Label(self.root, font=("times", 36, "bold"), fg=RED, bg=BLACK)
+        self.clock_label = tk.Label(self.root, font=("times", 46, "bold"), fg=RED, bg=BLACK)
         self.clock_label.grid(row=0, column=0, ipadx=50, columnspan=2, rowspan=1,
                               sticky="sew")
 
@@ -44,7 +44,7 @@ class Clock:
         self.root_alarm_time_container = tk.StringVar()
         self.root_alarm_time_container.set(self.current_alarm)
         alarm_time_label = tk.Label(
-            self.root, textvariable=self.root_alarm_time_container, fg=RED, bg=BLACK)
+            self.root, font=("times", 18, "bold"), textvariable=self.root_alarm_time_container, fg=RED, bg=BLACK)
         alarm_time_label.grid(row=1, column=0, columnspan=2, sticky="new")
 
         # Row 2: buttons for setting the alarm and exiting
@@ -123,7 +123,7 @@ class Clock:
         self.alarm_indicator = tk.Label(top, image=photo)
         self.alarm_indicator.image = photo  # keep a reference!
 
-        # check for exisitng alarm in cron
+        # check for existing alarm in cron and set indicator to main window
         if self.current_alarm:
             self.set_alarm_status_message(self.current_alarm)
 
@@ -186,7 +186,7 @@ class Clock:
 
     def set_alarm(self):
         """Callback for "Set alarm" button: add a new cron entry for alarm and
-        display a message for the user.
+        display a message for the user. Existing cron alarms will be overwritten.
         """
         try:
             entry_time = self.alarm_time_container.get()
