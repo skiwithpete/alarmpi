@@ -13,16 +13,19 @@ import dns.exception
 class AlarmEnv:
 
     def __init__(self, config_file):
-        """Read configurations from file."""
-        # Create a ConfigParser and read the config file
+        self.config_file = config_file
         self.config = configparser.ConfigParser()
 
-        filenames = self.config.read(config_file)
+    def setup(self):
+        """Setup the environment: parse and validate the configuration file and test
+        for network connectivity.
+        """
+        filenames = self.config.read(self.config_file)
         # config.read modifies the config object in place and returns list of file names read succesfully
         if not filenames:
-            raise RuntimeError("Failed reading config file: {}".format(config_file))
+            raise RuntimeError("Failed reading config file: {}".format(self.config_file))
 
-        # Test for network connection, contents of the alarm depends on whether there is connection
+        self.validate_config()
         self.netup = self._testnet()
 
     def _testnet(self):
@@ -137,7 +140,7 @@ class AlarmEnv:
     def config_has_match(self, section, option, value):
         """Check if config has a section and a key/value pair matching input."""
         try:
-            section_value = self.config.get(section, option)
+            section_value = self.get_value(section, option)
             return section_value == value
         except (configparser.NoSectionError, configparser.NoOptionError):
             return False
@@ -158,10 +161,10 @@ class AlarmEnv:
 
         return sections
 
-    def get_enabled_content_sections(self):
-        """Return names of enabled sections whose 'type' is 'content'."""
+    def get_enabled_sections(self, section_type):
+        """Return names of sections sections whose 'type' is section_type (either 'content' or 'tts')."""
         sections = [s for s in self.get_sections(exclude_main=True) if
-                    self.config_has_match(s, "type", "content") and
+                    self.config_has_match(s, "type", section_type) and
                     self.config_has_match(s, "enabled", "1")
                     ]
         return sections
