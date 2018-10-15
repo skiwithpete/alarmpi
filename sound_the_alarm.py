@@ -4,6 +4,7 @@ import subprocess
 import argparse
 import importlib
 import os.path
+import sys
 
 import pydub
 import pydub.playback
@@ -54,12 +55,12 @@ def main(alarm_env):
 
 def generate_content(alarm_env):
     """Loop through the configuration file and process each enabled item."""
-    sections = alarm_env.get_enabled_content_sections()
+    content_sections = alarm_env.get_enabled_sections("content")
 
     # for each section get the handler module and create the approriate
     # instance
     contents = []
-    for section_name in sections:
+    for section_name in content_sections:
         class_ = get_content_parser_class(alarm_env, section_name)
 
         # create an instance using the config section
@@ -83,10 +84,7 @@ def get_tts_client(alarm_env):
     """Determine which TTS engine to use based on the enabled tts sections
     in the config file. First enabled section is used.
     """
-    tts = [s for s in alarm_env.get_sections(exclude_main=True) if
-           alarm_env.config_has_match(s, "type", "tts") and
-           alarm_env.config_has_match(s, "enabled", "1")
-           ]
+    tts = alarm_env.get_enabled_sections("tts")
 
     # Instantiate the correct class
     if tts:
@@ -105,9 +103,7 @@ def get_tts_client(alarm_env):
 
 
 def get_content_parser_class(alarm_env, section_name):
-    """Given config file section name, create a handler instance, ie. an
-    instance of the class matching the listed handler module.
-    """
+    """Given config file handler section name, return the class of the handler."""
     # use importlib to dynamically import the correct module within
     # the 'handlers' package.
     handler_module_name = alarm_env.get_value(section_name, "handler")[:-3]
@@ -128,15 +124,16 @@ def play_beep():
     # /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config
     # use the sys.argv to format an absolute path to the sound file.
     # This is a bit of a hack, there's probably a better way...
-    import sys
 
     path = os.path.abspath("resources/Cool-alarm-tone-notification-sound.mp3")
     if len(sys.argv) > 1:
-        base = os.path.dirname(sys.argv[0])
+        base = os.path.dirname(sys.argv[1])  # get dirname from sound_the_alarm.py
         path = os.path.join(base, "resources", "Cool-alarm-tone-notification-sound.mp3")
 
     beep = pydub.AudioSegment.from_mp3(path)
     pydub.playback.play(beep)
+
+    return path
 
 
 def play_radio(alarm_env):
@@ -161,7 +158,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     alarm_env = alarmenv.AlarmEnv(args.config)
-    alarm_env.validate_config()
+    alarm_env.setup()
 
     if args.init_config:
         alarm_env.write_default_configuration()
