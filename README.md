@@ -55,7 +55,7 @@ I've made a number of changed to the original project:
  * Reorganized the file structure
  * Changed which text-to-speech engines are available, see below
  * Changed audio processing to use in-memory objects, thus removing the need to setup a ramdrive
- * Added unit tests (although the test suite is a bit light)
+ * Added unit tests
 
 
 
