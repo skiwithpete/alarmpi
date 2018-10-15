@@ -44,8 +44,8 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
             sunset = response_dictionary['query']['results']['channel']['astronomy']['sunset']
 
             # convert single digit minute to double digit for better speech synthesis
-            sunrise = self.format_time_string(sunrise)
-            sunset = self.format_time_string(sunset)
+            sunrise = YahooWeatherClient.format_time_string(sunrise)
+            sunset = YahooWeatherClient.format_time_string(sunset)
 
             if wind:
                 wind = round(float(wind), 1)
@@ -104,7 +104,8 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
 
         self.content = weather_yahoo
 
-    def format_time_string(self, s):
+    @staticmethod
+    def format_time_string(s):
         """Format API response sunset/sunrise time from 8:3 am to 8:03 am."""
         p = datetime.datetime.strptime(s, "%I:%M %p")
         return p.strftime("%I:%M %p")
