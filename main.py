@@ -13,4 +13,5 @@ import clock
 
 if __name__ == "__main__":
     app = clock.Clock()
+    app.create_main_window()
     app.root.mainloop()

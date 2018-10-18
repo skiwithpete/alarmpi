@@ -5,6 +5,7 @@ A Tkinter app displaying the current time and for setting up an alarm via a
 cron entry.
 """
 
+import datetime
 import time
 import sys
 import os
@@ -16,15 +17,43 @@ from PIL import Image, ImageTk
 
 class Clock:
 
+    # day of week range for the alarm in cron syntax
+    ALARM_DOW = "1-5"
+
     def __init__(self):
         """Create the root window for displaying time."""
+        self.root = tk.Tk()
+        self.cron = CronWriter()
+        # store current alarm time from cron as HH:MM
+        self.current_alarm_time = self.cron.get_current_alarm()
+
+        # init StringVars for various widgets needed in multiple methods
+        # 1 main window:
+        self.clock_time_var = tk.StringVar()  # current time
+        self.clock_alarm_indicator_var = tk.StringVar()  # alarm time
+        self.clock_alarm_indicator_var.set(self.current_alarm_time)
+
+        # 2 alarm setup window
+        self.alarm_time_var = tk.StringVar()  # alarm time
+        self.alarm_time_var.set("00:00")
+        self.alarm_status_var = tk.StringVar()  # status messages ('alarm set', 'invalid value', etc.)
+
+        # Current active alarm display should be cleared if no active alarm
+        # for the next day and re-set if alarm is active the next day
+        # (ie. don't show alarm as active during weekends)
+        # Add bindings for clearing and setting the active alarm label.
+        self.root.bind_all("<Button-1>", self.update_active_alarm_indicator)
+
+        self.tick()
+
+    def create_main_window(self):
+        """Create the main window. Contains labels for current and alarm time as well as
+        buttons for accessing the alarm setup window.
+        """
+        # rows: 3, columns: 2
         RED = "#FF1414"
         BLACK = "#090201"
 
-        self.cron = CronWriter()
-        self.current_alarm = self.cron.get_current_alarm()
-
-        self.root = tk.Tk()
         self.format_window(self.root, dimensions=(600, 320), title="Clock", bg=BLACK)
         # self.root.resizable(0, 0) #Don't allow resizing
 
@@ -36,37 +65,30 @@ class Clock:
             tk.Grid.rowconfigure(self.root, y, weight=1)
 
         # Row 0: label for displaying current time
-        self.clock_label = tk.Label(self.root, font=("times", 46, "bold"), fg=RED, bg=BLACK)
-        self.clock_label.grid(row=0, column=0, ipadx=50, columnspan=2, rowspan=1,
-                              sticky="sew")
+        clock_label = tk.Label(self.root, font=("times", 46, "bold"),
+                               textvariable=self.clock_time_var, fg=RED, bg=BLACK)
+        clock_label.grid(row=0, column=0, ipadx=50, columnspan=2, rowspan=1,
+                         sticky="sew")
 
-        # Row 1: label for alarm time (if set)
-        self.root_alarm_time_container = tk.StringVar()
-        self.root_alarm_time_container.set(self.current_alarm)
+        # Row 1: label for showing set alarm time (if any)
         alarm_time_label = tk.Label(
-            self.root, font=("times", 18, "bold"), textvariable=self.root_alarm_time_container, fg=RED, bg=BLACK)
+            self.root, font=("times", 18, "bold"), textvariable=self.clock_alarm_indicator_var, fg=RED, bg=BLACK)
         alarm_time_label.grid(row=1, column=0, columnspan=2, sticky="new")
 
         # Row 2: buttons for setting the alarm and exiting
         tk.Button(self.root, text="Set alarm",
-                  command=self.open_alarm_window).grid(row=2, column=0, sticky="nsew")
+                  command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
 
         tk.Button(self.root, text="Close",
                   command=self.root.destroy).grid(row=2, column=1, sticky="nsew")
 
-        self.tick()
-
-    def tick(self):
-        """Update the current time value every 1 second."""
-        s = time.strftime('%H:%M:%S')
-        if s != self.clock_label["text"]:
-            self.clock_label["text"] = s
-        self.clock_label.after(1000, self.tick)
-
-    def open_alarm_window(self):
-        """Create a new window for scheduling the alarm.
-        rows: 4 columns: 7
+    def create_alarm_window(self):
+        """Create a new window for scheduling the alarm. Contains toggle buttons
+        for setting the minute and hour value, labels for displaying the selection
+        and buttons for confirming.
         """
+        # rows: 4 columns: 7
+
         top = tk.Toplevel()
         self.format_window(top, dimensions=(500, 230), title="Set alarm")
 
@@ -107,14 +129,11 @@ class Clock:
             )
             hour_button.grid(row=row, column=column, padx=padx, sticky="nsew")
 
-        # label for showing the alarm time between the hour and minute selectors
-        self.alarm_time_container = tk.StringVar()
-        self.alarm_time_container.set("00:00")
-        tk.Label(top, textvariable=self.alarm_time_container).grid(row=1, column=3)
+        tk.Label(top, textvariable=self.alarm_time_var).grid(row=1, column=3)
 
         # label for displaying status messages upon setting the alarm
-        self.alarm_status_container = tk.StringVar()
-        tk.Label(top, textvariable=self.alarm_status_container).grid(row=2, column=3)
+
+        tk.Label(top, textvariable=self.alarm_status_var).grid(row=2, column=3)
 
         image = Image.open("resources/alarm-1673577_640.png")
         image = image.resize((28, 28), Image.ANTIALIAS)
@@ -124,8 +143,8 @@ class Clock:
         self.alarm_indicator.image = photo  # keep a reference!
 
         # check for existing alarm in cron and set indicator to main window
-        if self.current_alarm:
-            self.set_alarm_status_message(self.current_alarm)
+        if self.current_alarm_time:
+            self.set_alarm_status_message(self.current_alarm_time)
 
         # minute selectors on the right (rows 0-2, columns 4-6)
         tk.Label(top, text="Minute").grid(row=0, column=4, columnspan=3)
@@ -165,12 +184,12 @@ class Clock:
             row=3, column=5, rowspan=2, columnspan=2, pady=(10, 0), sticky="nsew")
 
     def update_alarm_display_time(self, type_, value):
-        """Given a type and a value update the alarm time label in the "set alarm" window.
+        """Given a type and a value, update the alarm time label in the alarm setup window.
         Args:
-            type (string): Either 'hour' or 'minute'. Determines the part of the time to update.
+            type_ (string): Either 'hour' or 'minute'. Determines the part of the time to update.
             value (int): The value to add to existing hour or minute part of the alarm time.
         """
-        old_alarm_time = self.alarm_time_container.get()
+        old_alarm_time = self.alarm_time_var.get()
         hour = int(old_alarm_time.split(":")[0])
         minute = int(old_alarm_time.split(":")[1])
 
@@ -182,17 +201,18 @@ class Clock:
             new_minute = minute + value
             new_value = str(hour).zfill(2) + ":" + str(new_minute).zfill(2)
 
-        self.alarm_time_container.set(new_value)
+        self.alarm_time_var.set(new_value)
 
     def set_alarm(self):
-        """Callback for "Set alarm" button: add a new cron entry for alarm and
-        display a message for the user. Existing cron alarms will be overwritten.
+        """Callback for "Set alarm" button: write a new cron entry for the alarm and
+        display a message for the user. Existing cron alarms will be overwritten
+        Invalid time values are not accepted.
         """
         try:
-            entry_time = self.alarm_time_container.get()
+            entry_time = self.alarm_time_var.get()
             t = time.strptime(entry_time, "%H:%M")
         except ValueError:
-            self.alarm_status_container.set("Invalid time")
+            self.alarm_status_var.set("Invalid time")
             return
 
         # define a cron entry with absolute paths to the executable and alarm script
@@ -210,10 +230,10 @@ class Clock:
         write a message in the status Label to notify user.
         """
         self.cron.delete_cron_entry()
-        self.alarm_status_container.set("Alarm cleared")
+        self.alarm_status_var.set("Alarm cleared")
         self.alarm_indicator.grid_remove()
 
-        self.root_alarm_time_container.set("")
+        self.clock_alarm_indicator_var.set("")
 
     def set_alarm_status_message(self, time):
         """Helper function for setting the alarm image and message to the
@@ -222,10 +242,47 @@ class Clock:
         # elements in the alarm setup window:
         self.alarm_indicator.grid(row=2, column=2)
         msg = "Alarm set for {}".format(time)
-        self.alarm_status_container.set(msg)
+        self.alarm_status_var.set(msg)
 
         # also set the time to the main window, below current time display
-        self.root_alarm_time_container.set(time)
+        self.clock_alarm_indicator_var.set(time)
+
+    def update_active_alarm_indicator(self, event):
+        """Binding for clearing the label reserved for displaying currently active
+        alarm time in the main window.
+        Alarm plays on weekdays, This function should be fired on all hits
+        occuring after friday's alarm and before sunday evening 21:00.
+        """
+        # get current active alarm time (if set)
+        alarm_time = self.current_alarm_time  # HH:MM
+        # return early if no alarm set
+        if not alarm_time:
+            return
+
+        # Get current day of week and compare active alarm day of week range.
+        # Note: Cron uses sunday=0, datetime uses monday=0
+        now = datetime.datetime.now()
+        dow = now.weekday()
+
+        # create UNIX timestamps for friday's alarm and sunday 21:00
+        t = time.strptime(alarm_time, "%H:%M")
+        friday = now.day + (4 - dow)
+        min_ts = now.replace(day=friday, hour=t.tm_hour, minute=t.tm_min, second=0)
+
+        sunday = now.day + (6 - dow)
+        max_ts = now.replace(day=sunday, hour=21, minute=0, second=0)
+
+        # if it's the weekend, clear the alarm display, else set it
+        if now >= min_ts and now <= max_ts:
+            self.clock_alarm_indicator_var.set("")
+        else:
+            self.clock_alarm_indicator_var.set(alarm_time)
+
+    def tick(self):
+        """Update the current time value in the main clock label every 1 second."""
+        s = time.strftime('%H:%M:%S')
+        self.clock_time_var.set(s)
+        self.root.after(1000, self.tick)
 
     def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
         """Given a Tk or Toplevel element set a width and height and assign it to the
