@@ -31,7 +31,6 @@ class Clock:
         # 1 main window:
         self.clock_time_var = tk.StringVar()  # current time
         self.clock_alarm_indicator_var = tk.StringVar()  # alarm time
-        self.clock_alarm_indicator_var.set(self.current_alarm_time)
 
         # 2 alarm setup window
         self.alarm_time_var = tk.StringVar()  # alarm time
@@ -42,9 +41,7 @@ class Clock:
         # for the next day and re-set if alarm is active the next day
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
-        self.root.bind_all("<Button-1>", self.update_active_alarm_indicator)
-
-        self.tick()
+        self.root.bind("<Button-1>", self.update_active_alarm_indicator)
 
     def create_main_window(self):
         """Create the main window. Contains labels for current and alarm time as well as
@@ -75,12 +72,17 @@ class Clock:
             self.root, font=("times", 18, "bold"), textvariable=self.clock_alarm_indicator_var, fg=RED, bg=BLACK)
         alarm_time_label.grid(row=1, column=0, columnspan=2, sticky="new")
 
+        # only display the alarm time during weekdays
+        self.update_active_alarm_indicator(None)  # use a dummy value as the event
+
         # Row 2: buttons for setting the alarm and exiting
         tk.Button(self.root, text="Set alarm",
                   command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
 
         tk.Button(self.root, text="Close",
                   command=self.root.destroy).grid(row=2, column=1, sticky="nsew")
+
+        self.tick()
 
     def create_alarm_window(self):
         """Create a new window for scheduling the alarm. Contains toggle buttons
@@ -132,7 +134,6 @@ class Clock:
         tk.Label(top, textvariable=self.alarm_time_var).grid(row=1, column=3)
 
         # label for displaying status messages upon setting the alarm
-
         tk.Label(top, textvariable=self.alarm_status_var).grid(row=2, column=3)
 
         image = Image.open("resources/alarm-1673577_640.png")
@@ -244,8 +245,8 @@ class Clock:
         msg = "Alarm set for {}".format(time)
         self.alarm_status_var.set(msg)
 
-        # also set the time to the main window, below current time display
-        self.clock_alarm_indicator_var.set(time)
+        # also set the time to the main window, below current time
+        self.update_active_alarm_indicator(None)
 
     def update_active_alarm_indicator(self, event):
         """Binding for clearing the label reserved for displaying currently active
@@ -264,7 +265,7 @@ class Clock:
         now = datetime.datetime.now()
         dow = now.weekday()
 
-        # create UNIX timestamps for friday's alarm and sunday 21:00
+        # create timestamps for friday's alarm and sunday 21:00
         t = time.strptime(alarm_time, "%H:%M")
         friday = now.day + (4 - dow)
         min_ts = now.replace(day=friday, hour=t.tm_hour, minute=t.tm_min, second=0)
@@ -280,7 +281,7 @@ class Clock:
 
     def tick(self):
         """Update the current time value in the main clock label every 1 second."""
-        s = time.strftime('%H:%M:%S')
+        s = time.strftime("%H:%M:%S")
         self.clock_time_var.set(s)
         self.root.after(1000, self.tick)
 
