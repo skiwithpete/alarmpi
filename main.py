@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+import argparse
 import clock
 
 
@@ -12,6 +12,11 @@ import clock
 
 
 if __name__ == "__main__":
-    app = clock.Clock()
-    app.create_main_window()
-    app.root.mainloop()
+    parser = argparse.ArgumentParser(
+        description="Run alarmpi GUI")
+    parser.add_argument("config", metavar="config", nargs="?",
+                        default="alarm.config", help="path to an alarm configuration file")
+    args = parser.parse_args()
+
+    app = clock.Clock(args.config)
+    app.run()

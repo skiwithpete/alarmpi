@@ -20,10 +20,10 @@ class Clock:
     # day of week range for the alarm in cron syntax
     ALARM_DOW = "1-5"
 
-    def __init__(self):
+    def __init__(self, config_file):
         """Create the root window for displaying time."""
         self.root = tk.Tk()
-        self.cron = CronWriter()
+        self.cron = CronWriter(config_file)
         # store current alarm time from cron as HH:MM
         self.current_alarm_time = self.cron.get_current_alarm()
 
@@ -42,6 +42,13 @@ class Clock:
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
         self.root.bind("<Button-1>", self.update_active_alarm_indicator)
+
+    def run(self):
+        """Validate configuration file path, create the main window run mainloop.
+        """
+        self.cron.validate_config_path()
+        self.create_main_window()
+        self.root.mainloop()
 
     def create_main_window(self):
         """Create the main window. Contains labels for current and alarm time as well as
@@ -222,7 +229,7 @@ class Clock:
             min=t.tm_min,
             python_exec=sys.executable,
             path_to_alarm=self.cron.alarm_path,
-            path_to_config=self.cron.alarm_config_path)
+            path_to_config=self.cron.config_file)
         self.cron.add_cron_entry(entry)
         self.set_alarm_status_message(entry_time)
 
@@ -311,10 +318,10 @@ class Clock:
 class CronWriter:
     """Helper class for writes cron entries. Uses crontab via subprocess."""
 
-    def __init__(self):
-        # format an absolute path to sound_the_alarm.py
+    def __init__(self, config_file):
+        # format absolute paths to sound_the_alarm.py and the config file
         self.alarm_path = os.path.abspath("sound_the_alarm.py")
-        self.alarm_config_path = os.path.abspath("alarm.config")  # TODO parametrize?
+        self.config_file = os.path.abspath(config_file)
 
     def get_crontab(self):
         """Return the current crontab"""
@@ -375,3 +382,8 @@ class CronWriter:
 
         p = subprocess.Popen(["crontab", "-", crontab], stdin=subprocess.PIPE)
         p.communicate(input=crontab.encode("utf8"))
+
+    def validate_config_path(self):
+        """Check whether self.config_file exists."""
+        if not os.path.isfile(self.config_file):
+            raise RuntimeError("No such file: {}".format(self.config_file))
