@@ -192,7 +192,9 @@ class Clock:
             row=3, column=5, rowspan=2, columnspan=2, pady=(10, 0), sticky="nsew")
 
     def update_alarm_display_time(self, type_, value):
-        """Given a type and a value, update the alarm time label in the alarm setup window.
+        """Given a type and a value, update the label displaying the currently selected alarm time
+        in the alarm setup window. Note: output may be invalid time value such as "16:64". These are
+        invalidated in the alarm setup callback.
         Args:
             type_ (string): Either 'hour' or 'minute'. Determines the part of the time to update.
             value (int): The value to add to existing hour or minute part of the alarm time.
@@ -258,8 +260,9 @@ class Clock:
     def update_active_alarm_indicator(self, event):
         """Binding for clearing the label reserved for displaying currently active
         alarm time in the main window.
-        Alarm plays on weekdays, This function should be fired on all hits
-        occuring after friday's alarm and before sunday evening 21:00.
+        Alarm plays on weekdays only, this function hides the alarm time indicator during
+        weekends. It should be fired on all hits occuring after friday's alarm
+        and before sunday evening 21:00.
         """
         # get current active alarm time (if set)
         alarm_time = self.current_alarm_time  # HH:MM
@@ -267,24 +270,27 @@ class Clock:
         if not alarm_time:
             return
 
-        # Get current day of week and compare active alarm day of week range.
-        # Note: Cron uses sunday=0, datetime uses monday=0
+        if self.is_weekend_after_alarm():
+            self.clock_alarm_indicator_var.set("")
+        else:
+            self.clock_alarm_indicator_var.set(alarm_time)
+
+    def is_weekend_after_alarm(self):
+        """Helper function for checking whether current datetime is between friday's alarm
+        and sunday 21:00.
+        """
         now = datetime.datetime.now()
-        dow = now.weekday()
+        dow = now.weekday()  # 0 == monday
 
         # create timestamps for friday's alarm and sunday 21:00
-        t = time.strptime(alarm_time, "%H:%M")
+        t = time.strptime(self.current_alarm_time, "%H:%M")  # HH:MM
         friday = now.day + (4 - dow)
         min_ts = now.replace(day=friday, hour=t.tm_hour, minute=t.tm_min, second=0)
 
         sunday = now.day + (6 - dow)
         max_ts = now.replace(day=sunday, hour=21, minute=0, second=0)
 
-        # if it's the weekend, clear the alarm display, else set it
-        if now >= min_ts and now <= max_ts:
-            self.clock_alarm_indicator_var.set("")
-        else:
-            self.clock_alarm_indicator_var.set(alarm_time)
+        return now >= min_ts and now <= max_ts
 
     def tick(self):
         """Update the current time value in the main clock label every 1 second."""
