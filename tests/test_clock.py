@@ -34,7 +34,7 @@ class ClockTestCase(TestCase):
         new_value = self.app.alarm_time_var.get()
         self.assertEqual(new_value, "00:10")
 
-    @patch("clock.Clock.is_weekend_after_alarm")
+    @patch("clock.Clock.is_weekend")
     def test_alarm_indicator_off_during_weekend(self, mock_weekend):
         """Is active alarm indicator in the main window set off during the weekend?"""
         mock_weekend.return_value = True
@@ -43,7 +43,7 @@ class ClockTestCase(TestCase):
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "")
 
-    @patch("clock.Clock.is_weekend_after_alarm")
+    @patch("clock.Clock.is_weekend")
     def test_alarm_indicator_on_during_weekdays(self, mock_weekend):
         """Is active alarm indicator in the main window set pn during weekdays?"""
         mock_weekend.return_value = False

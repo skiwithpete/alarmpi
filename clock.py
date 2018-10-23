@@ -33,8 +33,7 @@ class Clock:
         self.clock_alarm_indicator_var = tk.StringVar()  # alarm time
 
         # 2 alarm setup window
-        self.alarm_time_var = tk.StringVar()  # alarm time
-        self.alarm_time_var.set("00:00")
+        self.alarm_time_var = tk.StringVar()  # selected alarm time
         self.alarm_status_var = tk.StringVar()  # status messages ('alarm set', 'invalid value', etc.)
 
         # Current active alarm display should be cleared if no active alarm
@@ -42,6 +41,12 @@ class Clock:
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
         self.root.bind("<Button-1>", self.update_active_alarm_indicator)
+
+    def tick(self):
+        """Update the current time value in the main clock label every 1 second."""
+        s = time.strftime("%H:%M:%S")
+        self.clock_time_var.set(s)
+        self.root.after(1000, self.tick)
 
     def run(self):
         """Validate configuration file path, create the main window run mainloop.
@@ -99,6 +104,7 @@ class Clock:
         # rows: 4 columns: 7
 
         top = tk.Toplevel()
+        self.alarm_time_var.set("00:00")
         self.format_window(top, dimensions=(500, 230), title="Set alarm")
 
         # set weights to ensure widgets take free space within their cells
@@ -199,7 +205,9 @@ class Clock:
             type_ (string): Either 'hour' or 'minute'. Determines the part of the time to update.
             value (int): The value to add to existing hour or minute part of the alarm time.
         """
+        # get the currently displayed value in the setup window as base
         old_alarm_time = self.alarm_time_var.get()
+
         hour = int(old_alarm_time.split(":")[0])
         minute = int(old_alarm_time.split(":")[1])
 
@@ -233,6 +241,7 @@ class Clock:
             path_to_alarm=self.cron.alarm_path,
             path_to_config=self.cron.config_file)
         self.cron.add_cron_entry(entry)
+        self.current_alarm_time = entry_time
         self.set_alarm_status_message(entry_time)
 
     def clear_alarm(self):
@@ -243,6 +252,7 @@ class Clock:
         self.alarm_status_var.set("Alarm cleared")
         self.alarm_indicator.grid_remove()
 
+        self.current_alarm_time = ""
         self.clock_alarm_indicator_var.set("")
 
     def set_alarm_status_message(self, time):
@@ -266,16 +276,15 @@ class Clock:
         """
         # get current active alarm time (if set)
         alarm_time = self.current_alarm_time  # HH:MM
-        # return early if no alarm set
         if not alarm_time:
             return
 
-        if self.is_weekend_after_alarm():
+        if self.is_weekend():
             self.clock_alarm_indicator_var.set("")
         else:
             self.clock_alarm_indicator_var.set(alarm_time)
 
-    def is_weekend_after_alarm(self):
+    def is_weekend(self):
         """Helper function for checking whether current datetime is between friday's alarm
         and sunday 21:00.
         """
@@ -291,12 +300,6 @@ class Clock:
         max_ts = now.replace(day=sunday, hour=21, minute=0, second=0)
 
         return now >= min_ts and now <= max_ts
-
-    def tick(self):
-        """Update the current time value in the main clock label every 1 second."""
-        s = time.strftime("%H:%M:%S")
-        self.clock_time_var.set(s)
-        self.root.after(1000, self.tick)
 
     def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
         """Given a Tk or Toplevel element set a width and height and assign it to the
