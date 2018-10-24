@@ -34,6 +34,7 @@ class Clock:
 
         # 2 alarm setup window
         self.alarm_time_var = tk.StringVar()  # selected alarm time
+        self.alarm_time_var.set("00:00")
         self.alarm_status_var = tk.StringVar()  # status messages ('alarm set', 'invalid value', etc.)
 
         # Current active alarm display should be cleared if no active alarm
@@ -104,7 +105,6 @@ class Clock:
         # rows: 4 columns: 7
 
         top = tk.Toplevel()
-        self.alarm_time_var.set("00:00")
         self.format_window(top, dimensions=(500, 230), title="Set alarm")
 
         # set weights to ensure widgets take free space within their cells
@@ -144,6 +144,8 @@ class Clock:
             )
             hour_button.grid(row=row, column=column, padx=padx, sticky="nsew")
 
+        # reset the selected alarm label every time the setup window is opened
+        self.alarm_time_var.set("00:00")
         tk.Label(top, textvariable=self.alarm_time_var).grid(row=1, column=3)
 
         # label for displaying status messages upon setting the alarm
@@ -279,27 +281,29 @@ class Clock:
         if not alarm_time:
             return
 
-        if self.is_weekend():
+        now = datetime.datetime.now()
+        if self.weekend(now):
             self.clock_alarm_indicator_var.set("")
         else:
             self.clock_alarm_indicator_var.set(alarm_time)
 
-    def is_weekend(self):
-        """Helper function for checking whether current datetime is between friday's alarm
+    def weekend(self, d):
+        """Helper function. Check whether a datetime d is  between friday's alarm
         and sunday 21:00.
         """
-        now = datetime.datetime.now()
-        dow = now.weekday()  # 0 == monday
+        dow = d.weekday()  # 0 == monday
+        alarm_time = time.strptime(self.current_alarm_time, "%H:%M")
 
-        # create timestamps for friday's alarm and sunday 21:00
-        t = time.strptime(self.current_alarm_time, "%H:%M")  # HH:MM
-        friday = now.day + (4 - dow)
-        min_ts = now.replace(day=friday, hour=t.tm_hour, minute=t.tm_min, second=0)
+        # create dummy datetimes for same date as d and time values matching the alarm
+        # display boundaries
+        min_time = d.replace(hour=alarm_time.tm_hour, minute=alarm_time.tm_min)
+        max_time = d.replace(hour=21, minute=0)
 
-        sunday = now.day + (6 - dow)
-        max_ts = now.replace(day=sunday, hour=21, minute=0, second=0)
+        friday = (dow == 4 and d >= min_time)
+        saturday = (dow == 5)
+        sunday = (dow == 6 and d <= max_time)
 
-        return now >= min_ts and now <= max_ts
+        return (friday or saturday or sunday)
 
     def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
         """Given a Tk or Toplevel element set a width and height and assign it to the
