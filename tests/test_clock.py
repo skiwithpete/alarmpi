@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-
+import datetime
 import unittest
 from unittest import TestCase
 from unittest.mock import patch
@@ -12,15 +12,10 @@ import clock
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
-    @classmethod
     @patch("clock.CronWriter.get_current_alarm")
-    def setUpClass(self, mock_get_current_alarm):
+    def setUp(self, mock_get_current_alarm):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
         self.app = clock.Clock("")
-
-    def tearDown(self):
-        """Set Clock instance variables back to initial values."""
-        self.app.alarm_time_var.set("00:00")
 
     def test_hour_update_alarm_display_time(self):
         """Does update_alarm_display_time set proper value on hour input?"""
@@ -34,7 +29,43 @@ class ClockTestCase(TestCase):
         new_value = self.app.alarm_time_var.get()
         self.assertEqual(new_value, "00:10")
 
-    @patch("clock.Clock.is_weekend")
+    @patch("clock.Clock.set_alarm_status_message")
+    @patch("clock.CronWriter.add_cron_entry")
+    def test_set_alarm_changes_current_alarm_time(self, mock_add_cron_entry, mock_set_status_message):
+        """Does set_alarm process the correct tasks:
+          1 call CronWriter
+          2 update the internal alarm time instance variable
+          3 write status message to alarm setup window for user
+        """
+        # run update_alarm_display_time so set_alarm reads a value other than 00:00
+        self.app.update_alarm_display_time("hour", 17)
+        self.app.set_alarm()
+
+        # was CronWriter used?
+        mock_add_cron_entry.assert_called()
+
+        # was current_alarm_time changed?
+        res = self.app.current_alarm_time
+        self.assertEqual(res, "17:00")
+
+        # was a new status message written to the setup window?
+        mock_set_status_message.assert_called()
+
+    @patch("clock.CronWriter.delete_cron_entry")
+    def test_clear_alarm_changes_current_alarm_time(self, mock_delete_cron_entry):
+        """Does clear_alarm process proper clearing tasks?"""
+        # run update_alarm_display_time so set_alarm reads a value other than 00:00
+        self.app.create_alarm_window()
+        self.app.clear_alarm()
+
+        # was CronWriter used?
+        mock_delete_cron_entry.assert_called()
+
+        # was current_alarm_time changed?
+        res = self.app.current_alarm_time
+        self.assertEqual(res, "")
+
+    @patch("clock.Clock.weekend")
     def test_alarm_indicator_off_during_weekend(self, mock_weekend):
         """Is active alarm indicator in the main window set off during the weekend?"""
         mock_weekend.return_value = True
@@ -43,14 +74,36 @@ class ClockTestCase(TestCase):
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "")
 
-    @patch("clock.Clock.is_weekend")
+    @patch("clock.Clock.weekend")
     def test_alarm_indicator_on_during_weekdays(self, mock_weekend):
-        """Is active alarm indicator in the main window set pn during weekdays?"""
+        """Is active alarm indicator in the main window set on during weekdays?"""
         mock_weekend.return_value = False
 
         self.app.update_active_alarm_indicator(None)
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "17:00")
+
+    def test_weekend_detection(self):
+        """Are dates between friday's alarm time and sunday 21:00 recognized
+        as weekend?
+        """
+        friday_after_alarm = datetime.datetime(2018, 10, 19, 17, 2)
+        friday_before_alarm = datetime.datetime(2018, 10, 19, 4, 2)
+        saturday = datetime.datetime(2018, 9, 15, 1, 0)
+        tuesday = datetime.datetime(2018, 10, 9, 1, 0)
+        sunday_after_alarm = datetime.datetime(2019, 3, 24, 23, 17)
+
+        friday_after_alarm_response = self.app.weekend(friday_after_alarm)
+        friday_before_alarm_response = self.app.weekend(friday_before_alarm)
+        saturday_response = self.app.weekend(saturday)
+        tuesday_response = self.app.weekend(tuesday)
+        sunday_after_alarm_response = self.app.weekend(sunday_after_alarm)
+
+        self.assertTrue(friday_after_alarm_response)
+        self.assertFalse(friday_before_alarm_response)
+        self.assertTrue(saturday_response)
+        self.assertFalse(tuesday_response)
+        self.assertFalse(sunday_after_alarm_response)
 
 
 class CronWriterTestCase(TestCase):
@@ -69,7 +122,7 @@ class CronWriterTestCase(TestCase):
         # Mock crontable
         # m h  dom mon dow   command
 
-        0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+        0 5 * * 1 tar - zcf / var/backups/home.tgz / home/
 
         """.encode("utf8")  # return value should be bytes
         res = self.cron_writer.get_current_alarm()
