@@ -101,7 +101,7 @@ The first form open the GUI for displaying current time and scheduling the alarm
 
 In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`. This means that when scheduled, the alarm will play regardless of whether the GUI is running or not!
 
-The optional argument in both forms is a path to a configuration file for customizing the alarm, see `config_readme.md` for instructions. By default `alarm.config` will be used.
+The optional argument in both forms is a path to a configuration file for customizing the alarm, see [config_readme.md](./config_readme.md) for instructions. By default `alarm.config` will be used.
 
 Note that while the alarm time can be set from the GUI, the date cannot. The alarm is hard coded to occur every monday to friday at the specified time.
 
