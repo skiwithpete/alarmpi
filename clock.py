@@ -11,8 +11,9 @@ import sys
 import os
 import subprocess
 import tkinter as tk
-
 from PIL import Image, ImageTk
+
+import sound_the_alarm
 
 
 class Clock:
@@ -68,22 +69,22 @@ class Clock:
         # self.root.resizable(0, 0) #Don't allow resizing
 
         # set row and column weights so widgets expand to all available space
-        for x in range(2):
-            tk.Grid.columnconfigure(self.root, x, weight=1)
+        for i in range(4):
+            tk.Grid.columnconfigure(self.root, i, weight=1)
 
-        for y in range(3):
-            tk.Grid.rowconfigure(self.root, y, weight=1)
+        for i in range(3):
+            tk.Grid.rowconfigure(self.root, i, weight=1)
 
         # Row 0: label for displaying current time
         clock_label = tk.Label(self.root, font=("times", 46, "bold"),
                                textvariable=self.clock_time_var, fg=RED, bg=BLACK)
-        clock_label.grid(row=0, column=0, ipadx=50, columnspan=2, rowspan=1,
+        clock_label.grid(row=0, column=1, ipadx=50, columnspan=2, rowspan=1,
                          sticky="sew")
 
         # Row 1: label for showing set alarm time (if any)
         alarm_time_label = tk.Label(
             self.root, font=("times", 18, "bold"), textvariable=self.clock_alarm_indicator_var, fg=RED, bg=BLACK)
-        alarm_time_label.grid(row=1, column=0, columnspan=2, sticky="new")
+        alarm_time_label.grid(row=1, column=1, columnspan=2, sticky="new")
 
         # only display the alarm time during weekdays
         self.update_active_alarm_indicator(None)  # use a dummy value as the event
@@ -92,8 +93,14 @@ class Clock:
         tk.Button(self.root, text="Set alarm",
                   command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
 
+        tk.Button(self.root, text="Radio",
+                  command=lambda url: sound_the_alarm.play_radio(url)).grid(row=2, column=1, sticky="nsew")
+
+        tk.Button(self.root, text="Brightness",
+                  command=self.create_alarm_window).grid(row=2, column=2, sticky="nsew")
+
         tk.Button(self.root, text="Close",
-                  command=self.root.destroy).grid(row=2, column=1, sticky="nsew")
+                  command=self.root.destroy).grid(row=2, column=3, sticky="nsew")
 
         self.tick()
 
@@ -326,6 +333,13 @@ class Clock:
         dy = (w_height/2) - (height/2)
 
         widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
+
+    @staticmethod
+    def set_screen_brightness(brightness):
+        """Set screen brightness."""
+        cmd = 'sh -c "echo {} > /sys/class/backlight/rpi_backlight/brightness"'.format(
+            brightness).split()
+        subprocess.run(cmd)
 
 
 class CronWriter:
