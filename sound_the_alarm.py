@@ -131,7 +131,7 @@ class Alarm:
     @staticmethod
     def play_radio(url, timeout):
         """Play the radio stream defined in the configuration using mplayer."""
-        cmd = "/usr/bin/mplayer -nolirc -playlist {}".format(url).split()
+        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
         subprocess.run(cmd, timeout=timeout)
 
 
