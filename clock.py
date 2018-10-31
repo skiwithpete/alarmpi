@@ -89,15 +89,24 @@ class Clock:
         # only display the alarm time during weekdays
         self.update_active_alarm_indicator(None)  # use a dummy value as the event
 
-        # Row 2: buttons for setting the alarm and exiting
+        # Row 2: control buttons
         tk.Button(self.root, text="Set alarm",
                   command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
 
-        tk.Button(self.root, text="Radio",
-                  command=lambda url: sound_the_alarm.play_radio(url)).grid(row=2, column=1, sticky="nsew")
+        # 'Play radio' button as a CheckButton for on/off effects
+        self.radio_var = tk.IntVar()
+        url = "https://www.yle.fi/livestream/radiosuomi.asx"
+        radio_button = tk.Checkbutton(
+            self.root,
+            text="Radio",
+            variable=self.radio_var,
+            indicatoron=False,
+            command=lambda: sound_the_alarm.Alarm.play_radio(url, None),
+        )
+        radio_button.grid(row=2, column=1, sticky="nsew")
 
         tk.Button(self.root, text="Brightness",
-                  command=self.create_alarm_window).grid(row=2, column=2, sticky="nsew")
+                  command=Clock.set_screen_brightness).grid(row=2, column=2, sticky="nsew")
 
         tk.Button(self.root, text="Close",
                   command=self.root.destroy).grid(row=2, column=3, sticky="nsew")
@@ -335,11 +344,23 @@ class Clock:
         widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
 
     @staticmethod
-    def set_screen_brightness(brightness):
-        """Set screen brightness."""
-        cmd = 'sh -c "echo {} > /sys/class/backlight/rpi_backlight/brightness"'.format(
-            brightness).split()
-        subprocess.run(cmd)
+    def set_screen_brightness():
+        """Reads current screen brightness values from file and sets it either high or low."""
+        PATH = "/sys/class/backlight/rpi_backlight/brightness"
+        LOW = 20
+        HIGH = 255
+
+        with open(PATH) as f:
+            brightness = int(f.read())
+
+        # set to furthest away from current brightness
+        if abs(brightness-LOW) < abs(brightness-HIGH):
+            new_brightness = HIGH
+        else:
+            new_brightness = LOW
+
+        with open(PATH, "w") as f:
+            f.write(str(new_brightness))
 
 
 class CronWriter:
