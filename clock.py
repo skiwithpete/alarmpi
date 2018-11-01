@@ -25,6 +25,8 @@ class Clock:
         """Create the root window for displaying time."""
         self.root = tk.Tk()
         self.cron = CronWriter(config_file)
+        self.alarm = sound_the_alarm.Alarm(config_file)
+
         # store current alarm time from cron as HH:MM
         self.current_alarm_time = self.cron.get_current_alarm()
 
@@ -95,18 +97,28 @@ class Clock:
 
         # 'Play radio' button as a CheckButton for on/off effects
         self.radio_var = tk.IntVar()
-        url = "https://www.yle.fi/livestream/radiosuomi.asx"
+        url = self.alarm.env.radio_url
         radio_button = tk.Checkbutton(
             self.root,
-            text="Radio",
+            text="Play radio",
             variable=self.radio_var,
             indicatoron=False,
-            command=lambda: sound_the_alarm.Alarm.play_radio(url, None),
+            command=lambda: self.play_radio(url)
+            # command=lambda: sound_the_alarm.Alarm.play_radio(url, None),
         )
         radio_button.grid(row=2, column=1, sticky="nsew")
+        # disable the button if no url provided in the config file
+        if not url:
+            radio_button.config(state=tk.DISABLED)
 
-        tk.Button(self.root, text="Brightness",
-                  command=Clock.set_screen_brightness).grid(row=2, column=2, sticky="nsew")
+        brightness_button = tk.Button(self.root, text="Set brightness",
+                                      command=Clock.set_screen_brightness)
+        brightness_button.grid(row=2, column=2, sticky="nsew")
+
+        # Disable brigtness button if system brightness file does not exist
+        # ie. not running on Raspberry Pi.
+        if not os.path.isfile("/sys/class/backlight/rpi_backlight/brightness"):
+            brightness_button.config(state=tk.DISABLED)
 
         tk.Button(self.root, text="Close",
                   command=self.root.destroy).grid(row=2, column=3, sticky="nsew")
@@ -342,6 +354,18 @@ class Clock:
         dy = (w_height/2) - (height/2)
 
         widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
+
+    def play_radio(self, url):
+        """Open or close a radio stream depending on the current state of the
+        'play radio' button.
+        """
+        if self.radio_var.get() == 1:  # state changed from 0 to 1 => play the radio
+            cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
+            # Run the command via Popen directly to open the stream as a child process without
+            # waiting for it to finish.
+            subprocess.Popen(cmd)
+        else:
+            subprocess.run(["killall", "mplayer"])
 
     @staticmethod
     def set_screen_brightness():
