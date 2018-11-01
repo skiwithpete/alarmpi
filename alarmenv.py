@@ -26,6 +26,7 @@ class AlarmEnv:
             raise RuntimeError("Failed reading config file: {}".format(self.config_file))
 
         self.validate_config()
+        self.radio_url = self.get_value("radio", "url")
         self.netup = self._testnet()
 
     def _testnet(self):
@@ -39,16 +40,17 @@ class AlarmEnv:
             return False
 
     def validate_config(self):
-        """Validate configuration file: checks that other than [main] each section
-        has 'type' and 'enabled' keys and that contents have a 'handler'.
+        """Validate configuration file: checks that
+         1 content and tts sections have 'type', 'enabled' and 'handler' keys
+         2 sections other than [main] have a 'type' key
         """
         try:
-            for section in self.get_sections(exclude_main=True):
+            for section in self.get_sections(excludes=["main"]):
                 section_type = self.get_value(section, "type")
-                self.get_value(section, "enabled")
 
-                if section_type == "content":
+                if section_type in ("content", "tts"):
                     self.get_value(section, "handler")
+                    self.get_value(section, "enabled")
 
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             raise RuntimeError("Invalid configuration: ", e)
@@ -68,8 +70,6 @@ class AlarmEnv:
         [main]
         readaloud=1
         nthost=translate.google.com
-        # Keep the trailing '/' on ramfldr
-        ramfldr=/mnt/ram/
         end=Thats all for now. Have a nice day.
 
         ###################
@@ -130,9 +130,10 @@ class AlarmEnv:
         # Misc taks #
         #############
         [radio]
-        enabled=1
         type=radio
-        url=https://www.yle.fi/livestream/radiosuomi.asx
+        timeout=
+        # url for an internet radio stream, leave empty to disable radio
+        url=
         """
         with open(path, "w") as f:
             f.write(config)
@@ -151,19 +152,17 @@ class AlarmEnv:
     # The following get_ functions are mostly wrappers to get various values from
     # the configuration file (ie. self.config)
 
-    def get_sections(self, exclude_main=False):
-        """Return a list of sections in the configuration file with or without
-        the 'main' section.
-        """
+    def get_sections(self, excludes=None):
+        """Return a list of section names in the configuration file."""
         sections = self.config.sections()
-        if exclude_main:
-            return [s for s in sections if s != "main"]
+        if excludes is None:
+            excludes = []
 
-        return sections
+        return [s for s in sections if s not in excludes]
 
     def get_enabled_sections(self, section_type):
         """Return names of sections sections whose 'type' is section_type (either 'content' or 'tts')."""
-        sections = [s for s in self.get_sections(exclude_main=True) if
+        sections = [s for s in self.get_sections(excludes=["main"]) if
                     self.config_has_match(s, "type", section_type) and
                     self.config_has_match(s, "enabled", "1")
                     ]
