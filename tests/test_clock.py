@@ -12,8 +12,10 @@ import clock
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
+    # @patch("clock.sound_the_alarm.Alarm")
+    @patch("alarmenv.AlarmEnv.setup")
     @patch("clock.CronWriter.get_current_alarm")
-    def setUp(self, mock_get_current_alarm):
+    def setUp(self, mock_get_current_alarm, mock_alarm):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
         self.app = clock.Clock("")
 

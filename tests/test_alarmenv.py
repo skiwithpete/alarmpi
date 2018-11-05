@@ -53,7 +53,7 @@ class AlarmEnvTestCase(TestCase):
         """Does get_sections return section names without the main section?"""
         mock_sections.return_value = ["main", "greeting", "yahoo_weather", "BBC_news", "google_gcp_tts",
                                       "google_translate_tts", "festival_tts", "radio"]
-        read_sections = self.env.get_sections(True)
+        read_sections = self.env.get_sections(["main"])
 
         filtered_sections = ["greeting", "yahoo_weather", "BBC_news", "google_gcp_tts",
                              "google_translate_tts", "festival_tts", "radio"]
