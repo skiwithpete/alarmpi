@@ -17,6 +17,7 @@ import sound_the_alarm
 
 
 class Clock:
+    """A Tkinter GUI for displaying the current time and setting the alarm."""
 
     # day of week range for the alarm in cron syntax
     ALARM_DOW = "1-5"
@@ -68,7 +69,8 @@ class Clock:
         BLACK = "#090201"
 
         self.format_window(self.root, dimensions=(600, 320), title="Clock", bg=BLACK)
-        # self.root.resizable(0, 0) #Don't allow resizing
+        # set main window to fullscreen mode (overrides the dimentions above)
+        self.root.attributes("-fullscreen", True)
 
         # set row and column weights so widgets expand to all available space
         for i in range(4):
@@ -121,7 +123,7 @@ class Clock:
             brightness_button.config(state=tk.DISABLED)
 
         tk.Button(self.root, text="Close",
-                  command=self.root.destroy).grid(row=2, column=3, sticky="nsew")
+                  command=self.destroy).grid(row=2, column=3, sticky="nsew")
 
         self.tick()
 
@@ -316,7 +318,7 @@ class Clock:
             self.clock_alarm_indicator_var.set(alarm_time)
 
     def weekend(self, d):
-        """Helper function. Check whether a datetime d is  between friday's alarm
+        """Helper function. Check whether a datetime d is between friday's alarm
         and sunday 21:00.
         """
         dow = d.weekday()  # 0 == monday
@@ -354,6 +356,12 @@ class Clock:
         dy = (w_height/2) - (height/2)
 
         widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
+
+    def destroy(self):
+        """Destroy the main window and kill any running radio streams."""
+        if self.radio_var.get() == 1:
+            subprocess.run(["killall", "mplayer"])
+        self.root.destroy()
 
     def play_radio(self, url):
         """Open or close a radio stream depending on the current state of the
