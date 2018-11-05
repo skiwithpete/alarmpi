@@ -1,6 +1,6 @@
 
 ## Alarm configuration
-Alarm contents can be configured by editing `alarmpi.config`file.
+Alarm content can be configured by editing `alarmpi.config`.
 The file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used, if any.
 
 ### alarm.config description
@@ -19,7 +19,7 @@ The file specifies which components of the alarm are enabled and which text-to-s
    http://woeid.rosselliot.co.nz/ for WOEID codes.  
 
 
-**Note:** content sections are parsed in the order they appear in the configuration. Therefore greeting should come first.
+**Note:** content sections are parsed in the order they appear in the configuration. Therefore the greeting should come first.
 
 
 #### TTS engines  
@@ -40,14 +40,14 @@ Festival is a general purpose TTS system. Does not require an internet access an
 
 
 **Notes:**
- * the first TTS engine is used even if several are enabled. If all TTS engines are disabled but **readaloud=1** is set, Festival will be used.
-
+ * If more than one TTS engine are enabled, the first will be used.
+ * If all TTS engines are disabled but **readaloud=1** is set, Festival will be used.
  * If **readaloud** is disabled, a beeping sound effect will be played.
 
 **[radio]**  
-Determines the url to the radio stream. Uses `mplayer` system package. The stream is played after all TTS content has been processed. The `timeout` option can be used to specify a time in seconds after which the stream should close.
+Determines the url to the radio stream. Uses the `mplayer` command line movie player to play the stream. The stream is played after all TTS content has been processed and is diabled if no url is provided.
 
-**Note:** If the radio is enabled and the alarm is run via cron, the stream cannot be keyboard interrupted via `Ctr-c` and will play indefinitely by default. Either use the provided `stop.sh` script to kill the alarm (and the stream) or consider setting a `timeout`.
+**Note:** If the radio is enabled and the alarm is run via cron, the stream has to be stopped by terminating the `mplayer` process. Use the provided `stop.sh` script to kill the alarm (and the stream).
 
 ### Using a custom configuration
 You can either modify the provided configuration file `alarm.config` or create a new file and pass that to `sound_the_alarm.py` and `main.py` via a command line argument. To re-create the original configuration file, use the `--init-config` switch.
@@ -65,26 +65,13 @@ Extending the alarm with you're own content is simple:
         self.content = "Text-to-Speech content goes here"
  ```
 
- See any of the existing handlers for reference.
+ See any of the existing handlers for reference. Note that `sound_the_alarm.py` tries to import the first class (in alphabetical order) from each handler. Therefore, your handler should be a single class.
 
- 2. Register the path to your handler in `sound_the_alarm.py`:
- ```
- handler_map = {
-     "get_gcp_tts": "GoogleCloudTTS",
-     "get_google_translate_tts": "GoogleTranslateTTSManager",
-     "get_festival_tts": "FestivalTTSManager",
-     "get_greeting": "Greeting",
-     "get_bbc_news": "NewsParser",
-     "get_yahoo_weather": "YahooWeatherClient",
-     "my_new_module": "my_new_class"
- }
- ```
+ 2. Set the `handler` option in the configuration file to your new handler without the folder name.
 
- 3. Set the `handler` option in the configuration file to your new handler without the folder name.
+ 3. Set `type=content` and `enabled=1` in the configuration.
 
- 4. Set `type=content` and `enabled=1` in the configuration.
-
-Adding a new TTS engine can be done simialrly:
+Adding a new TTS engine can be done similarly:
 
  1. Write the handler. It should should subclass `aptts.AlarmpiTTS` and implement the `play` method.
 

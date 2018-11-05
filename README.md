@@ -40,6 +40,7 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
 The GUI for the clock is rather primitive due to hardware limitations: I build this project to run on a Raspberry Pi together with the official touch screen display as the only input device. Since Raspbian is not a touch screen OS, its support is limited to emulating mouse clicks. The alarm is therefore set using a binary based toggles for hour and minute.
 
 ![Main window](resources/clock_main.png)
+
 ![schedule window](resources/clock_schedule.png)
 
 
@@ -97,9 +98,11 @@ or
 python sound_the_alarm.py [path/to/configuration/file]
 ```
 
-The first form open the GUI for displaying current time and scheduling the alarm. In a headless Raspberry Pi environment this will fail since Tkinter cannot be imported. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
+The first form opens the GUI for displaying current time and scheduling the alarm. The GUI also contains buttons for turning radio stream on and off and setting screen brightness between high and low. These options have additional conditions. The radio button is only enabled when a url to a radio stream is set in the configuration file. The brightness button only works with the official Raspberry Pi touchscreen display as it works by writing a new brightness value to `/sys/class/backlight/rpi_backlight/brightness`. This buttons will be disabled if the file does exist.
 
-In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`. This means that when scheduled, the alarm will play regardless of whether the GUI is running or not!
+In a headless Raspberry Pi environment running the GUI will fail since Tkinter cannot be imported. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
+
+In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`. This means that when scheduled, the alarm will play regardless of whether the GUI is running or not! Note that if a radio stream is enabled and the alarm is run without the GUI, the stream has to be stopped by terminating the `mplayer` process running it. This can be done with the included `stop.sh` shell script. When using the GUI, closing the main window will also stop any active radio streams.
 
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [config_readme.md](./config_readme.md) for instructions. By default `alarm.config` will be used.
 
