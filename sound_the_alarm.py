@@ -13,6 +13,9 @@ import alarmenv
 
 
 class Alarm:
+    """A wrapper class for playing the alarm. Createa and alarmenv.AlarmEnv object based on
+    the configuration file and uses it to create the approriate alarm.
+    """
 
     def __init__(self, config_file):
         self.env = alarmenv.AlarmEnv(config_file)
@@ -39,14 +42,8 @@ class Alarm:
                 Alarm.play_beep()
 
             # open a radio stream if enabled
-            radio_enabled = self.env.config_has_match("radio", "enabled", "1")
-            if radio_enabled:
-                url = self.env.get_value("radio", "url")
-                try:
-                    timeout = int(self.env.get_value("radio", "timeout"))
-                except ValueError:  # raised if empty timeout in the configuration file
-                    timeout = None
-                Alarm.play_radio(url, timeout)
+            if self.env.radio_url:
+                Alarm.play_radio(self.env.radio_url)
 
     def generate_content(self):
         """Loop through the configuration file and process each enabled item."""
@@ -129,10 +126,12 @@ class Alarm:
         return path
 
     @staticmethod
-    def play_radio(url, timeout):
+    def play_radio(url):
         """Play the radio stream defined in the configuration using mplayer."""
         cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
-        subprocess.run(cmd, timeout=timeout)
+        # Run the command via Popen directly to open the stream as a child process without
+        # waiting for it to finish.
+        subprocess.Popen(cmd)
 
 
 if __name__ == "__main__":

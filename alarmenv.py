@@ -8,9 +8,8 @@ import dns.resolver
 import dns.exception
 
 
-# Parses the configuration file (by default alarmpi.config) to a dict
-
 class AlarmEnv:
+    """Parses the configuration file to a readable object."""
 
     def __init__(self, config_file):
         self.config_file = config_file
@@ -131,7 +130,6 @@ class AlarmEnv:
         #############
         [radio]
         type=radio
-        timeout=
         # url for an internet radio stream, leave empty to disable radio
         url=
         """
