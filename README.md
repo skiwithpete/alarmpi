@@ -26,7 +26,7 @@ Thats all for now. Have a nice day.
 [Play on SoundCloud](https://soundcloud.com/lajanki/pialarm_sample)
 
 
-This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/alarmpi. After seeing it on [YouTube](https://youtu.be/julETnOLkaU), I thought it was awsome and knew I wanted to use it to replace my old night table clock radio.
+This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/alarmpi. After seeing it on [YouTube](https://youtu.be/julETnOLkaU), I thought it was neat and knew I wanted to use it to replace my old night table clock radio.
 
 
 ### Main Features
@@ -37,7 +37,6 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
  * Alarm scheduling via cron
  * GUI with current time
 
-The GUI for the clock is rather primitive due to hardware limitations: I build this project to run on a Raspberry Pi together with the official touch screen display as the only input device. Since Raspbian is not a touch screen OS, its support is limited to emulating mouse clicks. The alarm is therefore set using a binary based toggles for hour and minute.
 
 ![Main window](resources/clock_main.png)
 
@@ -50,9 +49,19 @@ The GUI for the clock is rather primitive due to hardware limitations: I build t
  * Added option to stream an internet radio station
  * Removed features not applicable to my use case
  * Reorganized file structure
- * Changed available text-to-speech engines, see `config_readme.md`
+ * Changed available text-to-speech engines, see [config_readme.md](./config_readme.md)
  * Changed audio processing to use in-memory objects, thus removing the need to setup a ramdrive
  * Added unit tests
+
+### Hardware setup
+This project is built around the following hardware.
+ * Raspberry Pi
+ * Official Raspberry Pi Display
+ * A speaker
+
+Apart from the speaker these aren't requirements per se. The project is mostly a set of Python scripts which will likely run on many Linux systems. The only strict bind to a Raspberry Pi is a toggle button on the GUI for setting the screen backlight brightness between low and high. This button is disabled on other systems.
+
+It's also possible to run the alarm entirely from the command line, without a display attached.
 
 
 
@@ -98,11 +107,11 @@ or
 python sound_the_alarm.py [path/to/configuration/file]
 ```
 
-The first form opens the GUI for displaying current time and scheduling the alarm. The GUI also contains buttons for turning radio stream on and off and setting screen brightness between high and low. These options have additional conditions. The radio button is only enabled when a url to a radio stream is set in the configuration file. The brightness button only works with the official Raspberry Pi touchscreen display as it works by writing a new brightness value to `/sys/class/backlight/rpi_backlight/brightness`. This buttons will be disabled if the file does exist.
+The first form opens the GUI for displaying current time and scheduling the alarm. The GUI also contains buttons for turning radio stream on and off and setting screen brightness between high and low. These options have additional conditions. The radio button is only enabled when a url to a radio stream is set in the configuration file. The brightness button only works with the official Raspberry Pi touchscreen display as it works by writing a new brightness value to `/sys/class/backlight/rpi_backlight/brightness`. This buttons will be disabled if the file does not exist.
 
 In a headless Raspberry Pi environment running the GUI will fail since Tkinter cannot be imported. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
 
-In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`. This means that when scheduled, the alarm will play regardless of whether the GUI is running or not! Note that if a radio stream is enabled and the alarm is run without the GUI, the stream has to be stopped by terminating the `mplayer` process running it. This can be done with the included `stop.sh` shell script. When using the GUI, closing the main window will also stop any active radio streams.
+In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`. This means that when scheduled, the alarm will play regardless of whether the GUI is running or not! Also note that the radio stream, if enabled, is run as a separate `mplayer` system process from the Python script running the rest of the alarm. When run from the command line, you need to terminate the process separately. This can be done with the included `stop.sh` shell script. When using the GUI, closing the main window will also close any active radio streams.
 
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [config_readme.md](./config_readme.md) for instructions. By default `alarm.config` will be used.
 
