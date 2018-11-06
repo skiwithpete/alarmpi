@@ -80,14 +80,14 @@ class Clock:
             tk.Grid.rowconfigure(self.root, i, weight=1)
 
         # Row 0: label for displaying current time
-        clock_label = tk.Label(self.root, font=("times", 46, "bold"),
+        clock_label = tk.Label(self.root, font=("times", 48, "bold"),
                                textvariable=self.clock_time_var, fg=RED, bg=BLACK)
         clock_label.grid(row=0, column=1, ipadx=50, columnspan=2, rowspan=1,
                          sticky="sew")
 
         # Row 1: label for showing set alarm time (if any)
         alarm_time_label = tk.Label(
-            self.root, font=("times", 18, "bold"), textvariable=self.clock_alarm_indicator_var, fg=RED, bg=BLACK)
+            self.root, font=("times", 22, "bold"), textvariable=self.clock_alarm_indicator_var, fg=RED, bg=BLACK)
         alarm_time_label.grid(row=1, column=1, columnspan=2, sticky="new")
 
         # only display the alarm time during weekdays
@@ -113,7 +113,7 @@ class Clock:
         if not url:
             radio_button.config(state=tk.DISABLED)
 
-        brightness_button = tk.Button(self.root, text="Set brightness",
+        brightness_button = tk.Button(self.root, text="Toggle brightness",
                                       command=Clock.set_screen_brightness)
         brightness_button.grid(row=2, column=2, sticky="nsew")
 
@@ -379,7 +379,7 @@ class Clock:
     def set_screen_brightness():
         """Reads current screen brightness values from file and sets it either high or low."""
         PATH = "/sys/class/backlight/rpi_backlight/brightness"
-        LOW = 20
+        LOW = 9
         HIGH = 255
 
         with open(PATH) as f:
