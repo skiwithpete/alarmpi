@@ -19,14 +19,13 @@ import sound_the_alarm
 class Clock:
     """A Tkinter GUI for displaying the current time and setting the alarm."""
 
-    # day of week range for the alarm in cron syntax
-    ALARM_DOW = "1-5"
-
-    def __init__(self, config_file):
+    def __init__(self, config_file, **kwargs):
         """Create the root window for displaying time."""
         self.root = tk.Tk()
         self.cron = CronWriter(config_file)
         self.alarm = sound_the_alarm.Alarm(config_file)
+
+        self.kwargs = kwargs
 
         # store current alarm time from cron as HH:MM
         self.current_alarm_time = self.cron.get_current_alarm()
@@ -64,7 +63,7 @@ class Clock:
         """Create the main window. Contains labels for current and alarm time as well as
         buttons for accessing the alarm setup window.
         """
-        # rows: 3, columns: 2
+        # rows: 3, columns: 5
         RED = "#FF1414"
         BLACK = "#090201"
 
@@ -73,22 +72,32 @@ class Clock:
         self.root.attributes("-fullscreen", True)
 
         # set row and column weights so widgets expand to all available space
-        for i in range(4):
+        for i in range(5):
             tk.Grid.columnconfigure(self.root, i, weight=1)
 
         for i in range(3):
             tk.Grid.rowconfigure(self.root, i, weight=1)
 
         # Row 0: label for displaying current time
-        clock_label = tk.Label(self.root, font=("times", 48, "bold"),
-                               textvariable=self.clock_time_var, fg=RED, bg=BLACK)
-        clock_label.grid(row=0, column=1, ipadx=50, columnspan=2, rowspan=1,
+        clock_label = tk.Label(
+            self.root,
+            font=("times", 48, "bold"),
+            textvariable=self.clock_time_var,
+            fg=RED,
+            bg=BLACK
+        )
+        clock_label.grid(row=0, column=1, ipadx=50, columnspan=3, rowspan=1,
                          sticky="sew")
 
         # Row 1: label for showing set alarm time (if any)
         alarm_time_label = tk.Label(
-            self.root, font=("times", 22, "bold"), textvariable=self.clock_alarm_indicator_var, fg=RED, bg=BLACK)
-        alarm_time_label.grid(row=1, column=1, columnspan=2, sticky="new")
+            self.root,
+            font=("times", 22, "bold"),
+            textvariable=self.clock_alarm_indicator_var,
+            fg=RED,
+            bg=BLACK
+        )
+        alarm_time_label.grid(row=1, column=1, columnspan=3, sticky="new")
 
         # only display the alarm time during weekdays
         self.update_active_alarm_indicator(None)  # use a dummy value as the event
@@ -100,22 +109,30 @@ class Clock:
         # 'Play radio' button as a CheckButton for on/off effects
         self.radio_var = tk.IntVar()
         url = self.alarm.env.radio_url
-        radio_button = tk.Checkbutton(
+
+        radio_button = tk.Button(
             self.root,
             text="Play radio",
-            variable=self.radio_var,
-            indicatoron=False,
             command=lambda: self.play_radio(url)
-            # command=lambda: sound_the_alarm.Alarm.play_radio(url, None),
         )
         radio_button.grid(row=2, column=1, sticky="nsew")
         # disable the button if no url provided in the config file
         if not url:
             radio_button.config(state=tk.DISABLED)
 
-        brightness_button = tk.Button(self.root, text="Toggle brightness",
-                                      command=Clock.set_screen_brightness)
+        brightness_button = tk.Button(
+            self.root,
+            text="Toggle brightness",
+            command=Clock.set_screen_brightness
+        )
         brightness_button.grid(row=2, column=2, sticky="nsew")
+
+        sleep_button = tk.Button(
+            self.root,
+            text="Sleep",
+            command=Clock.put_screen_to_sleep
+        )
+        sleep_button.grid(row=2, column=3, sticky="nsew")
 
         # Disable brigtness button if system brightness file does not exist
         # ie. not running on Raspberry Pi.
@@ -123,7 +140,7 @@ class Clock:
             brightness_button.config(state=tk.DISABLED)
 
         tk.Button(self.root, text="Close",
-                  command=self.destroy).grid(row=2, column=3, sticky="nsew")
+                  command=self.destroy).grid(row=2, column=4, sticky="nsew")
 
         self.tick()
 
@@ -359,18 +376,22 @@ class Clock:
 
     def destroy(self):
         """Destroy the main window and kill any running radio streams."""
-        if self.radio_var.get() == 1:
-            subprocess.run(["killall", "mplayer"])
+        # redirect stderr to /dev/null to prevent an errot message if mplayer is not running
+        subprocess.run(["killall", "mplayer"], stderr=subprocess.DEVNULL)
         self.root.destroy()
 
     def play_radio(self, url):
-        """Open or close a radio stream depending on the current state of the
-        'play radio' button.
+        """Open or close the radio stream depending on whether an mplay process is
+        currently running.
         """
-        if self.radio_var.get() == 1:  # state changed from 0 to 1 => play the radio
+        # check current running status
+        res = subprocess.run(["pgrep", "mplayer"])
+
+        # a return code of 1 indicates mplayer was not running
+        if res.returncode == 1:
             cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
-            # Run the command via Popen directly to open the stream as a child process without
-            # waiting for it to finish.
+            # Run the command via Popen directly to open the stream as an independent child
+            # process. This way we do not wait for the stream to finish.
             subprocess.Popen(cmd)
         else:
             subprocess.run(["killall", "mplayer"])
@@ -393,6 +414,16 @@ class Clock:
 
         with open(PATH, "w") as f:
             f.write(str(new_brightness))
+
+    @staticmethod
+    def put_screen_to_sleep():
+        """Put the display to sleep. Will wakeup once the screen is touched. The screen
+        can also be turned off by setting /sys/class/backlight/rpi_backlight/bl_power to 1,
+        but this can only be recovered by changing the value back to 0 via ssh.
+        See https://stackoverflow.com/questions/39926012/raspberry-pi-enter-display-sleep
+        """
+        cmd = "XAUTHORITY=/home/pi/.Xauthority DISPLAY=:0.0 xset dpms force off".split()
+        subprocess.run(cmd)
 
 
 class CronWriter:
