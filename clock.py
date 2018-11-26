@@ -24,10 +24,13 @@ class Clock:
         self.root = tk.Tk()
         self.cron = CronWriter(config_file)
         self.alarm = sound_the_alarm.Alarm(config_file)
-
         self.kwargs = kwargs
 
-        # store current alarm time from cron as HH:MM
+        # determine whether the host system is a Raspberry Pi by checking
+        # the existance of a system brightness file.
+        self.is_rpi = os.path.isfile("/sys/class/backlight/rpi_backlight/brightness")
+
+        # store current alarm time from cron as an attribute in HH:MM
         self.current_alarm_time = self.cron.get_current_alarm()
 
         # init StringVars for various widgets needed in multiple methods
@@ -68,8 +71,11 @@ class Clock:
         BLACK = "#090201"
 
         self.format_window(self.root, dimensions=(600, 320), title="Clock", bg=BLACK)
-        # set main window to fullscreen mode (overrides the dimentions above)
-        self.root.attributes("-fullscreen", True)
+
+        # set main window to fullscreen mode unless windowed mode was specified
+        # (overrides the dimentions above)
+        if not self.kwargs.get("windowed"):
+            self.root.attributes("-fullscreen", True)
 
         # set row and column weights so widgets expand to all available space
         for i in range(5):
@@ -134,10 +140,10 @@ class Clock:
         )
         sleep_button.grid(row=2, column=3, sticky="nsew")
 
-        # Disable brigtness button if system brightness file does not exist
-        # ie. not running on Raspberry Pi.
-        if not os.path.isfile("/sys/class/backlight/rpi_backlight/brightness"):
+        # disable brigtness and sleep button if the host system is not a Raspberry Pi
+        if not self.is_rpi:
             brightness_button.config(state=tk.DISABLED)
+            sleep_button.config(state=tk.DISABLED)
 
         tk.Button(self.root, text="Close",
                   command=self.destroy).grid(row=2, column=4, sticky="nsew")

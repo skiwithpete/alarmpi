@@ -16,7 +16,9 @@ if __name__ == "__main__":
         description="Run alarmpi GUI")
     parser.add_argument("config", metavar="config", nargs="?",
                         default="alarm.config", help="path to an alarm configuration file")
+    parser.add_argument("--windowed", action="store_true")
     args = parser.parse_args()
 
-    app = clock.Clock(args.config)
+    kwargs = {"windowed": args.windowed}
+    app = clock.Clock(args.config, **kwargs)
     app.run()
