@@ -47,7 +47,7 @@ class Clock:
         # for the next day and re-set if alarm is active the next day
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
-        self.root.bind("<Button-1>", self.update_active_alarm_indicator)
+        self.root.bind("<Button-1>", self.update_on_touch_tasks)
 
     def tick(self):
         """Update the current time value in the main clock label every 1 second."""
@@ -76,6 +76,7 @@ class Clock:
         # (overrides the dimentions above)
         if not self.kwargs.get("windowed"):
             self.root.attributes("-fullscreen", True)
+            self.root.config(cursor="none")  # hide mouse cursor
 
         # set row and column weights so widgets expand to all available space
         for i in range(5):
@@ -106,25 +107,24 @@ class Clock:
         alarm_time_label.grid(row=1, column=1, columnspan=3, sticky="new")
 
         # only display the alarm time during weekdays
-        self.update_active_alarm_indicator(None)  # use a dummy value as the event
+        self.update_active_alarm_indicator()
 
         # Row 2: control buttons
         tk.Button(self.root, text="Set alarm",
                   command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
 
         # 'Play radio' button as a CheckButton for on/off effects
-        self.radio_var = tk.IntVar()
         url = self.alarm.env.radio_url
-
-        radio_button = tk.Button(
+        self.radio_button = tk.Button(
             self.root,
             text="Play radio",
             command=lambda: self.play_radio(url)
         )
-        radio_button.grid(row=2, column=1, sticky="nsew")
+
+        self.radio_button.grid(row=2, column=1, sticky="nsew")
         # disable the button if no url provided in the config file
         if not url:
-            radio_button.config(state=tk.DISABLED)
+            self.radio_button.config(state=tk.DISABLED)
 
         brightness_button = tk.Button(
             self.root,
@@ -320,9 +320,9 @@ class Clock:
         self.alarm_status_var.set(msg)
 
         # also set the time to the main window, below current time
-        self.update_active_alarm_indicator(None)
+        self.update_active_alarm_indicator()
 
-    def update_active_alarm_indicator(self, event):
+    def update_active_alarm_indicator(self):
         """Binding for clearing the label reserved for displaying currently active
         alarm time in the main window.
         Alarm plays on weekdays only, this function hides the alarm time indicator during
@@ -339,6 +339,16 @@ class Clock:
             self.clock_alarm_indicator_var.set("")
         else:
             self.clock_alarm_indicator_var.set(alarm_time)
+
+    def update_on_touch_tasks(self, event):
+        """Callback to the main window's event binding.
+        Calls individual tasks to perform:
+          1 hide/unhide the displayed alarm time if necessary.
+          2 set radio toggle button to pressed, if radio is playing.
+        """
+        self.update_active_alarm_indicator()
+        if Clock.radio_is_playing():
+            self.radio_button.config(relief=tk.SUNKEN)
 
     def weekend(self, d):
         """Helper function. Check whether a datetime d is between friday's alarm
@@ -382,7 +392,8 @@ class Clock:
 
     def destroy(self):
         """Destroy the main window and kill any running radio streams."""
-        # redirect stderr to /dev/null to prevent an errot message if mplayer is not running
+        # Redirect stderr to /dev/null to prevent an errot message if mplayer is not running.
+        # Note that this will kill _all_ mplayer instances, whether they belong to the alarm or not!
         subprocess.run(["killall", "mplayer"], stderr=subprocess.DEVNULL)
         self.root.destroy()
 
@@ -390,17 +401,25 @@ class Clock:
         """Open or close the radio stream depending on whether an mplay process is
         currently running.
         """
-        # check current running status
-        res = subprocess.run(["pgrep", "mplayer"])
+        # change the relief of the button
+        if self.radio_button["relief"] == tk.SUNKEN:
+            self.radio_button.config(relief=tk.RAISED)
+        else:
+            self.radio_button.config(relief=tk.SUNKEN)
 
-        # a return code of 1 indicates mplayer was not running
-        if res.returncode == 1:
+        if Clock.radio_is_playing():
+            subprocess.run(["killall", "mplayer"])
+        else:
             cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
             # Run the command via Popen directly to open the stream as an independent child
             # process. This way we do not wait for the stream to finish.
             subprocess.Popen(cmd)
-        else:
-            subprocess.run(["killall", "mplayer"])
+
+    @staticmethod
+    def radio_is_playing():
+        """Check if mplayr is currently running. Return True if it is."""
+        res = subprocess.run(["pgrep", "mplayer"], stdout=subprocess.DEVNULL)
+        return res.returncode == 0  # a return code of 0 indicates mplayer is running
 
     @staticmethod
     def set_screen_brightness():
