@@ -12,10 +12,10 @@ import clock
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
-    # @patch("clock.sound_the_alarm.Alarm")
+    @patch("clock.RadioStreamer")
     @patch("alarmenv.AlarmEnv.setup")
     @patch("clock.CronWriter.get_current_alarm")
-    def setUp(self, mock_get_current_alarm, mock_alarm):
+    def setUp(self, mock_get_current_alarm, mock_setup, mock_RadioStreamer):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
         self.app = clock.Clock("")
 
@@ -72,7 +72,7 @@ class ClockTestCase(TestCase):
         """Is active alarm indicator in the main window set off during the weekend?"""
         mock_weekend.return_value = True
 
-        self.app.update_active_alarm_indicator(None)
+        self.app.update_active_alarm_indicator()
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "")
 
@@ -81,7 +81,7 @@ class ClockTestCase(TestCase):
         """Is active alarm indicator in the main window set on during weekdays?"""
         mock_weekend.return_value = False
 
-        self.app.update_active_alarm_indicator(None)
+        self.app.update_active_alarm_indicator()
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "17:00")
 
@@ -107,9 +107,57 @@ class ClockTestCase(TestCase):
         self.assertFalse(tuesday_response)
         self.assertFalse(sunday_after_alarm_response)
 
+    def test_play_radio_opens_stream_when_not_opened(self):
+        """Does play_radio open a new radio stream if one is not already playing?"""
+        self.app.radio.is_playing.return_value = False
+
+        # Create necessary instance attributes to ensure this test will run
+        # as these aren't created in __init__,
+        # An ugly hack :(
+        self.app.radio_button = clock.tk.Button()
+        self.app.alarm.env.radio_url = "foo"
+
+        self.app.play_radio()
+        self.app.radio.play.assert_called()
+
+    def test_play_radio_closes_existing_stream(self):
+        """Does play_radio close existing stream when one is already playing?"""
+        self.app.radio.is_playing.return_value = True
+
+        self.app.radio_button = clock.tk.Button()
+        self.app.play_radio()
+        self.app.radio.stop.assert_called()
+
+
+class RadioStreamerTestCase(TestCase):
+    """Test cases for RadioStreamer: does streaming radio work correctly?"""
+
+    def setUp(self):
+        self.radio = clock.RadioStreamer()
+
+    def test_radio_not_playing_on_empty_process_list(self):
+        """Does is_playing return False when the list of running processes is empty?"""
+        self.radio.active = []
+        res = self.radio.is_playing()
+        self.assertFalse(res)
+
+    def test_radio_is_playing_on_non_empty_process_list(self):
+        """Does is_playing return True when the list of running processes is not empty?"""
+        self.radio.active = [1]
+        res = self.radio.is_playing()
+        self.assertTrue(res)
+
+    @patch("clock.subprocess.Popen")
+    def test_stop_clears_process_list(self, mock_kill):
+        """Does stop clear the list of running processes?"""
+        self.radio.play("foo")
+        self.radio.stop()
+
+        self.assertEqual(self.radio.active, [])
+
 
 class CronWriterTestCase(TestCase):
-    """Test cases for CronWriter class: do writing and reading from crontab work correctly?"""
+    """Test cases for CronWriter: do writing and reading from crontab work correctly?"""
 
     @classmethod
     def setUpClass(self):
