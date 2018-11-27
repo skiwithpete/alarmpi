@@ -24,6 +24,7 @@ class Clock:
         self.root = tk.Tk()
         self.cron = CronWriter(config_file)
         self.alarm = sound_the_alarm.Alarm(config_file)
+        self.radio = RadioStreamer()
         self.kwargs = kwargs
 
         # determine whether the host system is a Raspberry Pi by checking
@@ -113,17 +114,17 @@ class Clock:
         tk.Button(self.root, text="Set alarm",
                   command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
 
-        # 'Play radio' button as a CheckButton for on/off effects
-        url = self.alarm.env.radio_url
+        # 'Play radio' button. a tkinter Button whose relief is controlled by the
+        # callback so as to keep it as pressed until the stream is stopped
         self.radio_button = tk.Button(
             self.root,
             text="Play radio",
-            command=lambda: self.play_radio(url)
+            command=self.play_radio
         )
-
         self.radio_button.grid(row=2, column=1, sticky="nsew")
+
         # disable the button if no url provided in the config file
-        if not url:
+        if not self.alarm.env.radio_url:
             self.radio_button.config(state=tk.DISABLED)
 
         brightness_button = tk.Button(
@@ -323,11 +324,10 @@ class Clock:
         self.update_active_alarm_indicator()
 
     def update_active_alarm_indicator(self):
-        """Binding for clearing the label reserved for displaying currently active
-        alarm time in the main window.
+        """Clear the label reserved for displaying currently active alarm time
+        in the main window.
         Alarm plays on weekdays only, this function hides the alarm time indicator during
-        weekends. It should be fired on all hits occuring after friday's alarm
-        and before sunday evening 21:00.
+        weekends. It should only fire between friday's alarm and sunday evening 21:00.
         """
         # get current active alarm time (if set)
         alarm_time = self.current_alarm_time  # HH:MM
@@ -347,7 +347,7 @@ class Clock:
           2 set radio toggle button to pressed, if radio is playing.
         """
         self.update_active_alarm_indicator()
-        if Clock.radio_is_playing():
+        if self.radio.is_playing():
             self.radio_button.config(relief=tk.SUNKEN)
 
     def weekend(self, d):
@@ -392,14 +392,12 @@ class Clock:
 
     def destroy(self):
         """Destroy the main window and kill any running radio streams."""
-        # Redirect stderr to /dev/null to prevent an errot message if mplayer is not running.
-        # Note that this will kill _all_ mplayer instances, whether they belong to the alarm or not!
-        subprocess.run(["killall", "mplayer"], stderr=subprocess.DEVNULL)
+        self.radio.stop()
         self.root.destroy()
 
-    def play_radio(self, url):
-        """Open or close the radio stream depending on whether an mplay process is
-        currently running.
+    def play_radio(self):
+        """Callback to the 'Play radio' button: open or close the radio stream
+        depending on whether it is currently running.
         """
         # change the relief of the button
         if self.radio_button["relief"] == tk.SUNKEN:
@@ -407,19 +405,10 @@ class Clock:
         else:
             self.radio_button.config(relief=tk.SUNKEN)
 
-        if Clock.radio_is_playing():
-            subprocess.run(["killall", "mplayer"])
+        if self.radio.is_playing():
+            self.radio.stop()
         else:
-            cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
-            # Run the command via Popen directly to open the stream as an independent child
-            # process. This way we do not wait for the stream to finish.
-            subprocess.Popen(cmd)
-
-    @staticmethod
-    def radio_is_playing():
-        """Check if mplayr is currently running. Return True if it is."""
-        res = subprocess.run(["pgrep", "mplayer"], stdout=subprocess.DEVNULL)
-        return res.returncode == 0  # a return code of 0 indicates mplayer is running
+            self.radio.play(self.alarm.env.radio_url)
 
     @staticmethod
     def set_screen_brightness():
@@ -447,8 +436,35 @@ class Clock:
         but this can only be recovered by changing the value back to 0 via ssh.
         See https://stackoverflow.com/questions/39926012/raspberry-pi-enter-display-sleep
         """
-        cmd = "XAUTHORITY=/home/pi/.Xauthority DISPLAY=:0.0 xset dpms force off".split()
-        subprocess.run(cmd)
+        cmd = "XAUTHORITY=/home/pi/.Xauthority DISPLAY=:0.0 xset dpms force off"
+        # we need shell=True since the first argument is not a program call
+        subprocess.run(cmd, shell=True)
+
+
+class RadioStreamer:
+    """Helper class for playing a radio stream via mplayer."""
+
+    def __init__(self):
+        self.active = []  # list for opened streams (ie. Popen instances)
+
+    def is_playing(self):
+        """Check if mplayer is currently running. Return True if it is."""
+        return self.active != []  # return a boolean for clarity
+
+    def play(self, url):
+        """Open a radio stream as a child process. The stream will continue to run
+        in the background."""
+        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
+        # Run the command via Popen directly to open the stream as an independent child
+        # process. This way we do not wait for the stream to finish.
+        p = subprocess.Popen(cmd)
+        self.active.append(p)
+
+    def stop(self):
+        """Kill all opened streams."""
+        for process in self.active:
+            process.kill()
+        self.active = []
 
 
 class CronWriter:
