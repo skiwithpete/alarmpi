@@ -344,7 +344,7 @@ class Clock:
         """Callback to the main window's event binding.
         Calls individual tasks to perform:
           1 hide/unhide the displayed alarm time if necessary.
-          2 set radio toggle button to pressed, if radio is playing.
+          2 set radio toggle button relief to pressed, if radio is playing.
         """
         self.update_active_alarm_indicator()
         if self.radio.is_playing():
@@ -369,8 +369,8 @@ class Clock:
         return (friday or saturday or sunday)
 
     def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
-        """Given a Tk or Toplevel element set a width and height and assign it to the
-        center of the screen.
+        """Helper function for formatting a window. Given a Tk or Toplevel
+        element set a width and height and assign it to the center of the screen.
         Args:
             widget (tk.Tk): the tkinter widget to format
             dimensions (tuple): dimensions of the window as (width, height) pair
@@ -412,7 +412,9 @@ class Clock:
 
     @staticmethod
     def set_screen_brightness():
-        """Reads current screen brightness values from file and sets it either high or low."""
+        """Reads Raspberry pi touch display's current brightness values from
+        file and sets it either high or low depending on the current value.
+        """
         PATH = "/sys/class/backlight/rpi_backlight/brightness"
         LOW = 9
         HIGH = 255
@@ -431,14 +433,20 @@ class Clock:
 
     @staticmethod
     def put_screen_to_sleep():
-        """Put the display to sleep. Will wakeup once the screen is touched. The screen
-        can also be turned off by setting /sys/class/backlight/rpi_backlight/bl_power to 1,
-        but this can only be recovered by changing the value back to 0 via ssh.
+        """Put Raspberry pi touch display to sleep using the command
+            XAUTHORITY=/home/pi/.Xauthority DISPLAY=:0.0 xset dpms force off
+        The display will wakeup on touch.
         See https://stackoverflow.com/questions/39926012/raspberry-pi-enter-display-sleep
+
+        The display can also be turned off by setting
+        /sys/class/backlight/rpi_backlight/bl_power to 1, but this can only be
+        recovered by changing the value back to 0 via ssh.
         """
-        cmd = "XAUTHORITY=/home/pi/.Xauthority DISPLAY=:0.0 xset dpms force off"
-        # we need shell=True since the first argument is not a program call
-        subprocess.run(cmd, shell=True)
+        cmd = "xset dpms force off".split()
+        # set required env variables so we don't need to run the whole command
+        # with shell=True
+        env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0.0"}
+        subprocess.run(cmd, env=env)
 
 
 class RadioStreamer:
