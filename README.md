@@ -1,6 +1,6 @@
 # Alarmpi
 
-A clock radio for a Raspberry Pi with customizable alarm.
+A Raspberry Pi clock radio with customizable Text To Speech alarm.
 ```
 Good afternoon, it's Wednesday September twelfth. The time is 07:29 PM.
 
@@ -33,7 +33,7 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
  * A spoken greeting based on time of day
  * Reads the day's weather using Yahoo Weather
  * Reads latest news from BBC World RSS feed
- * Streams internet radio streams using `mplayer`
+ * Plays internet radio streams using `mplayer`
  * Alarm scheduling via cron
  * GUI with current time
 
@@ -59,9 +59,9 @@ This project is built around the following hardware.
  * Official Raspberry Pi Display
  * A speaker
 
-Apart from the speaker these aren't requirements per se. The project is mostly a set of Python scripts which will likely run on many Linux systems. The only strict bind to a Raspberry Pi is a toggle button on the GUI for setting the screen backlight brightness between low and high. This button is disabled on other systems.
+Apart from the speaker these aren't requirements per se. The project is mostly a couple of Python scripts which will likely run on many Linux platforms. The GUI does have two bindings to a Raspberry Pi: the buttons for toggling screen brightness and putting it to sleep are disabled on a different system.
 
-It's also possible to run the alarm entirely from the command line, without a display attached.
+It's also possible to run the alarm without the GUI on a headless setup.
 
 
 
@@ -90,7 +90,7 @@ It's also possible to run the alarm entirely from the command line, without a di
 
   and follow the instructions.
 
-   * Since this script uses cron to schedule the alarm and hende modifies crontab. If a crontab already exists, you may therefore want to create a backup with `crontab -l > cron.backup` before running the script. It can be restored with `crontab cron.backup`.  
+   * This script uses cron to schedule the alarm and hence modifies the user's crontab. You may therefore want to create a backup of an existing crontab with `crontab -l > cron.backup` before running the script. It can be restored with `crontab cron.backup`.  
 
  4. Optionally, run unit tests with
 
@@ -107,11 +107,11 @@ or
 python sound_the_alarm.py [path/to/configuration/file]
 ```
 
-The first form opens the GUI for displaying current time and scheduling the alarm. The GUI also contains buttons for turning radio stream on and off and setting screen brightness between high and low. These options have additional conditions. The radio button is only enabled when a url to a radio stream is set in the configuration file. The brightness button only works with the official Raspberry Pi touchscreen display as it works by writing a new brightness value to `/sys/class/backlight/rpi_backlight/brightness`. This buttons will be disabled if the file does not exist.
+The first form opens a GUI for displaying current time and scheduling the alarm, see the screenshots above. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.
 
 In a headless Raspberry Pi environment running the GUI will fail since Tkinter cannot be imported. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
 
-In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`. This means that when scheduled, the alarm will play regardless of whether the GUI is running or not! Also note that the radio stream, if enabled, is run as a separate `mplayer` system process from the Python script running the rest of the alarm. When run from the command line, you need to terminate the process separately. This can be done with the included `stop.sh` shell script. When using the GUI, closing the main window will also close any active radio streams.
+Scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a separate `mplayer` process. The GUI's _Play radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but using the second form of the script you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
 
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [config_readme.md](./config_readme.md) for instructions. By default `alarm.config` will be used.
 
@@ -127,4 +127,16 @@ optional arguments:
   -h, --help     show this help message and exit
   --init-config  re-create the default configuration file alarm.config.
                  Overwrites existing file.
+```
+
+The GUI also supports a fullscreen mode:
+```
+Run alarmpi GUI
+
+positional arguments:
+  config        path to an alarm configuration file. Defaults to alarm.config
+
+optional arguments:
+  -h, --help    show this help message and exit
+  --fullscreen  launch the script in fullscreen mode
 ```
