@@ -72,7 +72,7 @@ class ClockTestCase(TestCase):
         """Is active alarm indicator in the main window set off during the weekend?"""
         mock_weekend.return_value = True
 
-        self.app.update_active_alarm_indicator()
+        self.app.set_active_alarm_indicator()
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "")
 
@@ -81,7 +81,7 @@ class ClockTestCase(TestCase):
         """Is active alarm indicator in the main window set on during weekdays?"""
         mock_weekend.return_value = False
 
-        self.app.update_active_alarm_indicator()
+        self.app.set_active_alarm_indicator()
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "17:00")
 
@@ -224,4 +224,7 @@ if __name__ == "__main__":
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(ClockTestCase)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(RadioStreamerTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)

@@ -75,8 +75,6 @@ class AlarmProcessingTestCase(TestCase):
         """Test the alarm is played when no path to the configuration file is provided
         as a command line argument to the script.
         """
-        #mock_sys_argv.return_value = []
-        #mock_from_mp3.return_value = ""
         sound_the_alarm.Alarm.play_beep()
         mock_play.assert_called()
 
