@@ -4,8 +4,10 @@ import subprocess
 import argparse
 import importlib
 import os.path
+import os
 import sys
 import inspect
+import signal
 
 import pydub
 import pydub.playback
@@ -23,7 +25,6 @@ class Alarm:
 
     def main(self):
         """Read the configuration file, create and play the corresponding alarm."""
-
         # Check status for internet connection. If no connection detected,
         # play a beeping sound instead of making API calls.
         if not self.env.netup:
@@ -41,9 +42,16 @@ class Alarm:
             else:
                 Alarm.play_beep()
 
-            # open a radio stream if enabled
+            # Play the radio stream if enabled:
+            # If the GUI is running, send a signal to it to use its RadioStreamer
+            # to handle necessary GUI buttons and process control,
+            # otherwise call mplayer directly.
             if self.env.radio_url:
-                Alarm.play_radio(self.env.radio_url)
+                pid = Alarm.gui_running()
+                if pid:
+                    os.kill(pid, signal.SIGUSR1)  # send a user signal
+                else:
+                    self.play_radio()
 
     def generate_content(self):
         """Loop through the configuration file and process each enabled item."""
@@ -106,13 +114,34 @@ class Alarm:
 
         return class_
 
+    def play_radio(self):
+        """Play the radio stream defined in the configuration using mplayer."""
+        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(
+            self.env.radio_url).split()
+        # Run the command via Popen directly to open the stream as a child process without
+        # waiting for it to finish.
+        subprocess.Popen(cmd)
+
+    @staticmethod
+    def gui_running():
+        """Check if the GUI is running. Attempts to read the GUI's pid from it's
+        pidfile.
+        """
+        import main
+        try:
+            with open(main.PIDFILE) as f:
+                pid = int(f.read())
+                return pid
+        except FileNotFoundError:
+            return
+
     @staticmethod
     def play_beep():
         """Play a beeping sound effect."""
         # Create a path to the mp3 file. If this script was called via cron, we need
         # an absolute path. Since cron runs this script with absolute paths as
-        # /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config
-        # use the sys.argv to format an absolute path to the sound file.
+        # /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config we can
+        # use sys.argv to format an absolute path to the sound file.
         # This is a bit of a hack, there's probably a better way...
 
         path = os.path.abspath("resources/Cool-alarm-tone-notification-sound.mp3")
@@ -125,20 +154,12 @@ class Alarm:
 
         return path
 
-    @staticmethod
-    def play_radio(url):
-        """Play the radio stream defined in the configuration using mplayer."""
-        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
-        # Run the command via Popen directly to open the stream as a child process without
-        # waiting for it to finish.
-        subprocess.Popen(cmd)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Play the alarm using a specified configuration file")
     parser.add_argument("config", metavar="config", nargs="?",
-                        default="alarm.config", help="path to the config file")
+                        default="alarm.config", help="path to an alarm configuration file. Defaults to alarm.config")
     parser.add_argument("--init-config", action="store_true",
                         help="re-create the default configuration file alarm.config. Overwrites existing file.")
     args = parser.parse_args()

@@ -10,6 +10,7 @@ import time
 import sys
 import os
 import subprocess
+import signal
 import tkinter as tk
 from PIL import Image, ImageTk
 
@@ -49,6 +50,7 @@ class Clock:
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
         self.root.bind("<Button-1>", self.update_on_touch_tasks)
+        signal.signal(signal.SIGUSR1, self.signal_handler)
 
     def tick(self):
         """Update the current time value in the main clock label every 1 second."""
@@ -63,6 +65,19 @@ class Clock:
         self.create_main_window()
         self.root.mainloop()
 
+    def destroy(self):
+        """Destroy the main window and kill any running radio streams."""
+        self.radio.stop()
+        self.root.destroy()
+
+    def signal_handler(self, sig, frame):
+        """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
+        signals from sound_the_alarm denoting a request to open a radio stream and to
+        set the radio button as pressed. Also runs a check to see whether the displayed
+        alarm time in the main window should be hidden (ie. no alarm the next day)."""
+        self.play_radio()
+        self.set_active_alarm_indicator()
+
     def create_main_window(self):
         """Create the main window. Contains labels for current and alarm time as well as
         buttons for accessing the alarm setup window.
@@ -73,9 +88,9 @@ class Clock:
 
         self.format_window(self.root, dimensions=(600, 320), title="Clock", bg=BLACK)
 
-        # set main window to fullscreen mode unless windowed mode was specified
+        # set main window to fullscreen if command line flag for it was provided
         # (overrides the dimentions above)
-        if not self.kwargs.get("windowed"):
+        if self.kwargs.get("fullscreen"):
             self.root.attributes("-fullscreen", True)
             self.root.config(cursor="none")  # hide mouse cursor
 
@@ -108,7 +123,7 @@ class Clock:
         alarm_time_label.grid(row=1, column=1, columnspan=3, sticky="new")
 
         # only display the alarm time during weekdays
-        self.update_active_alarm_indicator()
+        self.set_active_alarm_indicator()
 
         # Row 2: control buttons
         tk.Button(self.root, text="Set alarm",
@@ -282,6 +297,7 @@ class Clock:
         display a message for the user. Existing cron alarms will be overwritten
         Invalid time values are not accepted.
         """
+        # TODO: don't hard code the date?
         try:
             entry_time = self.alarm_time_var.get()
             t = time.strptime(entry_time, "%H:%M")
@@ -321,15 +337,15 @@ class Clock:
         self.alarm_status_var.set(msg)
 
         # also set the time to the main window, below current time
-        self.update_active_alarm_indicator()
+        self.set_active_alarm_indicator()
 
-    def update_active_alarm_indicator(self):
-        """Clear the label reserved for displaying currently active alarm time
-        in the main window.
-        Alarm plays on weekdays only, this function hides the alarm time indicator during
-        weekends. It should only fire between friday's alarm and sunday evening 21:00.
+    def set_active_alarm_indicator(self):
+        """Updates the main window label for displaying set alarm time. No time
+        should be displayed during weekends, since the alarm only playes on weekdays.
         """
-        # get current active alarm time (if set)
+        # TODO support for dynamic alarm times. Currently this whole script assumes
+        # the alarm should only be played on weekdays and set_alarm is hard coded
+        # to set the date part to 1-5. Maybe do something else instead?
         alarm_time = self.current_alarm_time  # HH:MM
         if not alarm_time:
             return
@@ -342,13 +358,10 @@ class Clock:
 
     def update_on_touch_tasks(self, event):
         """Callback to the main window's event binding.
-        Calls individual tasks to perform:
-          1 hide/unhide the displayed alarm time if necessary.
-          2 set radio toggle button relief to pressed, if radio is playing.
+         Hide/unhide the displayed alarm time if necessary. Ie. alarm time should
+         only be showed on weekdays.
         """
-        self.update_active_alarm_indicator()
-        if self.radio.is_playing():
-            self.radio_button.config(relief=tk.SUNKEN)
+        self.set_active_alarm_indicator()
 
     def weekend(self, d):
         """Helper function. Check whether a datetime d is between friday's alarm
@@ -389,11 +402,6 @@ class Clock:
         dy = (w_height/2) - (height/2)
 
         widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
-
-    def destroy(self):
-        """Destroy the main window and kill any running radio streams."""
-        self.radio.stop()
-        self.root.destroy()
 
     def play_radio(self):
         """Callback to the 'Play radio' button: open or close the radio stream
