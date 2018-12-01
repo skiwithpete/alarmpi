@@ -68,32 +68,6 @@ class AlarmProcessingTestCase(TestCase):
             created_class = self.alarm.get_content_parser_class("")
             self.assertIs(created_class, response_class)
 
-    @patch("sys.argv")
-    @patch("pydub.playback.play")
-    @patch("pydub.AudioSegment.from_mp3")
-    def test_alarm_played_with_no_extra_sys_argv(self, mock_from_mp3, mock_play, mock_sys_argv):
-        """Test the alarm is played when no path to the configuration file is provided
-        as a command line argument to the script.
-        """
-        sound_the_alarm.Alarm.play_beep()
-        mock_play.assert_called()
-
-    @patch("sys.argv")
-    @patch("pydub.playback.play")
-    @patch("pydub.AudioSegment.from_mp3")
-    def test_alarm_sound_has_valid_file_path_when_sys_argv_provided(self, mock_from_mp3, mock_play, mock_sys_argv):
-        """Test that a valid path to the alarm mp3 file is formed when a path to the configuration
-        file is provided.
-        """
-        # use getcwd to format a path to an alarm.config file (need not exist for this test)
-        mock_filepath = os.path.join(os.getcwd(), "sound_the_alarm.py")
-        mock_sys_argv.return_value = ["/bin/python", mock_filepath]  # need 2 item in sys.argv
-
-        base = os.path.dirname(mock_filepath)
-        path = os.path.join(base, "resources", "Cool-alarm-tone-notification-sound.mp3")
-        response_path = sound_the_alarm.Alarm.play_beep()
-        self.assertEqual(response_path, path)
-
     @patch("sound_the_alarm.Alarm.play_beep")
     def test_beep_played_when_no_network(self, mock_play_beep):
         """Is the beep played when no network connection is detected?"""
@@ -115,7 +89,6 @@ class AlarmProcessingTestCase(TestCase):
     @patch("alarmenv.AlarmEnv.config_has_match")
     def test_radio_played_when_enabled(self, mock_config_has_match, mock_play_beep, mock_play_radio):
         """Is a radio stream opened when radio is enabled in the config?"""
-        # mock_config_has_match.side_effect = [False, True]  # skip the tts check
         self.alarm.env.netup = True
         mock_config_has_match.return_value = False
         self.alarm.env.radio_url = True

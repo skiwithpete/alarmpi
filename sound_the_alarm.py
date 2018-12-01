@@ -14,6 +14,18 @@ import pydub.playback
 import alarmenv
 
 
+# If this script was called via cron, we need an absolute path to the 'install'
+# directory (ie. location of the alarmpi base directory).
+# Since cron runs this script with absolute paths as
+# /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config, we can
+# use sys.argv to format an absolute path from the 2nd argument.
+# This is a bit of a hack, there's probably a better way...
+
+BASE = os.getcwd()
+if len(sys.argv) > 1:
+    BASE = os.path.dirname(sys.argv[1])  # get dirname from the path to sound_the_alarm.py
+
+
 class Alarm:
     """A wrapper class for playing the alarm. Createa and alarmenv.AlarmEnv object based on
     the configuration file and uses it to create the approriate alarm.
@@ -128,8 +140,9 @@ class Alarm:
         pidfile.
         """
         import main
+        pidfile = os.path.join(BASE, main.PIDFILE)
         try:
-            with open(main.PIDFILE) as f:
+            with open(pidfile) as f:
                 pid = int(f.read())
                 return pid
         except FileNotFoundError:
@@ -138,17 +151,7 @@ class Alarm:
     @staticmethod
     def play_beep():
         """Play a beeping sound effect."""
-        # Create a path to the mp3 file. If this script was called via cron, we need
-        # an absolute path. Since cron runs this script with absolute paths as
-        # /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config we can
-        # use sys.argv to format an absolute path to the sound file.
-        # This is a bit of a hack, there's probably a better way...
-
-        path = os.path.abspath("resources/Cool-alarm-tone-notification-sound.mp3")
-        if len(sys.argv) > 1:
-            base = os.path.dirname(sys.argv[1])  # get dirname from sound_the_alarm.py
-            path = os.path.join(base, "resources", "Cool-alarm-tone-notification-sound.mp3")
-
+        path = os.path.join(BASE, "resources", "Cool-alarm-tone-notification-sound.mp3")
         beep = pydub.AudioSegment.from_mp3(path)
         pydub.playback.play(beep)
 
