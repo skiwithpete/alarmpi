@@ -142,12 +142,12 @@ class Clock:
         if not self.alarm.env.radio_url:
             self.radio_button.config(state=tk.DISABLED)
 
-        brightness_button = tk.Button(
+        self.brightness_button = tk.Button(
             self.root,
             text="Toggle brightness",
             command=Clock.set_screen_brightness
         )
-        brightness_button.grid(row=2, column=2, sticky="nsew")
+        self.brightness_button.grid(row=2, column=2, sticky="nsew")
 
         sleep_button = tk.Button(
             self.root,
@@ -158,7 +158,7 @@ class Clock:
 
         # disable brigtness and sleep button if the host system is not a Raspberry Pi
         if not self.is_rpi:
-            brightness_button.config(state=tk.DISABLED)
+            self.brightness_button.config(state=tk.DISABLED)
             sleep_button.config(state=tk.DISABLED)
 
         tk.Button(self.root, text="Close",
@@ -410,6 +410,9 @@ class Clock:
         # change the relief of the button
         if self.radio_button["relief"] == tk.SUNKEN:
             self.radio_button.config(relief=tk.RAISED)
+            # touching the screen will leave the button state as ACTIVE, force it to
+            # NORMAL to match with normal mouse click event.
+            self.radio_button.config(state=tk.NORMAL)
         else:
             self.radio_button.config(relief=tk.SUNKEN)
 
@@ -418,8 +421,7 @@ class Clock:
         else:
             self.radio.play(self.alarm.env.radio_url)
 
-    @staticmethod
-    def set_screen_brightness():
+    def set_screen_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from
         file and sets it either high or low depending on the current value.
         """
@@ -438,6 +440,10 @@ class Clock:
 
         with open(PATH, "w") as f:
             f.write(str(new_brightness))
+
+        # set button state to NORMAL when de-set, similar to play_radio above
+        if self.brightness_button["relief"] == tk.SUNKEN:
+            self.brightness_button.config(state=tk.NORMAL)
 
     @staticmethod
     def put_screen_to_sleep():
