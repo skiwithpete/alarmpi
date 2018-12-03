@@ -145,7 +145,7 @@ class Clock:
         self.brightness_button = tk.Button(
             self.root,
             text="Toggle brightness",
-            command=Clock.set_screen_brightness
+            command=self.set_screen_brightness
         )
         self.brightness_button.grid(row=2, column=2, sticky="nsew")
 
