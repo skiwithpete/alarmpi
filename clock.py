@@ -435,15 +435,13 @@ class Clock:
         # set to furthest away from current brightness
         if abs(brightness-LOW) < abs(brightness-HIGH):
             new_brightness = HIGH
+            # also force button state to NORMAL similar to play_radio above
+            self.brightness_button.config(state=tk.NORMAL)
         else:
             new_brightness = LOW
 
         with open(PATH, "w") as f:
             f.write(str(new_brightness))
-
-        # set button state to NORMAL when de-set, similar to play_radio above
-        if self.brightness_button["relief"] == tk.SUNKEN:
-            self.brightness_button.config(state=tk.NORMAL)
 
     @staticmethod
     def put_screen_to_sleep():
