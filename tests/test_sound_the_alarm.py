@@ -85,16 +85,34 @@ class AlarmProcessingTestCase(TestCase):
         mock_play_beep.assert_called()
 
     @patch("sound_the_alarm.Alarm.play_radio")
-    @patch("sound_the_alarm.Alarm.play_beep")
+    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.generate_content")
+    @patch("sound_the_alarm.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_radio_played_when_enabled(self, mock_config_has_match, mock_play_beep, mock_play_radio):
+    def test_radio_played_when_enabled(self, mock_config_has_match, mock_gui_running, mock_generate_content, mock_play, mock_play_radio):
         """Is a radio stream opened when radio is enabled in the config?"""
+        mock_gui_running.return_value = False
+        mock_config_has_match.return_value = True
+        mock_generate_content.return_value = "dummy content"  # need non empty content
+
         self.alarm.env.netup = True
-        mock_config_has_match.return_value = False
         self.alarm.env.radio_url = True
 
         self.alarm.main()
         mock_play_radio.assert_called()
+
+    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.gui_running")
+    @patch("alarmenv.AlarmEnv.config_has_match")
+    def test_wakeup_signal_sent_if_gui_running(self, mock_config_has_match, mock_gui_running, mock_play):
+        """Is a SIGUSR2 signal sent to the GUI process if determined to be running?"""
+        mock_gui_running.return_value = 125
+        mock_config_has_match.return_value = True
+
+        self.alarm.env.netup = False
+
+        self.alarm.main()
+        mock_play.assert_called_with(sound_the_alarm.Alarm.play_beep, pid=125)
 
 
 class HandlerTestCase(TestCase):

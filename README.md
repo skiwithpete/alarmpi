@@ -109,7 +109,7 @@ python sound_the_alarm.py [path/to/configuration/file]
 
 The first form opens a GUI for displaying current time and scheduling the alarm, see the screenshots above. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.
 
-In a headless Raspberry Pi environment running the GUI will fail since Tkinter cannot be imported. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
+In a headless Raspberry Pi environment running the GUI will fail since Tkinter cannot be initialized. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
 
 Scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a separate `mplayer` process. The GUI's _Play radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but using the second form of the script you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
 

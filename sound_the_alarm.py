@@ -37,33 +37,42 @@ class Alarm:
 
     def main(self):
         """Read the configuration file, create and play the corresponding alarm."""
-        # Check status for internet connection. If no connection detected,
-        # play a beeping sound instead of making API calls.
-        if not self.env.netup:
-            Alarm.play_beep()
+        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
+        pid = Alarm.gui_running()
 
-        else:
-            tts_enabled = self.env.config_has_match("main", "readaloud", "1")
-            if tts_enabled:
-                content = self.generate_content()
-                tts_client = self.get_tts_client()
-                text = "\n".join(content)
-                tts_client.play(text)
+        # If no network connection is detected, or the 'readaloud' option is not set,
+        # paly a beeping sound effect isntead of making a series of API calls.
+        if not self.env.netup or not tts_enabled:
+            self.play(Alarm.play_beep, pid=pid)
+            return
 
-            # play a beeping sound if readaloud is not enabled
+        content = self.generate_content()
+        tts_client = self.get_tts_client()
+        text = "\n".join(content)
+        self.play(tts_client.play, args=text, pid=pid)
+
+        # Play the radio stream if enabled:
+        # If the GUI is running, send a signal to it to use its RadioStreamer.
+        # This set the radio button as pressed and enables the button to control
+        # radio on/off state.
+        # Otherwise call mplayer directly.
+        if self.env.radio_url:
+            if pid:
+                os.kill(pid, signal.SIGUSR1)
             else:
-                Alarm.play_beep()
+                self.play_radio()
 
-            # Play the radio stream if enabled:
-            # If the GUI is running, send a signal to it to use its RadioStreamer
-            # to handle necessary GUI buttons and process control,
-            # otherwise call mplayer directly.
-            if self.env.radio_url:
-                pid = Alarm.gui_running()
-                if pid:
-                    os.kill(pid, signal.SIGUSR1)  # send a user signal
-                else:
-                    self.play_radio()
+    def play(self, callback, args=None, pid=None):
+        """Wrapper for play the alarm: either a beeping sound or the TTS messages.
+        If the GUI is running, also sends a signal to it to wakeup the screen
+        if blank.
+        """
+        if pid:
+            os.kill(pid, signal.SIGUSR2)
+        if args:
+            callback(args)
+        else:
+            callback()
 
     def generate_content(self):
         """Loop through the configuration file and process each enabled item."""

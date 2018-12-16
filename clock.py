@@ -50,7 +50,8 @@ class Clock:
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
         self.root.bind("<Button-1>", self.update_on_touch_tasks)
-        signal.signal(signal.SIGUSR1, self.signal_handler)
+        signal.signal(signal.SIGUSR1, self.radio_signal_handler)
+        signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
     def tick(self):
         """Update the current time value in the main clock label every 1 second."""
@@ -59,7 +60,7 @@ class Clock:
         self.root.after(1000, self.tick)
 
     def run(self):
-        """Validate configuration file path, create the main window run mainloop.
+        """Validate configuration file path, create the main window and run mainloop.
         """
         self.cron.validate_config_path()
         self.create_main_window()
@@ -70,12 +71,18 @@ class Clock:
         self.radio.stop()
         self.root.destroy()
 
-    def signal_handler(self, sig, frame):
+    def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
         signals from sound_the_alarm denoting a request to open a radio stream and to
         set the radio button as pressed. Also runs a check to see whether the displayed
         alarm time in the main window should be hidden (ie. no alarm the next day)."""
         self.play_radio()
+        self.set_active_alarm_indicator()
+
+    def wakeup_signal_handler(self, sig, frame):
+        """Signal handler for waking up the screen. Sent by sound_the_alarm
+        upon the alarm. If the screen is blank, reset the screensaver activated by xset."""
+        self.set_screensaver("off")
         self.set_active_alarm_indicator()
 
     def create_main_window(self):
@@ -151,8 +158,8 @@ class Clock:
 
         sleep_button = tk.Button(
             self.root,
-            text="Sleep",
-            command=Clock.put_screen_to_sleep
+            text="Screen off",
+            command=Clock.set_screensaver
         )
         sleep_button.grid(row=2, column=3, sticky="nsew")
 
@@ -444,20 +451,20 @@ class Clock:
             f.write(str(new_brightness))
 
     @staticmethod
-    def put_screen_to_sleep():
-        """Put Raspberry pi touch display to sleep using the command
-            XAUTHORITY=/home/pi/.Xauthority DISPLAY=:0.0 xset dpms force off
-        The display will wakeup on touch.
-        See https://stackoverflow.com/questions/39926012/raspberry-pi-enter-display-sleep
-
-        The display can also be turned off by setting
-        /sys/class/backlight/rpi_backlight/bl_power to 1, but this can only be
-        recovered by changing the value back to 0 via ssh.
+    def set_screensaver(state="on"):
+        """Use the xset utility to either activate the screen saver (the default)
+        or turn it off. Touching the screen will also deactivate the screensaver.
         """
-        cmd = "xset dpms force off".split()
+
+        cmd = "xset s reset".split()
+        if state == "on":
+            cmd = "xset s activate".split()
+
         # set required env variables so we don't need to run the whole command
         # with shell=True
-        env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0.0"}
+        # Note: the user folder is assumed to be 'pi'
+        #env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
+        env = {"DISPLAY": ":0"}
         subprocess.run(cmd, env=env)
 
 
