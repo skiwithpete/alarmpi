@@ -49,7 +49,6 @@ class AlarmProcessingTestCase(TestCase):
     @patch("alarmenv.AlarmEnv.get_value")
     def test_correct_content_parser_chosen(self, mock_get_value):
         """Given a content section, is the correct class chosen in get_content_parser_class?"""
-        #
         mock_get_value.side_effect = ["get_bbc_news.py", "get_festival_tts.py", "get_gcp_tts.py",
                                       "get_google_translate_tts.py", "get_greeting.py", "get_yahoo_weather.py"]
 
@@ -68,28 +67,44 @@ class AlarmProcessingTestCase(TestCase):
             created_class = self.alarm.get_content_parser_class("")
             self.assertIs(created_class, response_class)
 
-    @patch("sound_the_alarm.Alarm.play_beep")
-    def test_beep_played_when_no_network(self, mock_play_beep):
+    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.gui_running")
+    @patch("alarmenv.AlarmEnv.config_has_match")
+    def test_beep_played_when_no_network(self, mock_config_has_match, mock_gui_running, mock_play):
         """Is the beep played when no network connection is detected?"""
+        mock_gui_running.return_value = False
+        mock_config_has_match.return_value = True
         self.alarm.env.netup = False
         self.alarm.main()
-        mock_play_beep.assert_called()
 
-    @patch("sound_the_alarm.Alarm.play_beep")
+        mock_play.assert_called_with(
+            self.alarm.play_beep,
+            pid=False,
+            signame=sound_the_alarm.signal.SIGUSR2
+        )
+
+    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_beep_played_when_no_readaloud(self, mock_config_has_match, mock_play_beep):
+    def test_beep_played_when_no_readaloud(self, mock_config_has_match, mock_gui_running, mock_play):
         """Is the beep played when readaloud = 0 is set in the configuration?"""
-        self.alarm.env.netup = True
+        mock_gui_running.return_value = 135
         mock_config_has_match.return_value = False
+        self.alarm.env.netup = True
         self.alarm.main()
-        mock_play_beep.assert_called()
 
-    @patch("sound_the_alarm.Alarm.play_radio")
+        mock_play.assert_called_with(
+            self.alarm.play_beep,
+            pid=135,
+            signame=sound_the_alarm.signal.SIGUSR2
+        )
+
+    # ...this is just terrible :(
     @patch("sound_the_alarm.Alarm.play")
     @patch("sound_the_alarm.Alarm.generate_content")
     @patch("sound_the_alarm.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_radio_played_when_enabled(self, mock_config_has_match, mock_gui_running, mock_generate_content, mock_play, mock_play_radio):
+    def test_radio_played_when_enabled(self, mock_config_has_match, mock_gui_running, mock_generate_content, mock_play):
         """Is a radio stream opened when radio is enabled in the config?"""
         mock_gui_running.return_value = False
         mock_config_has_match.return_value = True
@@ -99,20 +114,11 @@ class AlarmProcessingTestCase(TestCase):
         self.alarm.env.radio_url = True
 
         self.alarm.main()
-        mock_play_radio.assert_called()
-
-    @patch("sound_the_alarm.Alarm.play")
-    @patch("sound_the_alarm.Alarm.gui_running")
-    @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_wakeup_signal_sent_if_gui_running(self, mock_config_has_match, mock_gui_running, mock_play):
-        """Is a SIGUSR2 signal sent to the GUI process if determined to be running?"""
-        mock_gui_running.return_value = 125
-        mock_config_has_match.return_value = True
-
-        self.alarm.env.netup = False
-
-        self.alarm.main()
-        mock_play.assert_called_with(sound_the_alarm.Alarm.play_beep, pid=125)
+        mock_play.assert_called_with(
+            self.alarm.play_radio,
+            pid=False,
+            signame=sound_the_alarm.signal.SIGUSR1
+        )
 
 
 class HandlerTestCase(TestCase):
