@@ -32,5 +32,6 @@ if __name__ == "__main__":
 
     write_pidfile()
     app = clock.Clock(args.config, **kwargs)
+
     app.run()
     os.remove(PIDFILE)

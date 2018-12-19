@@ -169,14 +169,7 @@ if __name__ == "__main__":
         description="Play the alarm using a specified configuration file")
     parser.add_argument("config", metavar="config", nargs="?",
                         default="alarm.config", help="path to an alarm configuration file. Defaults to alarm.config")
-    parser.add_argument("--init-config", action="store_true",
-                        help="re-create the default configuration file alarm.config. Overwrites existing file.")
     args = parser.parse_args()
 
     app = Alarm(args.config)
-
-    if args.init_config:
-        app.env.write_default_configuration()
-
-    else:
-        app.main()
+    app.main()

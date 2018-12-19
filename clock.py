@@ -366,7 +366,7 @@ class Clock:
     def update_on_touch_tasks(self, event):
         """Callback to the main window's event binding.
          Hide/unhide the displayed alarm time if necessary. Ie. alarm time should
-         only be showed on weekdays.
+         only be shown on weekdays.
         """
         self.set_active_alarm_indicator()
 
