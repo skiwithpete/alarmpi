@@ -101,7 +101,7 @@ class YahooWeatherClient(apcontent.AlarmpiContent):
                 today_high, today_low)
             weather_yahoo += " The sun rises at {} and sets at {}.".format(sunrise, sunset)
 
-        except requests.exceptions.HTTPError:
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
             weather_yahoo = "Failed to connect to Yahoo Weather. "
         # API response doesn"t contain the path listed above
         except TypeError:
