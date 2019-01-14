@@ -28,7 +28,7 @@ Three TTS engines are supported:
 **[google_gcp_tts]**  
 Google Cloud Text-to-Speech engine. This provides the most human-like speech, but requires some additional setup. Since this is a Google Cloud platform API, you need to setup a Google Cloud project and enable billing.
 
-Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, specify the path to your key as the `private_key_file` option
+Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, specify the path to your key as the `key_file` option
 
 While this is a paid API, there is a free tier of 1 million characters per month. This should easily cover the alarm's needs: a single run of the script generates about 1100 characters worth of text; running the script once per day therefore only generates a total of some 33 000 characters. See https://cloud.google.com/text-to-speech/pricing and https://cloud.google.com/text-to-speech/quotas for more information.
 
@@ -77,4 +77,4 @@ Adding a new TTS engine can be done similarly:
 
  2. Create a configuration section with `type=tts`
 
-  * You can use the `private_key_file` option to set reference an API access token file to the constructor if required. This will be passed to the initializer.
+  * You can use the `key_file` option to set reference an API access token file to the constructor if required. This will be passed to the initializer.

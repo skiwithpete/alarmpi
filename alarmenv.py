@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os.path
-import sys
+
 import configparser
 import dns.resolver
 import dns.exception
@@ -42,14 +41,22 @@ class AlarmEnv:
         """Validate configuration file: checks that
          1 content and tts sections have 'type', 'enabled' and 'handler' keys
          2 sections other than [main] have a 'type' key
+         3 if a section with 'key_file' is enabled, the key is non-empty
+            (note: this does not valide the file!)
         """
         try:
             for section in self.get_sections(excludes=["main"]):
                 section_type = self.get_value(section, "type")
 
                 if section_type in ("content", "tts"):
-                    self.get_value(section, "handler")
+                    self.get_value(section, "handler")  # raises NoOptionError if not 'handler' key
                     self.get_value(section, "enabled")
+
+                # check for 'key_file' key on enabled sections
+                key_file_match = self.config.has_option(section, "key_file")
+                enabled = self.get_value(section, "enabled") == "1"
+                if key_file_match and enabled:
+                    self.get_value(section, "key_file")
 
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             raise RuntimeError("Invalid configuration: ", e)
@@ -90,11 +97,14 @@ class AlarmEnv:
         """Return a configuration section by name."""
         return self.config[section]
 
-    def get_value(self, section, option):
-        """Get a value matching a section and option. Throws either NoSectionError or
+    def get_value(self, section, option, fallback=None):
+        """Get a value matching a section and option. Raises either NoSectionError or
         NoOptionError on invalid input.
         """
-        return self.config.get(section, option)
+        if fallback is None:
+            return self.config.get(section, option)
+
+        return self.config.get(section, option, fallback=fallback)
 
     def get_value_with_fallback(self, section, option, fallback):
         """Get a value matching a section and option, but return a fallback value on
