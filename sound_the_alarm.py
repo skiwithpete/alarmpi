@@ -43,33 +43,27 @@ class Alarm:
         # If no network connection is detected, or the 'readaloud' option is not set,
         # paly a beeping sound effect isntead of making a series of API calls.
         if not self.env.netup or not tts_enabled:
-            self.play(Alarm.play_beep, pid=pid, signame=signal.SIGUSR2)
+            if pid:
+                os.kill(pid, signal.SIGUSR2)
+            Alarm.play_beep()
             return
 
         content = self.generate_content()
         tts_client = self.get_tts_client()
         text = "\n".join(content)
-        self.play(tts_client.play, args=text, pid=pid, signame=signal.SIGUSR2)
+        if pid:
+            os.kill(pid, signal.SIGUSR2)
+        tts_client.play(text)
 
         # Play the radio stream if enabled:
         # If the GUI is running, send a signal to it to use its RadioStreamer.
-        # This set the radio button as pressed and enables the button to control
-        # radio on/off state.
-        # Otherwise call mplayer directly.
+        # Signalling also sets the GUI's radio button as pressed.
+        # If GUI is not running, call mplayer directly.
         if self.env.radio_url:
-            self.play(self.play_radio, pid=pid, signame=signal.SIGUSR1)
-
-    def play(self, callback, args=None, pid=None, signame=None):
-        """Wrapper for play the alarm: either a beeping sound or the TTS messages.
-        If the GUI is running, also sends a signal to it to wakeup the screen
-        if blank.
-        """
-        if pid:
-            os.kill(pid, signame)
-        if args:
-            callback(args)
-        else:
-            callback()
+            if pid:
+                os.kill(pid, signal.SIGUSR1)
+            else:
+                self.play_radio()
 
     def generate_content(self):
         """Loop through the configuration file and process each enabled item."""
