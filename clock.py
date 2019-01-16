@@ -23,7 +23,7 @@ class Clock:
     def __init__(self, config_file, **kwargs):
         """Create the root window for displaying time."""
         self.root = tk.Tk()
-        self.cron = CronWriter(config_file)
+        self.cron = CronWriter()
         self.alarm = sound_the_alarm.Alarm(config_file)
         self.radio = RadioStreamer()
         self.kwargs = kwargs
@@ -62,7 +62,6 @@ class Clock:
     def run(self):
         """Validate configuration file path, create the main window and run mainloop.
         """
-        self.cron.validate_config_path()
         self.create_main_window()
         self.root.mainloop()
 
@@ -365,10 +364,23 @@ class Clock:
 
     def update_on_touch_tasks(self, event):
         """Callback to the main window's event binding.
-         Hide/unhide the displayed alarm time if necessary. Ie. alarm time should
-         only be shown on weekdays.
+          * hides/unhide the displayed alarm time if necessary. Ie. alarm time should
+                only be shown on weekdays.
+          * automatically blanks the screen after a short period if night time
         """
+        # TODO: uniform nightime, weekend detection to offset alarmenv parameter
         self.set_active_alarm_indicator()
+        try:
+            self.set_screensaver_state()
+        except ValueError:
+            return
+
+    def set_screensaver_state(self):
+        nightmode_offset = int(self.alarm.env.get_value("main", "nightmode_offset"))
+        night_time = self.night_time(nightmode_offset)
+
+        if night_time:
+            self.root.after(2000, Clock.set_screensaver, "on")
 
     def weekend(self, d):
         """Helper function. Check whether a datetime d is between friday's alarm
@@ -387,6 +399,29 @@ class Clock:
         sunday = (dow == 6 and d <= max_time)
 
         return (friday or saturday or sunday)
+
+    def night_time(self, offset):
+        """Helper function. Check whether current time is between set alarm time and
+        and offset hours before alarm time.
+        """
+        alarm_time = datetime.datetime.strptime(self.current_alarm_time, "%H:%M")
+        alarm_time_minutes = alarm_time.hour * 60 + alarm_time.minute
+
+        earlier = alarm_time - datetime.timedelta(hours=offset)
+        earlier_minutes = earlier.hour * 60 + earlier.minute
+
+        now = datetime.datetime.now()
+        now_minutes = now.hour * 60 + now.minute
+
+        # Are we currently within nightmode_offset hours of the next alarm?
+        # If the offset time is within the same day as the alarm, check current time
+        # between the two times
+        if earlier_minutes < alarm_time_minutes:
+            return now_minutes >= earlier_minutes and now_minutes <= alarm_time_minutes
+
+        # If offset time is in the previous day to alarm time, check if now is
+        # after offset time in that day or before alarm time the next day
+        return now_minutes >= earlier_minutes or now_minutes <= alarm_time
 
     def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
         """Helper function for formatting a window. Given a Tk or Toplevel
@@ -414,11 +449,10 @@ class Clock:
         """Callback to the 'Play radio' button: open or close the radio stream
         depending on whether it is currently running.
         """
-        # change the relief of the button
+        # Change the relief of the button
         if self.radio_button["relief"] == tk.SUNKEN:
             self.radio_button.config(relief=tk.RAISED)
-            # touching the screen will leave the button state as ACTIVE, force it to
-            # NORMAL to match with normal mouse click event.
+            # Also force the button state to NORMAL instead of ACTIVE
             self.radio_button.config(state=tk.NORMAL)
         else:
             self.radio_button.config(relief=tk.SUNKEN)
@@ -472,35 +506,36 @@ class RadioStreamer:
     """Helper class for playing a radio stream via mplayer."""
 
     def __init__(self):
-        self.active = []  # list for opened streams (ie. Popen instances)
+        self.process = None
 
     def is_playing(self):
         """Check if mplayer is currently running. Return True if it is."""
-        return self.active != []  # return a boolean for clarity
+        return self.process is not None
 
     def play(self, url):
         """Open a radio stream as a child process. The stream will continue to run
-        in the background."""
+        in the background.
+        """
         cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
-        p = subprocess.Popen(cmd)
-        self.active.append(p)
+        self.process = subprocess.Popen(cmd)
 
     def stop(self):
-        """Kill all opened streams."""
-        for process in self.active:
-            process.kill()
-        self.active = []
+        """Terminate the running mplayer process."""
+        try:
+            self.process.terminate()
+            self.process = None
+        except AttributeError:
+            return
 
 
 class CronWriter:
     """Helper class for writes cron entries. Uses crontab via subprocess."""
 
-    def __init__(self, config_file):
+    def __init__(self):
         # format absolute paths to sound_the_alarm.py and the config file
         self.alarm_path = os.path.abspath("sound_the_alarm.py")
-        self.config_file = os.path.abspath(config_file)
 
     def get_crontab(self):
         """Return the current crontab"""
@@ -561,8 +596,3 @@ class CronWriter:
 
         p = subprocess.Popen(["crontab", "-", crontab], stdin=subprocess.PIPE)
         p.communicate(input=crontab.encode("utf8"))
-
-    def validate_config_path(self):
-        """Check whether self.config_file exists."""
-        if not os.path.isfile(self.config_file):
-            raise RuntimeError("No such file: {}".format(self.config_file))

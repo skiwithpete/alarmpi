@@ -105,9 +105,3 @@ class AlarmEnv:
             return self.config.get(section, option)
 
         return self.config.get(section, option, fallback=fallback)
-
-    def get_value_with_fallback(self, section, option, fallback):
-        """Get a value matching a section and option, but return a fallback value on
-        invalid input instead of raising an error.
-        """
-        return self.config.get(section, option, fallback=fallback)
