@@ -14,7 +14,8 @@ import signal
 import tkinter as tk
 from PIL import Image, ImageTk
 
-import sound_the_alarm
+import alarmenv
+import utils
 
 
 class Clock:
@@ -24,7 +25,12 @@ class Clock:
         """Create the root window for displaying time."""
         self.root = tk.Tk()
         self.cron = CronWriter()
-        self.alarm = sound_the_alarm.Alarm(config_file)
+
+        # Read the alarm configuration file and initialize and alarmenv object
+        self.config_file = config_file
+        self.env = alarmenv.AlarmEnv(config_file)
+        self.env.setup()
+
         self.radio = RadioStreamer()
         self.kwargs = kwargs
 
@@ -145,7 +151,7 @@ class Clock:
         self.radio_button.grid(row=2, column=1, sticky="nsew")
 
         # disable the button if no url provided in the config file
-        if not self.alarm.env.radio_url:
+        if not self.env.radio_url:
             self.radio_button.config(state=tk.DISABLED)
 
         self.brightness_button = tk.Button(
@@ -303,7 +309,6 @@ class Clock:
         display a message for the user. Existing cron alarms will be overwritten
         Invalid time values are not accepted.
         """
-        # TODO: don't hard code the date?
         try:
             entry_time = self.alarm_time_var.get()
             t = time.strptime(entry_time, "%H:%M")
@@ -311,13 +316,19 @@ class Clock:
             self.alarm_status_var.set("Invalid time")
             return
 
-        # define a cron entry with absolute paths to the executable and alarm script
-        entry = "{min} {hour} * * 1-5 {python_exec} {path_to_alarm} {path_to_config}".format(
-            hour=t.tm_hour,
+        # Define a cron entry with absolute paths to the Python interpreter and
+        # the alarm script to run (sound_the_alarm.py)
+        date_range = "1-5"
+        if self.env.get_value("alarm", "include_weekends") == "1":
+            date_range = "*"
+
+        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(
             min=t.tm_min,
+            hour=t.tm_hour,
+            date_range=date_range,
             python_exec=sys.executable,
             path_to_alarm=self.cron.alarm_path,
-            path_to_config=self.cron.config_file)
+            path_to_config=self.config_file)
         self.cron.add_cron_entry(entry)
         self.current_alarm_time = entry_time
         self.set_alarm_status_message(entry_time)
@@ -337,100 +348,67 @@ class Clock:
         """Helper function for setting the alarm image and message to the
         alarm window.
         """
-        # elements in the alarm setup window:
         self.alarm_indicator.grid(row=2, column=2)
         msg = "Alarm set for {}".format(time)
         self.alarm_status_var.set(msg)
 
-        # also set the time to the main window, below current time
+        # Also display the alarm time in the main window
         self.set_active_alarm_indicator()
 
     def set_active_alarm_indicator(self):
-        """Updates the main window label for displaying set alarm time. No time
-        should be displayed during weekends, since the alarm only playes on weekdays.
+        """Updates the main window label displaying set alarm time. By default the
+        alarm only plays on weekdays. If so, empty the label after friday's alarm.
         """
-        # TODO support for dynamic alarm times. Currently this whole script assumes
-        # the alarm should only be played on weekdays and set_alarm is hard coded
-        # to set the date part to 1-5. Maybe do something else instead?
-        alarm_time = self.current_alarm_time  # HH:MM
+        if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
+            return
+
+        alarm_time = self.current_alarm_time  # string: HH:MM
         if not alarm_time:
             return
 
         now = datetime.datetime.now()
-        if self.weekend(now):
+        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+        weekend = utils.weekend(now, offset, alarm_time)
+        if weekend:
             self.clock_alarm_indicator_var.set("")
         else:
             self.clock_alarm_indicator_var.set(alarm_time)
 
     def update_on_touch_tasks(self, event):
-        """Callback to the main window's event binding.
-          * hides/unhide the displayed alarm time if necessary. Ie. alarm time should
-                only be shown on weekdays.
-          * automatically blanks the screen after a short period if night time
+        """Callback to the main window's event binding. Runs tasks that should
+        occur every on every touch event:
+          * checks if alarm time should be hidden
+          * set a short timeout for blanking if night time
         """
-        # TODO: uniform nightime, weekend detection to offset alarmenv parameter
         self.set_active_alarm_indicator()
-        try:
-            self.set_screensaver_state()
-        except ValueError:
+        self.set_screensaver_timeout()
+
+    def set_screensaver_timeout(self):
+        """Blank the screen after a short timeout if it is currently night time
+        (ie. nightmode_offset hours before alarm time).
+        """
+        now = datetime.datetime.now()
+        alarm_time = self.current_alarm_time  # string: HH:MM
+        if not alarm_time:
             return
 
-    def set_screensaver_state(self):
-        nightmode_offset = int(self.alarm.env.get_value("main", "nightmode_offset"))
-        night_time = self.night_time(nightmode_offset)
+        try:
+            offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+            nighttime = utils.nighttime(now, offset, alarm_time)
 
-        if night_time:
-            self.root.after(2000, Clock.set_screensaver, "on")
-
-    def weekend(self, d):
-        """Helper function. Check whether a datetime d is between friday's alarm
-        and sunday 21:00.
-        """
-        dow = d.weekday()  # 0 == monday
-        alarm_time = time.strptime(self.current_alarm_time, "%H:%M")
-
-        # create dummy datetimes for same date as d and time values matching the alarm
-        # display boundaries
-        min_time = d.replace(hour=alarm_time.tm_hour, minute=alarm_time.tm_min)
-        max_time = d.replace(hour=21, minute=0)
-
-        friday = (dow == 4 and d >= min_time)
-        saturday = (dow == 5)
-        sunday = (dow == 6 and d <= max_time)
-
-        return (friday or saturday or sunday)
-
-    def night_time(self, offset):
-        """Helper function. Check whether current time is between set alarm time and
-        and offset hours before alarm time.
-        """
-        alarm_time = datetime.datetime.strptime(self.current_alarm_time, "%H:%M")
-        alarm_time_minutes = alarm_time.hour * 60 + alarm_time.minute
-
-        earlier = alarm_time - datetime.timedelta(hours=offset)
-        earlier_minutes = earlier.hour * 60 + earlier.minute
-
-        now = datetime.datetime.now()
-        now_minutes = now.hour * 60 + now.minute
-
-        # Are we currently within nightmode_offset hours of the next alarm?
-        # If the offset time is within the same day as the alarm, check current time
-        # between the two times
-        if earlier_minutes < alarm_time_minutes:
-            return now_minutes >= earlier_minutes and now_minutes <= alarm_time_minutes
-
-        # If offset time is in the previous day to alarm time, check if now is
-        # after offset time in that day or before alarm time the next day
-        return now_minutes >= earlier_minutes or now_minutes <= alarm_time
+            if nighttime:
+                self.root.after(2000, Clock.set_screensaver, "on")
+        except ValueError:
+            return
 
     def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
         """Helper function for formatting a window. Given a Tk or Toplevel
         element set a width and height and assign it to the center of the screen.
         Args:
-            widget (tk.Tk): the tkinter widget to format
-            dimensions (tuple): dimensions of the window as (width, height) pair
-            title (str): window title
-            bg (str): background color
+            widget(tk.Tk): the tkinter widget to format
+            dimensions(tuple): dimensions of the window as (width, height) pair
+            title(str): window title
+            bg(str): background color
         """
         widget.configure(background=bg)
         widget.title(title)
@@ -460,7 +438,7 @@ class Clock:
         if self.radio.is_playing():
             self.radio.stop()
         else:
-            self.radio.play(self.alarm.env.radio_url)
+            self.radio.play(self.env.radio_url)
 
     def set_screen_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from
@@ -486,7 +464,7 @@ class Clock:
 
     @staticmethod
     def set_screensaver(state="on"):
-        """Use the xset utility to either activate the screen saver (the default)
+        """Use the xset utility to either activate the screen saver(the default)
         or turn it off. Touching the screen will also deactivate the screensaver.
         """
 
@@ -497,7 +475,7 @@ class Clock:
         # set required env variables so we don't need to run the whole command
         # with shell=True
         # Note: the user folder is assumed to be 'pi'
-        #env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
+        # env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
         env = {"DISPLAY": ":0"}
         subprocess.run(cmd, env=env)
 
@@ -543,7 +521,7 @@ class CronWriter:
         return subprocess.check_output(["crontab", "-l"]).decode()
 
     def get_current_alarm(self):
-        """If an alarm has been set, return its time in HH:MM format. If not set
+        """If an alarm has been set, return its time in HH: MM format. If not set
         returns an empty string.
         """
         crontab = subprocess.check_output(["crontab", "-l"]).decode()

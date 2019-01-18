@@ -45,16 +45,17 @@ class AlarmEnv:
             (note: this does not valide the file!)
         """
         try:
-            for section in self.get_sections(excludes=["main"]):
+            for section in self.get_sections(excludes=["main", "alarm"]):
                 section_type = self.get_value(section, "type")
 
                 if section_type in ("content", "tts"):
-                    self.get_value(section, "handler")  # raises NoOptionError if not 'handler' key
+                    self.get_value(section, "handler")  # raises NoOptionError if no 'handler' key
                     self.get_value(section, "enabled")
 
                 # check for 'key_file' key on enabled sections
                 key_file_match = self.config.has_option(section, "key_file")
                 enabled = self.get_value(section, "enabled") == "1"
+                # if found, check value is not empty
                 if key_file_match and enabled:
                     self.get_value(section, "key_file")
 
