@@ -27,13 +27,9 @@ if len(sys.argv) > 1:
 
 
 class Alarm:
-    """A wrapper class for playing the alarm. Createa and alarmenv.AlarmEnv object based on
-    the configuration file and uses it to create the approriate alarm.
-    """
 
-    def __init__(self, config_file):
-        self.env = alarmenv.AlarmEnv(config_file)
-        self.env.setup()
+    def __init__(self, env):
+        self.env = env
 
     def main(self):
         """Read the configuration file, create and play the corresponding alarm."""
@@ -165,5 +161,8 @@ if __name__ == "__main__":
                         default="alarm.config", help="path to an alarm configuration file. Defaults to alarm.config")
     args = parser.parse_args()
 
-    app = Alarm(args.config)
+    env = alarmenv.AlarmEnv(args.config)
+    env.setup()
+
+    app = Alarm(env)
     app.main()
