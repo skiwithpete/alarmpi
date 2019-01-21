@@ -34,10 +34,6 @@ class Clock:
         self.radio = RadioStreamer()
         self.kwargs = kwargs
 
-        # determine whether the host system is a Raspberry Pi by checking
-        # the existance of a system brightness file.
-        self.is_rpi = os.path.isfile("/sys/class/backlight/rpi_backlight/brightness")
-
         # store current alarm time from cron as an attribute in HH:MM
         self.current_alarm_time = self.cron.get_current_alarm()
 
@@ -169,7 +165,7 @@ class Clock:
         sleep_button.grid(row=2, column=3, sticky="nsew")
 
         # disable brigtness and sleep button if the host system is not a Raspberry Pi
-        if not self.is_rpi:
+        if not self.env.is_rpi:
             self.brightness_button.config(state=tk.DISABLED)
             sleep_button.config(state=tk.DISABLED)
 
@@ -319,7 +315,7 @@ class Clock:
         # Define a cron entry with absolute paths to the Python interpreter and
         # the alarm script to run (sound_the_alarm.py)
         date_range = "1-5"
-        if self.env.get_value("alarm", "include_weekends") == "1":
+        if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
             date_range = "*"
 
         entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
+import os.path
 import configparser
 import dns.resolver
 import dns.exception
@@ -13,6 +13,9 @@ class AlarmEnv:
     def __init__(self, config_file):
         self.config_file = config_file
         self.config = configparser.ConfigParser()
+        # Determine whether the host system is a Raspberry Pi by checking
+        # the existance of a system brightness file.
+        self.is_rpi = os.path.isfile("/sys/class/backlight/rpi_backlight/brightness")
 
     def setup(self):
         """Setup the environment: parse and validate the configuration file and test
