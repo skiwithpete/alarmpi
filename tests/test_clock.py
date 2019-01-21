@@ -67,45 +67,23 @@ class ClockTestCase(TestCase):
         res = self.app.current_alarm_time
         self.assertEqual(res, "")
 
-    @patch("clock.Clock.weekend")
+    @patch("clock.utils.weekend")
     def test_alarm_indicator_off_during_weekend(self, mock_weekend):
-        """Is active alarm indicator in the main window set off during the weekend?"""
+        """Is the main window's active alarm indicator blank during the weekend?"""
         mock_weekend.return_value = True
 
         self.app.set_active_alarm_indicator()
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "")
 
-    @patch("clock.Clock.weekend")
+    @patch("clock.utils.weekend")
     def test_alarm_indicator_on_during_weekdays(self, mock_weekend):
-        """Is active alarm indicator in the main window set on during weekdays?"""
+        """Is the main window's active alarm indicator on during weekdays?"""
         mock_weekend.return_value = False
 
         self.app.set_active_alarm_indicator()
         new_value = self.app.clock_alarm_indicator_var.get()
         self.assertEqual(new_value, "17:00")
-
-    def test_weekend_detection(self):
-        """Are dates between friday's alarm time and sunday 21:00 recognized
-        as weekend?
-        """
-        friday_after_alarm = datetime.datetime(2018, 10, 19, 17, 2)
-        friday_before_alarm = datetime.datetime(2018, 10, 19, 4, 2)
-        saturday = datetime.datetime(2018, 9, 15, 1, 0)
-        tuesday = datetime.datetime(2018, 10, 9, 1, 0)
-        sunday_after_alarm = datetime.datetime(2019, 3, 24, 23, 17)
-
-        friday_after_alarm_response = self.app.weekend(friday_after_alarm)
-        friday_before_alarm_response = self.app.weekend(friday_before_alarm)
-        saturday_response = self.app.weekend(saturday)
-        tuesday_response = self.app.weekend(tuesday)
-        sunday_after_alarm_response = self.app.weekend(sunday_after_alarm)
-
-        self.assertTrue(friday_after_alarm_response)
-        self.assertFalse(friday_before_alarm_response)
-        self.assertTrue(saturday_response)
-        self.assertFalse(tuesday_response)
-        self.assertFalse(sunday_after_alarm_response)
 
     def test_play_radio_opens_stream_when_not_opened(self):
         """Does play_radio open a new radio stream if one is not already playing?"""
@@ -115,10 +93,10 @@ class ClockTestCase(TestCase):
         # as these aren't created in __init__,
         # An ugly hack :(
         self.app.radio_button = clock.tk.Button()
-        self.app.alarm.env.radio_url = "foo"
+        self.app.env.radio_url = "mock_url"
 
         self.app.play_radio()
-        self.app.radio.play.assert_called()
+        self.app.radio.play.assert_called_with("mock_url")
 
     def test_play_radio_closes_existing_stream(self):
         """Does play_radio close existing stream when one is already playing?"""
@@ -135,25 +113,25 @@ class RadioStreamerTestCase(TestCase):
     def setUp(self):
         self.radio = clock.RadioStreamer()
 
-    def test_radio_not_playing_on_empty_process_list(self):
-        """Does is_playing return False when the list of running processes is empty?"""
-        self.radio.active = []
+    def test_radio_not_playing_on_empty_process(self):
+        """Does is_playing return False when there active process flag is not set?"""
+        self.radio.process = None
         res = self.radio.is_playing()
         self.assertFalse(res)
 
-    def test_radio_is_playing_on_non_empty_process_list(self):
-        """Does is_playing return True when the list of running processes is not empty?"""
-        self.radio.active = [1]
+    def test_radio_is_playing_on_non_empty_process(self):
+        """Does is_playing return True when an active process flag is set?"""
+        self.radio.process = True
         res = self.radio.is_playing()
         self.assertTrue(res)
 
     @patch("clock.subprocess.Popen")
-    def test_stop_clears_process_list(self, mock_kill):
+    def test_stop_clears_active_process(self, mock_Popen):
         """Does stop clear the list of running processes?"""
-        self.radio.play("foo")
+        self.radio.play("mock_url")
         self.radio.stop()
 
-        self.assertEqual(self.radio.active, [])
+        self.assertEqual(self.radio.process, None)
 
 
 class CronWriterTestCase(TestCase):
@@ -161,7 +139,7 @@ class CronWriterTestCase(TestCase):
 
     @classmethod
     def setUpClass(self):
-        self.cron_writer = clock.CronWriter("")
+        self.cron_writer = clock.CronWriter()
 
     @patch("subprocess.check_output")
     def test_empty_string_returned_as_alarm_when_no_alarm_set(self, mock_subprocess_check_output):
@@ -210,12 +188,6 @@ class CronWriterTestCase(TestCase):
         res = self.cron_writer.get_crontab_lines_without_alarm()
 
         self.assertNotIn(alarm_line, res)
-
-    def test_invalid_config_file_raises_error(self):
-        """Does calling validate_config_path with invalid config file path rase
-        RuntimeError?
-        """
-        self.assertRaises(RuntimeError, self.cron_writer.validate_config_path)
 
 
 if __name__ == "__main__":

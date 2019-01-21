@@ -51,11 +51,11 @@ class AlarmEnvTestCase(TestCase):
     @patch("configparser.ConfigParser.sections")
     def test_get_sections_without_main(self, mock_sections):
         """Does get_sections return section names without the main section?"""
-        mock_sections.return_value = ["main", "greeting", "yahoo_weather", "BBC_news", "google_gcp_tts",
+        mock_sections.return_value = ["main", "greeting", "openweathermap", "BBC_news", "google_gcp_tts",
                                       "google_translate_tts", "festival_tts", "radio"]
         read_sections = self.env.get_sections(["main"])
 
-        filtered_sections = ["greeting", "yahoo_weather", "BBC_news", "google_gcp_tts",
+        filtered_sections = ["greeting", "openweathermap", "BBC_news", "google_gcp_tts",
                              "google_translate_tts", "festival_tts", "radio"]
         self.assertEqual(read_sections, filtered_sections)
 
@@ -63,12 +63,12 @@ class AlarmEnvTestCase(TestCase):
     @patch("alarmenv.AlarmEnv.get_sections")
     def test_read_content_sections(self, mock_get_sections, mock_config_has_match):
         """Does get_enabled_type_sections return correct content section names?"""
-        mock_get_sections.return_value = ["greeting", "yahoo_weather", "BBC_news"]
+        mock_get_sections.return_value = ["greeting", "openweathermap", "BBC_news"]
         # sets the first 2 items as 'enabled'
         mock_config_has_match.side_effect = [True, True, True, True, False, False]
 
         sections = self.env.get_enabled_sections("content")
-        self.assertEqual(sections, ["greeting", "yahoo_weather"])
+        self.assertEqual(sections, ["greeting", "openweathermap"])
 
 
 if __name__ == "__main__":

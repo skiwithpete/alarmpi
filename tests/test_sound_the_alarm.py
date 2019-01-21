@@ -1,18 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os
+
 import unittest
 from unittest import TestCase
 from unittest.mock import patch
 
+import alarmenv
 import sound_the_alarm
 import handlers.get_bbc_news
 import handlers.get_festival_tts
 import handlers.get_gcp_tts
 import handlers.get_google_translate_tts
 import handlers.get_greeting
-import handlers.get_yahoo_weather
+import handlers.get_open_weather
 
 
 class AlarmProcessingTestCase(TestCase):
@@ -20,20 +21,21 @@ class AlarmProcessingTestCase(TestCase):
     to the configuration file?
     """
 
-    @patch("alarmenv.AlarmEnv.setup")
-    def setUp(self, mock_setup):
-        self.alarm = sound_the_alarm.Alarm("")
+    def setUp(self):
+        """Create an Alarm object using a dummy AlarmEnv."""
+        env = alarmenv.AlarmEnv("mock_config_file")
+        self.alarm = sound_the_alarm.Alarm(env)
         self.alarm.env.radio_url = False
 
-    @patch("alarmenv.AlarmEnv.get_value_with_fallback")
+    @patch("alarmenv.AlarmEnv.get_value")
     @patch("sound_the_alarm.Alarm.get_content_parser_class")
     @patch("alarmenv.AlarmEnv.get_enabled_sections")
-    def test_correct_tts_client_chosen(self, mock_get_enabled_sections, mock_get_content_parser_class, mock_get_value_with_fallback):
+    def test_first_enabled_tts_client_chosen(self, mock_get_enabled_sections, mock_get_content_parser_class, mock_get_value):
         """Does get_tts_client choose the first enabled client?"""
         mock_get_enabled_sections.return_value = ["google_translate_tts"]
 
         mock_get_content_parser_class.return_value = handlers.get_google_translate_tts.GoogleTranslateTTSManager
-        mock_get_value_with_fallback.return_value = None
+        mock_get_value.return_value = None
 
         client = self.alarm.get_tts_client()
         self.assertIsInstance(client, handlers.get_google_translate_tts.GoogleTranslateTTSManager)
@@ -50,7 +52,7 @@ class AlarmProcessingTestCase(TestCase):
     def test_correct_content_parser_chosen(self, mock_get_value):
         """Given a content section, is the correct class chosen in get_content_parser_class?"""
         mock_get_value.side_effect = ["get_bbc_news.py", "get_festival_tts.py", "get_gcp_tts.py",
-                                      "get_google_translate_tts.py", "get_greeting.py", "get_yahoo_weather.py"]
+                                      "get_google_translate_tts.py", "get_greeting.py", "get_open_weather.py"]
 
         # import handler modules
         response_classes = [
@@ -59,7 +61,7 @@ class AlarmProcessingTestCase(TestCase):
             handlers.get_gcp_tts.GoogleCloudTTS,
             handlers.get_google_translate_tts.GoogleTranslateTTSManager,
             handlers.get_greeting.Greeting,
-            handlers.get_yahoo_weather.YahooWeatherClient
+            handlers.get_open_weather.OpenWeatherMapClient
         ]
 
         # run get_content_parser_class for each handler name and compare to the corresponding response_class
@@ -67,75 +69,48 @@ class AlarmProcessingTestCase(TestCase):
             created_class = self.alarm.get_content_parser_class("")
             self.assertIs(created_class, response_class)
 
-    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.play_beep")
     @patch("sound_the_alarm.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_beep_played_when_no_network(self, mock_config_has_match, mock_gui_running, mock_play):
+    def test_beep_played_when_no_network(self, mock_config_has_match, mock_gui_running, mock_play_beep):
         """Is the beep played when no network connection is detected?"""
         mock_gui_running.return_value = False
-        mock_config_has_match.return_value = True
+        mock_config_has_match.return_value = True  # is GUI running
         self.alarm.env.netup = False
         self.alarm.main()
 
-        mock_play.assert_called_with(
-            self.alarm.play_beep,
-            pid=False,
-            signame=sound_the_alarm.signal.SIGUSR2
-        )
+        mock_play_beep.assert_called()
 
-    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.play_beep")
     @patch("sound_the_alarm.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_beep_played_when_no_readaloud(self, mock_config_has_match, mock_gui_running, mock_play):
+    def test_beep_played_when_no_readaloud(self, mock_config_has_match, mock_gui_running, mock_play_beep):
         """Is the beep played when readaloud = 0 is set in the configuration?"""
-        mock_gui_running.return_value = 135
-        mock_config_has_match.return_value = False
+        mock_gui_running.return_value = False
+        mock_config_has_match.return_value = False  # is GUI running
         self.alarm.env.netup = True
         self.alarm.main()
 
-        mock_play.assert_called_with(
-            self.alarm.play_beep,
-            pid=135,
-            signame=sound_the_alarm.signal.SIGUSR2
-        )
+        mock_play_beep.assert_called()
 
-    # ...this is just terrible :(
-    @patch("sound_the_alarm.Alarm.play")
+    @patch("sound_the_alarm.Alarm.play_radio")
+    @patch("sound_the_alarm.Alarm.get_tts_client")
     @patch("sound_the_alarm.Alarm.generate_content")
     @patch("sound_the_alarm.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
-    def test_radio_played_when_enabled(self, mock_config_has_match, mock_gui_running, mock_generate_content, mock_play):
+    def test_radio_played_when_enabled(self, mock_config_has_match, mock_gui_running, mock_generate_content, mock_get_tts_client, mock_play_radio):
         """Is a radio stream opened when radio is enabled in the config?"""
         mock_gui_running.return_value = False
-        mock_config_has_match.return_value = True
-        mock_generate_content.return_value = "dummy content"  # need non empty content
+        mock_config_has_match.return_value = True  # is GUI running
 
         self.alarm.env.netup = True
         self.alarm.env.radio_url = True
 
         self.alarm.main()
-        mock_play.assert_called_with(
-            self.alarm.play_radio,
-            pid=False,
-            signame=sound_the_alarm.signal.SIGUSR1
-        )
-
-
-class HandlerTestCase(TestCase):
-    """Test cases for content handlers."""
-
-    def test_sunset_time_formatted_with_double_minute_digits(self):
-        """Are sunset & sunrise timestring returned by the weather API correctly formatted
-        with double digit minute readings?
-        """
-        formatted = handlers.get_yahoo_weather.YahooWeatherClient.format_time_string("8:3 am")
-        self.assertEqual(formatted, "08:03 AM")
+        mock_play_radio.assert_called()
 
 
 if __name__ == "__main__":
     """Create test suites from both classes and run tests."""
     suite = unittest.TestLoader().loadTestsFromTestCase(AlarmProcessingTestCase)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-    suite = unittest.TestLoader().loadTestsFromTestCase(HandlerTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)
