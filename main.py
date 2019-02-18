@@ -2,23 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import os
 import clock
+import sys
+from PyQt5.QtWidgets import QApplication
 
 
-# Entrypoint for the project, runs the clock GUI. The rest of the components
-# (greeting, news and weather, radio) are processed in sound_the_alarm.py. The clock
-# can be used to set a cron entry for this. Alternatively, sound_the_alarm.py
-# can be run directly.
-
-PIDFILE = "clock.pid"
-
-
-def write_pidfile():
-    """Write a pidfile for the currently running Python process (ie. main.py)"""
-    with open(PIDFILE, "w") as f:
-        pid = os.getpid()
-        f.write(str(pid))
+# Entrypoint for the project, runs the clock GUI. The GUI can be used to
+# schedule an alarm. To run the alarm directly, run sound_the_alarm.py.
+# TODO: alarm can be run directly from the GUI in future version
 
 
 if __name__ == "__main__":
@@ -30,8 +21,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = {"fullscreen": args.fullscreen}
 
-    write_pidfile()
-    app = clock.Clock(args.config, **kwargs)
-
-    app.run()
-    os.remove(PIDFILE)
+    app = QApplication(sys.argv)
+    ex = clock.AlarmWindow(args.config, **kwargs)
+    sys.exit(app.exec_())

@@ -1,29 +1,56 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 """
-A Tkinter app displaying the current time and for setting up an alarm via a
-cron entry.
+ZetCode PyQt5 tutorial
+
+In this example, we create a bit
+more complicated window layout using
+the QGridLayout manager.
+
+author: Jan Bodnar
+website: zetcode.com
+last edited: January 2015
 """
 
-import datetime
+
 import time
-import sys
+import datetime
 import os
 import subprocess
 import signal
-import tkinter as tk
-from PIL import Image, ImageTk
+from collections import namedtuple
+
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import (
+    QWidget,
+    QLabel,
+    QPushButton,
+    QLCDNumber,
+    QGridLayout,
+    QApplication,
+    QSizePolicy,
+    QDesktopWidget
+)
+from PyQt5.QtGui import QPixmap
 
 import alarmenv
 import utils
 
+# Create namedtuples for storing button and label configurations
+ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
+ButtonConfig.__new__.__defaults__ = (
+    None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
-class Clock:
-    """A Tkinter GUI for displaying the current time and setting the alarm."""
+
+class AlarmWindow(QWidget):
+    """QWidget subclass for main window."""
 
     def __init__(self, config_file, **kwargs):
-        """Create the root window for displaying time."""
-        self.root = tk.Tk()
+        super().__init__()
+        self.settings_window = SettingsWindow()
+        self.initUI()
+
         self.cron = CronWriter()
 
         # Read the alarm configuration file and initialize and alarmenv object
@@ -31,46 +58,109 @@ class Clock:
         self.env = alarmenv.AlarmEnv(config_file)
         self.env.setup()
 
+        # Disable sleep button if host system is not a Raspberry Pi
+        if not self.env.is_rpi:
+            self.control_buttons["Sleep"].setEnabled(False)
+
         self.radio = RadioStreamer()
         self.kwargs = kwargs
 
-        # store current alarm time from cron as an attribute in HH:MM
         self.current_alarm_time = self.cron.get_current_alarm()
-
-        # init StringVars for various widgets needed in multiple methods
-        # 1 main window:
-        self.clock_time_var = tk.StringVar()  # current time
-        self.clock_alarm_indicator_var = tk.StringVar()  # alarm time
-
-        # 2 alarm setup window
-        self.alarm_time_var = tk.StringVar()  # selected alarm time
-        self.alarm_time_var.set("00:00")
-        self.alarm_status_var = tk.StringVar()  # status messages ('alarm set', 'invalid value', etc.)
+        self.alarm_time_lcd.display(self.current_alarm_time)
 
         # Current active alarm display should be cleared if no active alarm
         # for the next day and re-set if alarm is active the next day
         # (ie. don't show alarm as active during weekends)
         # Add bindings for clearing and setting the active alarm label.
-        self.root.bind("<Button-1>", self.update_on_touch_tasks)
-        signal.signal(signal.SIGUSR1, self.radio_signal_handler)
-        signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
+        #self.root.bind("<Button-1>", self.update_on_touch_tasks)
+        #signal.signal(signal.SIGUSR1, self.radio_signal_handler)
+        #signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
+
+    def initUI(self):
+        # subgrids for layouting
+        grid = QGridLayout()
+        alarm_grid = QGridLayout()
+        left_grid = QGridLayout()
+        right_grid = QGridLayout()
+        bottom_grid = QGridLayout()
+
+        # ** Center grid: current and alarm time displays **
+        self.clock_lcd = QLCDNumber(8, self)
+        self.clock_lcd.setStyleSheet("border: 0px;")
+        alarm_grid.addWidget(self.clock_lcd, 0, 0)
+
+        self.tick()
+        _timer = QTimer(self)
+        _timer.timeout.connect(self.tick)
+        _timer.start(1000)
+
+        self.alarm_time_lcd = QLCDNumber(self)
+        self.alarm_time_lcd.display("0:00")
+        self.alarm_time_lcd.setStyleSheet("border: 0px;")
+        alarm_grid.addWidget(self.alarm_time_lcd, 1, 0)
+
+        # ** Bottom grid: main UI control buttons **
+        button_configs = [
+            ButtonConfig(text="Settings", position=(0, 0), slot=self.settings_window.initUI),
+            ButtonConfig(text="Sleep", position=(0, 1), slot=AlarmWindow.set_screensaver),
+            ButtonConfig(text="Radio", position=(0, 2), slot=self.play_radio),
+            ButtonConfig(text="Close", position=(0, 3), slot=QApplication.instance().quit)
+        ]
+
+        self.control_buttons = {}
+        for config in button_configs:
+            button = QPushButton(config.text, self)
+            button.setSizePolicy(*config.size_policy)
+            self.control_buttons[config.text] = button  # store a reference to the button
+
+            if config.slot:
+                button.clicked.connect(config.slot)
+            bottom_grid.addWidget(button, *config.position)
+
+        # Set the Radio on/off button to a checkable button
+        self.control_buttons["Radio"].setCheckable(True)
+
+        # ** Left grid: next 3 departing trains **
+        train1 = QLabel("U 6:54", self)
+        train2 = QLabel("E 7:14", self)
+        train3 = QLabel("U 7:33", self)
+        left_grid.addWidget(train1, 0, 0)
+        left_grid.addWidget(train2, 1, 0)
+        left_grid.addWidget(train3, 2, 0)
+
+        # ** Right grid: weather forecast **
+        temperature = QLabel("16°", self)
+        weather_container = QLabel(self)
+        pixmap = QPixmap('day_sunny_1-512.png').scaledToWidth(48)
+        weather_container.setPixmap(pixmap)
+        right_grid.addWidget(temperature, 0, 0, Qt.AlignRight)
+        right_grid.addWidget(weather_container, 0, 1, Qt.AlignRight)
+
+        grid.addLayout(alarm_grid, 0, 1)
+        grid.addLayout(left_grid, 0, 0)
+        grid.addLayout(right_grid, 0, 2)
+        grid.addLayout(bottom_grid, 1, 0, 1, 3)
+
+        # Set row strech so the bottom bar doesn't take too much space
+        grid.setRowStretch(0, 2)
+        grid.setRowStretch(1, 1)
+
+        self.setLayout(grid)
+        self.resize(600, 320)
+        self.center()
+
+        self.setWindowTitle("Alarmpi")
+        self.show()
 
     def tick(self):
-        """Update the current time value in the main clock label every 1 second."""
         s = time.strftime("%H:%M:%S")
-        self.clock_time_var.set(s)
-        self.root.after(1000, self.tick)
+        self.clock_lcd.display(s)
 
-    def run(self):
-        """Validate configuration file path, create the main window and run mainloop.
-        """
-        self.create_main_window()
-        self.root.mainloop()
-
-    def destroy(self):
-        """Destroy the main window and kill any running radio streams."""
-        self.radio.stop()
-        self.root.destroy()
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
@@ -86,305 +176,12 @@ class Clock:
         self.set_screensaver("off")
         self.set_active_alarm_indicator()
 
-    def create_main_window(self):
-        """Create the main window. Contains labels for current and alarm time as well as
-        buttons for accessing the alarm setup window.
-        """
-        # rows: 3, columns: 5
-        RED = "#FF1414"
-        BLACK = "#090201"
-
-        self.format_window(self.root, dimensions=(600, 320), title="Clock", bg=BLACK)
-
-        # set main window to fullscreen if command line flag for it was provided
-        # (overrides the dimentions above)
-        if self.kwargs.get("fullscreen"):
-            self.root.attributes("-fullscreen", True)
-            self.root.config(cursor="none")  # hide mouse cursor
-
-        # set row and column weights so widgets expand to all available space
-        for i in range(5):
-            tk.Grid.columnconfigure(self.root, i, weight=1)
-
-        for i in range(3):
-            tk.Grid.rowconfigure(self.root, i, weight=1)
-
-        # Row 0: label for displaying current time
-        clock_label = tk.Label(
-            self.root,
-            font=("times", 48, "bold"),
-            textvariable=self.clock_time_var,
-            fg=RED,
-            bg=BLACK
-        )
-        clock_label.grid(row=0, column=1, ipadx=50, columnspan=3, rowspan=1,
-                         sticky="sew")
-
-        # Row 1: label for showing set alarm time (if any)
-        alarm_time_label = tk.Label(
-            self.root,
-            font=("times", 22, "bold"),
-            textvariable=self.clock_alarm_indicator_var,
-            fg=RED,
-            bg=BLACK
-        )
-        alarm_time_label.grid(row=1, column=1, columnspan=3, sticky="new")
-
-        # only display the alarm time during weekdays
-        self.set_active_alarm_indicator()
-
-        # Row 2: control buttons
-        tk.Button(self.root, text="Set alarm",
-                  command=self.create_alarm_window).grid(row=2, column=0, sticky="nsew")
-
-        # 'Play radio' button. a tkinter Button whose relief is controlled by the
-        # callback so as to keep it as pressed until the stream is stopped
-        self.radio_button = tk.Button(
-            self.root,
-            text="Play radio",
-            command=self.play_radio
-        )
-        self.radio_button.grid(row=2, column=1, sticky="nsew")
-
-        # disable the button if no url provided in the config file
-        if not self.env.radio_url:
-            self.radio_button.config(state=tk.DISABLED)
-
-        self.brightness_button = tk.Button(
-            self.root,
-            text="Toggle brightness",
-            command=self.set_screen_brightness
-        )
-        self.brightness_button.grid(row=2, column=2, sticky="nsew")
-
-        sleep_button = tk.Button(
-            self.root,
-            text="Screen off",
-            command=Clock.set_screensaver
-        )
-        sleep_button.grid(row=2, column=3, sticky="nsew")
-
-        # disable brigtness and sleep button if the host system is not a Raspberry Pi
-        if not self.env.is_rpi:
-            self.brightness_button.config(state=tk.DISABLED)
-            sleep_button.config(state=tk.DISABLED)
-
-        tk.Button(self.root, text="Close",
-                  command=self.destroy).grid(row=2, column=4, sticky="nsew")
-
-        self.tick()
-
-    def create_alarm_window(self):
-        """Create a new window for scheduling the alarm. Contains toggle buttons
-        for setting the minute and hour value, labels for displaying the selection
-        and buttons for confirming.
-        """
-        # rows: 4 columns: 7
-
-        top = tk.Toplevel()
-        self.format_window(top, dimensions=(500, 230), title="Set alarm")
-
-        # set weights to ensure widgets take free space within their cells
-        for x in range(7):
-            tk.Grid.columnconfigure(top, x, weight=1)
-
-        for y in range(5):
-            tk.Grid.rowconfigure(top, y, weight=1)
-
-        # hour selectors on the left side of the window (rows 0-2, columns 0-2)
-        hour_indicators = []
-        tk.Label(top, text="Hour").grid(row=0, column=0, columnspan=3)
-        for i in range(5):
-            var = tk.IntVar()
-            hour_indicators.append(var)
-            button_value = 2**i
-
-            padx = (0, 0)
-            # the leftmost buttons should have a positive left padding
-            if i % 3 == 0:
-                padx = (10, 0)
-
-            # first 3 buttons in consecutive columns on row 1, remaining 2 on row 2
-            row = 1
-            column = i % 3
-            if i > 2:
-                row = 2
-
-            hour_button = tk.Checkbutton(
-                top,
-                text=str(button_value),
-                variable=var,
-                onvalue=button_value,
-                offvalue=-button_value,
-                indicatoron=False,
-                command=lambda var=var: self.update_alarm_display_time("hour", var.get())
-            )
-            hour_button.grid(row=row, column=column, padx=padx, sticky="nsew")
-
-        # reset the selected alarm label every time the setup window is opened
-        self.alarm_time_var.set("00:00")
-        tk.Label(top, textvariable=self.alarm_time_var).grid(row=1, column=3)
-
-        # label for displaying status messages upon setting the alarm
-        tk.Label(top, textvariable=self.alarm_status_var).grid(row=2, column=3)
-
-        image = Image.open("resources/alarm-1673577_640.png")
-        image = image.resize((28, 28), Image.ANTIALIAS)
-        photo = ImageTk.PhotoImage(image)
-
-        self.alarm_indicator = tk.Label(top, image=photo)
-        self.alarm_indicator.image = photo  # keep a reference!
-
-        # check for existing alarm in cron and set indicator to main window
-        if self.current_alarm_time:
-            self.set_alarm_status_message(self.current_alarm_time)
-
-        # minute selectors on the right (rows 0-2, columns 4-6)
-        tk.Label(top, text="Minute").grid(row=0, column=4, columnspan=3)
-        for i in range(6):
-            var = tk.IntVar()
-            button_value = 2**i
-
-            padx = (0, 0)
-            # padding for rightmost buttons
-            if i % 3 == 2:
-                padx = (0, 10)
-
-            # first 3 buttons in consecutive columns on row 1, remaining 3 on row 2
-            row = 1
-            column = (i % 3) + 4
-            if i > 2:
-                row = 2
-
-            hour_button = tk.Checkbutton(
-                top,
-                text=str(button_value),
-                variable=var,
-                onvalue=button_value,
-                offvalue=-button_value,
-                indicatoron=False,
-                command=lambda var=var: self.update_alarm_display_time("minute", var.get())
-            )
-            hour_button.var = var
-            hour_button.grid(row=row, column=column, padx=padx, sticky="nsew")
-
-        # row 3  buttons for setting and clearing the alarm and exiting
-        tk.Button(top, text="Set alarm", command=self.set_alarm).grid(
-            row=3, column=0, rowspan=2, columnspan=2, pady=(10, 0), sticky="nsew")
-        tk.Button(top, text="Clear alarm", command=self.clear_alarm).grid(
-            row=3, column=2, rowspan=2, columnspan=3, pady=(10, 0), sticky="nsew")
-        tk.Button(top, text="Close", command=top.destroy).grid(
-            row=3, column=5, rowspan=2, columnspan=2, pady=(10, 0), sticky="nsew")
-
-    def update_alarm_display_time(self, type_, value):
-        """Given a type and a value, update the label displaying the currently selected alarm time
-        in the alarm setup window. Note: output may be invalid time value such as "16:64". These are
-        invalidated in the alarm setup callback.
-        Args:
-            type_ (string): Either 'hour' or 'minute'. Determines the part of the time to update.
-            value (int): The value to add to existing hour or minute part of the alarm time.
-        """
-        # get the currently displayed value in the setup window as base
-        old_alarm_time = self.alarm_time_var.get()
-
-        hour = int(old_alarm_time.split(":")[0])
-        minute = int(old_alarm_time.split(":")[1])
-
-        if type_ == "hour":
-            new_hour = hour + value
-            new_value = str(new_hour).zfill(2) + ":" + str(minute).zfill(2)
-
-        else:
-            new_minute = minute + value
-            new_value = str(hour).zfill(2) + ":" + str(new_minute).zfill(2)
-
-        self.alarm_time_var.set(new_value)
-
-    def set_alarm(self):
-        """Callback for "Set alarm" button: write a new cron entry for the alarm and
-        display a message for the user. Existing cron alarms will be overwritten
-        Invalid time values are not accepted.
-        """
-        try:
-            entry_time = self.alarm_time_var.get()
-            t = time.strptime(entry_time, "%H:%M")
-        except ValueError:
-            self.alarm_status_var.set("Invalid time")
-            return
-
-        # Define a cron entry with absolute paths to the Python interpreter and
-        # the alarm script to run (sound_the_alarm.py)
-        date_range = "1-5"
-        if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
-            date_range = "*"
-
-        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(
-            min=t.tm_min,
-            hour=t.tm_hour,
-            date_range=date_range,
-            python_exec=sys.executable,
-            path_to_alarm=self.cron.alarm_path,
-            path_to_config=self.config_file)
-        self.cron.add_cron_entry(entry)
-        self.current_alarm_time = entry_time
-        self.set_alarm_status_message(entry_time)
-
-    def clear_alarm(self):
-        """Callback for the "Clear alarm" button: remove the cron entry and
-        write a message in the status Label to notify user.
-        """
-        self.cron.delete_cron_entry()
-        self.alarm_status_var.set("Alarm cleared")
-        self.alarm_indicator.grid_remove()
-
-        self.current_alarm_time = ""
-        self.clock_alarm_indicator_var.set("")
-
-    def set_alarm_status_message(self, time):
-        """Helper function for setting the alarm image and message to the
-        alarm window.
-        """
-        self.alarm_indicator.grid(row=2, column=2)
-        msg = "Alarm set for {}".format(time)
-        self.alarm_status_var.set(msg)
-
-        # Also display the alarm time in the main window
-        self.set_active_alarm_indicator()
-
-    def set_active_alarm_indicator(self):
-        """Updates the main window label displaying set alarm time. By default the
-        alarm only plays on weekdays. If so, empty the label after friday's alarm.
-        """
-        if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
-            return
-
-        alarm_time = self.current_alarm_time  # string: HH:MM
-        if not alarm_time:
-            return
-
-        now = datetime.datetime.now()
-        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
-        weekend = utils.weekend(now, offset, alarm_time)
-        if weekend:
-            self.clock_alarm_indicator_var.set("")
-        else:
-            self.clock_alarm_indicator_var.set(alarm_time)
-
-    def update_on_touch_tasks(self, event):
-        """Callback to the main window's event binding. Runs tasks that should
-        occur every on every touch event:
-          * checks if alarm time should be hidden
-          * set a short timeout for blanking if night time
-        """
-        self.set_active_alarm_indicator()
-        self.set_screensaver_timeout()
-
     def set_screensaver_timeout(self):
         """Blank the screen after a short timeout if it is currently night time
         (ie. nightmode_offset hours before alarm time).
         """
         now = datetime.datetime.now()
-        alarm_time = self.current_alarm_time  # string: HH:MM
+        alarm_time = self.current_alarm_time  # HH:MM
         if not alarm_time:
             return
 
@@ -393,50 +190,27 @@ class Clock:
             nighttime = utils.nighttime(now, offset, alarm_time)
 
             if nighttime:
-                self.root.after(2000, Clock.set_screensaver, "on")
+                self.root.after(2000, AlarmWindow.set_screensaver, "on")
         except ValueError:
             return
 
-    def format_window(self, widget, dimensions, title, bg="#D9D9D9"):
-        """Helper function for formatting a window. Given a Tk or Toplevel
-        element set a width and height and assign it to the center of the screen.
-        Args:
-            widget(tk.Tk): the tkinter widget to format
-            dimensions(tuple): dimensions of the window as (width, height) pair
-            title(str): window title
-            bg(str): background color
-        """
-        widget.configure(background=bg)
-        widget.title(title)
-
-        width, height = dimensions
-        w_width = widget.winfo_screenwidth()  # width of the screen
-        w_height = widget.winfo_screenheight()  # height of the screen
-
-        # compute offsets from the edges of the screen
-        dx = (w_width/2) - (width/2)
-        dy = (w_height/2) - (height/2)
-
-        widget.geometry("{}x{}+{}+{}".format(width, height, int(dx), int(dy)))
-
     def play_radio(self):
         """Callback to the 'Play radio' button: open or close the radio stream
-        depending on whether it is currently running.
+        depending on the button state.
         """
         # Change the relief of the button
-        if self.radio_button["relief"] == tk.SUNKEN:
-            self.radio_button.config(relief=tk.RAISED)
-            # Also force the button state to NORMAL instead of ACTIVE
-            self.radio_button.config(state=tk.NORMAL)
-        else:
-            self.radio_button.config(relief=tk.SUNKEN)
+        button = self.control_buttons["Radio"]
 
-        if self.radio.is_playing():
-            self.radio.stop()
-        else:
+        # Get the current state of the button. Note that this function runs after
+        # the click event. Ie. pressing isChecked returns True when the button
+        # was activated and thus when the radio should be played.
+        button_checked = button.isChecked()
+        if button_checked:
             self.radio.play(self.env.radio_url)
+        else:
+            self.radio.stop()
 
-    def set_screen_brightness(self):
+    def change_display_backlight_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from
         file and sets it either high or low depending on the current value.
         """
@@ -463,7 +237,6 @@ class Clock:
         """Use the xset utility to either activate the screen saver(the default)
         or turn it off. Touching the screen will also deactivate the screensaver.
         """
-
         cmd = "xset s reset".split()
         if state == "on":
             cmd = "xset s activate".split()
@@ -474,6 +247,80 @@ class Clock:
         # env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
         env = {"DISPLAY": ":0"}
         subprocess.run(cmd, env=env)
+
+
+class SettingsWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    def initUI(self):
+        grid = QGridLayout()
+
+        # subgrids for positioning elements
+        left_grid = QGridLayout()
+        right_grid = QGridLayout()
+        bottom_grid = QGridLayout()
+
+        # ** Right grid: numpad for settings the alarm **
+        button_configs = [
+            ButtonConfig(text="m/h", position=(0, 2)),
+            ButtonConfig(text="1", position=(1, 0)),
+            ButtonConfig(text="2", position=(1, 1)),
+            ButtonConfig(text="3", position=(1, 2)),
+            ButtonConfig(text="4", position=(2, 0)),
+            ButtonConfig(text="5", position=(2, 1)),
+            ButtonConfig(text="6", position=(2, 2)),
+            ButtonConfig(text="7", position=(3, 0)),
+            ButtonConfig(text="8", position=(3, 1)),
+            ButtonConfig(text="9", position=(3, 2)),
+            ButtonConfig(text="0", position=(4, 1)),
+            ButtonConfig(text="set", position=(5, 0)),
+            ButtonConfig(text="set", position=(5, 2)),
+        ]
+
+        for config in button_configs:
+            button = QPushButton(config.text, self)
+
+            if config.slot:
+                button.clicked.connect(config.slot)
+            right_grid.addWidget(button, *config.position)
+
+        # ** Bottom level main buttons **
+        button_config = [
+            ButtonConfig(text="Play now", position=(0, 0)),
+            ButtonConfig(text="Show console", position=(0, 1)),
+            ButtonConfig(text="Set brightness", position=(0, 2)),
+            ButtonConfig(text="Close", position=(0, 3), slot=self.close)
+        ]
+
+        for config in button_config:
+            button = QPushButton(config.text, self)
+            button.setSizePolicy(*config.size_policy)
+
+            if config.slot:
+                button.clicked.connect(config.slot)
+            bottom_grid.addWidget(button, *config.position)
+
+        # ** Left grid: misc settings **
+        test_label = QLabel("foo", self)
+        left_grid.addWidget(test_label, 1, 0)
+
+        grid.addLayout(left_grid, 0, 0)
+        grid.addLayout(right_grid, 0, 1)
+        grid.addLayout(bottom_grid, 1, 0, 1, 2)
+
+        self.setLayout(grid)
+        self.resize(500, 300)
+        self.center()
+
+        self.setWindowTitle("Settings")
+        self.show()
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
 
 class RadioStreamer:
