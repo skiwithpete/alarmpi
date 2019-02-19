@@ -8,6 +8,7 @@ import os
 import sys
 import inspect
 import signal
+import getpass
 
 import pydub
 import pydub.playback
@@ -25,6 +26,10 @@ BASE = os.getcwd()
 if len(sys.argv) > 1:
     BASE = os.path.dirname(sys.argv[1])  # get dirname from the path to sound_the_alarm.py
 
+# alias USRSIGnals for clarity
+RADIO_PLAY_SIGNAL = signal.SIGUSR1
+WAKEUP_SIGNAL = signal.SIGUSR2
+
 
 class Alarm:
 
@@ -40,7 +45,7 @@ class Alarm:
         # paly a beeping sound effect isntead of making a series of API calls.
         if not self.env.netup or not tts_enabled:
             if pid:
-                os.kill(pid, signal.SIGUSR2)
+                os.kill(pid, WAKEUP_SIGNAL)
             Alarm.play_beep()
             return
 
@@ -48,7 +53,7 @@ class Alarm:
         tts_client = self.get_tts_client()
         text = "\n".join(content)
         if pid:
-            os.kill(pid, signal.SIGUSR2)
+            os.kill(pid, WAKEUP_SIGNAL)
         tts_client.play(text)
 
         # Play the radio stream if enabled:
@@ -57,7 +62,7 @@ class Alarm:
         # If GUI is not running, call mplayer directly.
         if self.env.radio_url:
             if pid:
-                os.kill(pid, signal.SIGUSR1)
+                os.kill(pid, RADIO_PLAY_SIGNAL)
             else:
                 self.play_radio()
 
@@ -132,17 +137,19 @@ class Alarm:
 
     @staticmethod
     def gui_running():
-        """Check if the GUI is running. Attempts to read the GUI's pid from it's
-        pidfile.
+        """Check if the GUI is running. Uses pgrep to get pid of a
+        running 'python main.py' process owned by the currently logged in user.
         """
-        import main
-        pidfile = os.path.join(BASE, main.PIDFILE)
+        user = getpass.getuser()
+
+        # look for python processes running main.py owned by the currently logged
+        # in user.
+        cmd = ["pgrep", "-u", user, "-f", "python .*(alarmpi/)?main.py"]
+        p = subprocess.run(cmd, stdout=subprocess.PIPE)
         try:
-            with open(pidfile) as f:
-                pid = int(f.read())
-                return pid
-        except FileNotFoundError:
-            return
+            return int(p.stdout)
+        except ValueError:
+            return False
 
     @staticmethod
     def play_beep():
