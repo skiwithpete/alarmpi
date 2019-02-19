@@ -22,5 +22,5 @@ if __name__ == "__main__":
     kwargs = {"fullscreen": args.fullscreen}
 
     app = QApplication(sys.argv)
-    ex = clock.AlarmWindow(args.config, **kwargs)
+    ex = clock.Clock(args.config, **kwargs)
     sys.exit(app.exec_())

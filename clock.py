@@ -43,38 +43,151 @@ ButtonConfig.__new__.__defaults__ = (
     None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
 
-class AlarmWindow(QWidget):
-    """QWidget subclass for main window."""
+class Clock:
+    """Wrapper class for the clock itself. Defines interactions between
+    UI elements and backend logic.
+    """
 
     def __init__(self, config_file, **kwargs):
-        super().__init__()
+        self.main_window = AlarmWindow()
         self.settings_window = SettingsWindow()
-        self.initUI()
 
         self.cron = CronWriter()
+        self.radio = RadioStreamer()
+        self.kwargs = kwargs
 
         # Read the alarm configuration file and initialize and alarmenv object
         self.config_file = config_file
         self.env = alarmenv.AlarmEnv(config_file)
         self.env.setup()
 
+        # Setup references to main control buttons in both windows
+        settings_button = self.main_window.control_buttons["Settings"]
+        radio_button = self.main_window.control_buttons["Radio"]
+        sleep_button = self.main_window.control_buttons["Sleep"]
+
+        brightness_button = self.settings_window.control_buttons["Toggle brightness"]
+
         # Disable sleep button if host system is not a Raspberry Pi
         if not self.env.is_rpi:
-            self.control_buttons["Sleep"].setEnabled(False)
+            sleep_button.setEnabled(False)
+            brightness_button.setEnabled(False)
 
-        self.radio = RadioStreamer()
-        self.kwargs = kwargs
-
+        # Set main window's alarm time display to cron's time
         self.current_alarm_time = self.cron.get_current_alarm()
-        self.alarm_time_lcd.display(self.current_alarm_time)
+        self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
-        # Current active alarm display should be cleared if no active alarm
-        # for the next day and re-set if alarm is active the next day
-        # (ie. don't show alarm as active during weekends)
-        # Add bindings for clearing and setting the active alarm label.
-        #self.root.bind("<Button-1>", self.update_on_touch_tasks)
-        #signal.signal(signal.SIGUSR1, self.radio_signal_handler)
-        #signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
+        self.main_window.mouseReleaseEvent = self.on_touch_event_handler
+        signal.signal(signal.SIGUSR1, self.radio_signal_handler)
+        signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
+
+        # Set button handlers for buttons requiring interactions between helper classes
+        self.main_window.set_button_handler(settings_button, self.settings_window.show)
+        self.main_window.set_button_handler(radio_button, self.play_radio)
+        self.main_window.set_button_handler(sleep_button, Clock.toggle_screensaver)
+
+        self.settings_window.set_button_handler(
+            brightness_button, self.toggle_display_backlight_brightness)
+
+    def radio_signal_handler(self, sig, frame):
+        """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
+        signals from sound_the_alarm denoting a request to open a radio stream and to
+        set the radio button as pressed. Also runs a check to see whether the displayed
+        alarm time in the main window should be hidden (ie. no alarm the next day)."""
+        self.play_radio()
+        self.set_active_alarm_indicator()
+
+    def wakeup_signal_handler(self, sig, frame):
+        """Signal handler for waking up the screen. Sent by sound_the_alarm
+        upon the alarm. If the screen is blank, reset the screensaver activated by xset."""
+        self.toggle_screensaver("off")
+        self.set_active_alarm_indicator()
+
+    def on_touch_event_handler(self, event):
+        print("foo")
+
+    def set_screensaver_timeout(self):
+        """Blank the screen after a short timeout if it is currently night time
+        (ie. nightmode_offset hours before alarm time).
+        """
+        now = datetime.datetime.now()
+        alarm_time = self.current_alarm_time  # HH:MM
+        if not alarm_time:
+            return
+
+        try:
+            offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+            nighttime = utils.nighttime(now, offset, alarm_time)
+
+            if nighttime:
+                _timer = QTimer(self)
+                _timer.setSingleShot(True)
+                _timer.timeout.connect(Clock.toggle_screensaver)
+                _timer.start(2000)
+
+        except ValueError:
+            return
+
+    def play_radio(self):
+        """Callback to the 'Play radio' button: open or close the radio stream
+        depending on the button state.
+        """
+        # Change the relief of the button
+        button = self.control_buttons["Radio"]
+
+        # Get the current state of the button. Note that this function runs after
+        # the click event. Ie. pressing isChecked returns True when the button
+        # was activated and thus when the radio should be played.
+        button_checked = button.isChecked()
+        if button_checked:
+            self.radio.play(self.env.radio_url)
+        else:
+            self.radio.stop()
+
+    def toggle_display_backlight_brightness(self):
+        """Reads Raspberry pi touch display's current brightness values from system
+        file and sets it to either high or low depending on the current value.
+        """
+        PATH = "/sys/class/backlight/rpi_backlight/brightness"
+        LOW = 9
+        HIGH = 255
+
+        with open(PATH) as f:
+            brightness = int(f.read())
+
+        # set to furthest away from current brightness
+        if abs(brightness-LOW) < abs(brightness-HIGH):
+            new_brightness = HIGH
+        else:
+            new_brightness = LOW
+
+        with open(PATH, "w") as f:
+            f.write(str(new_brightness))
+
+    @staticmethod
+    def toggle_screensaver(state="on"):
+        """Use the xset utility to either activate the screen saver(the default)
+        or turn it off. Touching the screen will also deactivate the screensaver.
+        """
+        cmd = "xset s reset".split()
+        if state == "on":
+            cmd = "xset s activate".split()
+
+        # set required env variables so we don't need to run the whole command
+        # with shell=True
+        # Note: the user folder is assumed to be 'pi'
+        # env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
+        env = {"DISPLAY": ":0"}
+        subprocess.run(cmd, env=env)
+
+
+class AlarmWindow(QWidget):
+    """QWidget subclass for main window."""
+
+    def __init__(self):
+        super().__init__()
+        self.control_buttons = {}  # setup a dict for control buttons
+        self.initUI()
 
     def initUI(self):
         # subgrids for layouting
@@ -101,13 +214,12 @@ class AlarmWindow(QWidget):
 
         # ** Bottom grid: main UI control buttons **
         button_configs = [
-            ButtonConfig(text="Settings", position=(0, 0), slot=self.settings_window.initUI),
-            ButtonConfig(text="Sleep", position=(0, 1), slot=AlarmWindow.set_screensaver),
-            ButtonConfig(text="Radio", position=(0, 2), slot=self.play_radio),
+            ButtonConfig(text="Settings", position=(0, 0)),
+            ButtonConfig(text="Sleep", position=(0, 1)),
+            ButtonConfig(text="Radio", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3), slot=QApplication.instance().quit)
         ]
 
-        self.control_buttons = {}
         for config in button_configs:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
@@ -162,96 +274,15 @@ class AlarmWindow(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def radio_signal_handler(self, sig, frame):
-        """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
-        signals from sound_the_alarm denoting a request to open a radio stream and to
-        set the radio button as pressed. Also runs a check to see whether the displayed
-        alarm time in the main window should be hidden (ie. no alarm the next day)."""
-        self.play_radio()
-        self.set_active_alarm_indicator()
-
-    def wakeup_signal_handler(self, sig, frame):
-        """Signal handler for waking up the screen. Sent by sound_the_alarm
-        upon the alarm. If the screen is blank, reset the screensaver activated by xset."""
-        self.set_screensaver("off")
-        self.set_active_alarm_indicator()
-
-    def set_screensaver_timeout(self):
-        """Blank the screen after a short timeout if it is currently night time
-        (ie. nightmode_offset hours before alarm time).
-        """
-        now = datetime.datetime.now()
-        alarm_time = self.current_alarm_time  # HH:MM
-        if not alarm_time:
-            return
-
-        try:
-            offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
-            nighttime = utils.nighttime(now, offset, alarm_time)
-
-            if nighttime:
-                self.root.after(2000, AlarmWindow.set_screensaver, "on")
-        except ValueError:
-            return
-
-    def play_radio(self):
-        """Callback to the 'Play radio' button: open or close the radio stream
-        depending on the button state.
-        """
-        # Change the relief of the button
-        button = self.control_buttons["Radio"]
-
-        # Get the current state of the button. Note that this function runs after
-        # the click event. Ie. pressing isChecked returns True when the button
-        # was activated and thus when the radio should be played.
-        button_checked = button.isChecked()
-        if button_checked:
-            self.radio.play(self.env.radio_url)
-        else:
-            self.radio.stop()
-
-    def change_display_backlight_brightness(self):
-        """Reads Raspberry pi touch display's current brightness values from
-        file and sets it either high or low depending on the current value.
-        """
-        PATH = "/sys/class/backlight/rpi_backlight/brightness"
-        LOW = 9
-        HIGH = 255
-
-        with open(PATH) as f:
-            brightness = int(f.read())
-
-        # set to furthest away from current brightness
-        if abs(brightness-LOW) < abs(brightness-HIGH):
-            new_brightness = HIGH
-            # also force button state to NORMAL similar to play_radio above
-            self.brightness_button.config(state=tk.NORMAL)
-        else:
-            new_brightness = LOW
-
-        with open(PATH, "w") as f:
-            f.write(str(new_brightness))
-
-    @staticmethod
-    def set_screensaver(state="on"):
-        """Use the xset utility to either activate the screen saver(the default)
-        or turn it off. Touching the screen will also deactivate the screensaver.
-        """
-        cmd = "xset s reset".split()
-        if state == "on":
-            cmd = "xset s activate".split()
-
-        # set required env variables so we don't need to run the whole command
-        # with shell=True
-        # Note: the user folder is assumed to be 'pi'
-        # env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
-        env = {"DISPLAY": ":0"}
-        subprocess.run(cmd, env=env)
+    def set_button_handler(self, button, handler):
+        button.clicked.connect(handler)
 
 
 class SettingsWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.control_buttons = {}
+        self.initUI()
 
     def initUI(self):
         grid = QGridLayout()
@@ -275,7 +306,7 @@ class SettingsWindow(QWidget):
             ButtonConfig(text="9", position=(3, 2)),
             ButtonConfig(text="0", position=(4, 1)),
             ButtonConfig(text="set", position=(5, 0)),
-            ButtonConfig(text="set", position=(5, 2)),
+            ButtonConfig(text="clear", position=(5, 2)),
         ]
 
         for config in button_configs:
@@ -285,17 +316,21 @@ class SettingsWindow(QWidget):
                 button.clicked.connect(config.slot)
             right_grid.addWidget(button, *config.position)
 
+        alarm_time_label = QLabel("current alarm time: ")
+        right_grid.addWidget(alarm_time_label, 6, 0)
+
         # ** Bottom level main buttons **
         button_config = [
             ButtonConfig(text="Play now", position=(0, 0)),
             ButtonConfig(text="Show console", position=(0, 1)),
-            ButtonConfig(text="Set brightness", position=(0, 2)),
+            ButtonConfig(text="Toggle brightness", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3), slot=self.close)
         ]
 
         for config in button_config:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
+            self.control_buttons[config.text] = button
 
             if config.slot:
                 button.clicked.connect(config.slot)
@@ -314,13 +349,16 @@ class SettingsWindow(QWidget):
         self.center()
 
         self.setWindowTitle("Settings")
-        self.show()
+        # self.show()
 
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def set_button_handler(self, button, handler):
+        button.clicked.connect(handler)
 
 
 class RadioStreamer:
