@@ -17,8 +17,10 @@ last edited: January 2015
 import time
 import datetime
 import os
+import sys
 import subprocess
 import signal
+from functools import partial
 from collections import namedtuple
 
 from PyQt5.QtCore import Qt, QTimer
@@ -36,6 +38,7 @@ from PyQt5.QtGui import QPixmap
 
 import alarmenv
 import utils
+import sound_the_alarm
 
 # Create namedtuples for storing button and label configurations
 ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
@@ -61,12 +64,15 @@ class Clock:
         self.env = alarmenv.AlarmEnv(config_file)
         self.env.setup()
 
+        self.alarm_player = sound_the_alarm.Alarm(self.env)
+
         # Setup references to main control buttons in both windows
         settings_button = self.main_window.control_buttons["Settings"]
         radio_button = self.main_window.control_buttons["Radio"]
         sleep_button = self.main_window.control_buttons["Sleep"]
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
+        alarm_play_button = self.settings_window.control_buttons["Play now"]
 
         # Disable sleep button if host system is not a Raspberry Pi
         if not self.env.is_rpi:
@@ -88,6 +94,8 @@ class Clock:
 
         self.settings_window.set_button_handler(
             brightness_button, self.toggle_display_backlight_brightness)
+        self.settings_window.set_button_handler(
+            alarm_play_button, self.alarm_player.sound_alarm_without_gui_or_radio)
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
@@ -293,41 +301,51 @@ class SettingsWindow(QWidget):
         bottom_grid = QGridLayout()
 
         # ** Right grid: numpad for settings the alarm **
-        button_configs = [
-            ButtonConfig(text="m/h", position=(0, 2)),
-            ButtonConfig(text="1", position=(1, 0)),
-            ButtonConfig(text="2", position=(1, 1)),
-            ButtonConfig(text="3", position=(1, 2)),
-            ButtonConfig(text="4", position=(2, 0)),
-            ButtonConfig(text="5", position=(2, 1)),
-            ButtonConfig(text="6", position=(2, 2)),
-            ButtonConfig(text="7", position=(3, 0)),
-            ButtonConfig(text="8", position=(3, 1)),
-            ButtonConfig(text="9", position=(3, 2)),
-            ButtonConfig(text="0", position=(4, 1)),
+        instruction_label = QLabel("Set alarm HH:MM")
+        right_grid.addWidget(instruction_label, 0, 0, 1, 3)
+
+        numpad_button_config = [
+            ButtonConfig(text="1", position=(1, 0), slot=True),
+            ButtonConfig(text="2", position=(1, 1), slot=True),
+            ButtonConfig(text="3", position=(1, 2), slot=True),
+            ButtonConfig(text="4", position=(2, 0), slot=True),
+            ButtonConfig(text="5", position=(2, 1), slot=True),
+            ButtonConfig(text="6", position=(2, 2), slot=True),
+            ButtonConfig(text="7", position=(3, 0), slot=True),
+            ButtonConfig(text="8", position=(3, 1), slot=True),
+            ButtonConfig(text="9", position=(3, 2), slot=True),
+            ButtonConfig(text="0", position=(4, 1), slot=True),
             ButtonConfig(text="set", position=(5, 0)),
-            ButtonConfig(text="clear", position=(5, 2)),
+            ButtonConfig(text="clear", position=(5, 2))
         ]
 
-        for config in button_configs:
+        for config in numpad_button_config:
             button = QPushButton(config.text, self)
 
-            if config.slot:
-                button.clicked.connect(config.slot)
+            # pass button text as parameter to the callback
+            if config.slot is True:
+                slot = partial(self.update_alarm_time, config.text)
+                button.clicked.connect(slot)
             right_grid.addWidget(button, *config.position)
 
-        alarm_time_label = QLabel("current alarm time: ")
-        right_grid.addWidget(alarm_time_label, 6, 0)
+        # Labels for displaying current active alarm time and time
+        # set using the numpad controls.
+        self.set_alarm_time_label = QLabel("  :  ")
+        self.set_alarm_time_label.setAlignment(Qt.AlignCenter)
+        right_grid.addWidget(self.set_alarm_time_label, 5, 1)
+
+        self.active_alarm_time_label = QLabel("current alarm time: ")
+        right_grid.addWidget(self.active_alarm_time_label, 6, 0, 1, 3)
 
         # ** Bottom level main buttons **
-        button_config = [
+        control_button_config = [
             ButtonConfig(text="Play now", position=(0, 0)),
             ButtonConfig(text="Show console", position=(0, 1)),
             ButtonConfig(text="Toggle brightness", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3), slot=self.close)
         ]
 
-        for config in button_config:
+        for config in control_button_config:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
             self.control_buttons[config.text] = button
@@ -349,13 +367,74 @@ class SettingsWindow(QWidget):
         self.center()
 
         self.setWindowTitle("Settings")
-        # self.show()
 
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def update_alarm_time(self, val):
+        """Update the QLabel for displaying the alarm time set using the numpad."""
+        # Compute number of digits in the currently displayed value
+        current_display_value = self.set_alarm_time_label.text()
+        current_display_digits_num = sum(c.isdigit() for c in current_display_value)
+
+        # The format for the alarm setup label is HH:MM. Depending on the length
+        # of the currently displayed value either set the next digit or start
+        # building a new value from the first digit.
+        new_value = list(current_display_value)
+        if current_display_digits_num < 2:
+            new_value[current_display_digits_num] = val
+
+        elif current_display_digits_num < 4:
+            new_value[current_display_digits_num + 1] = val
+
+        else:
+            new_value = list(val + " :  ")
+
+        new_value = "".join(new_value)
+        self.set_alarm_time_label.setText(new_value)
+
+    def set_alarm(self):
+        """Callback for "Set alarm" button: write a new cron entry for the alarm and
+        display a message for the user. Existing cron alarms will be overwritten
+        Invalid time values are not accepted.
+        """
+        try:
+            current_display_value = self.set_alarm_time_label.text()
+            t = time.strptime(current_display_value, "%H:%M")
+        except ValueError:
+            self.active_alarm_time_label.setText("ERROR: Invalid time")
+            return
+
+        # Define a cron entry with absolute paths to the Python interpreter and
+        # the alarm script to run (sound_the_alarm.py)
+        date_range = "1-5"
+        # if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
+        #    date_range = "*"
+
+        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(
+            min=t.tm_min,
+            hour=t.tm_hour,
+            date_range=date_range,
+            python_exec=sys.executable,
+            path_to_alarm=self.cron.alarm_path,
+            path_to_config=self.config_file)
+        self.cron.add_entry(entry)
+        self.current_alarm_time = entry_time
+        self.active_alarm_time_label("Alarm set to", entry_time)
+
+    def clear_alarm(self):
+        """Callback for the "Clear alarm" button: remove the cron entry and
+        write a message in the status Label to notify user.
+        """
+        self.cron.delete_entry()
+        self.active_alarm_time_label.setText("Alarm cleared")
+        self.alarm_indicator.grid_remove()
+
+        self.current_alarm_time = ""
+        self.clock_alarm_indicator_var.set("")
 
     def set_button_handler(self, button, handler):
         button.clicked.connect(handler)
@@ -426,7 +505,7 @@ class CronWriter:
 
         return [line for line in crontab_lines if self.alarm_path not in line]
 
-    def delete_cron_entry(self):
+    def delete_entry(self):
         """Delete cron entry for sound_the_alarm.py."""
         crontab_lines = self.get_crontab_lines_without_alarm()
 
@@ -437,7 +516,7 @@ class CronWriter:
         # write as the new crontab
         self.write_crontab(crontab)
 
-    def add_cron_entry(self, entry):
+    def add_entry(self, entry):
         """Add an entry for sound_the_alarm.py. Existing crontab is overwritten."""
         crontab_lines = self.get_crontab_lines_without_alarm()
 

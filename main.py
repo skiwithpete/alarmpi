@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import QApplication
 
 # Entrypoint for the project, runs the clock GUI. The GUI can be used to
 # schedule an alarm. To run the alarm directly, run sound_the_alarm.py.
-# TODO: alarm can be run directly from the GUI in future version
 
 
 if __name__ == "__main__":

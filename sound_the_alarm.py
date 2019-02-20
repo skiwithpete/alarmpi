@@ -66,6 +66,19 @@ class Alarm:
             else:
                 self.play_radio()
 
+    def sound_alarm_without_gui_or_radio(self):
+        """A stripped down version of main above. Play TTS sections of the alarm
+        without sending signals to the GUI or playing the radio.
+        """
+        if not self.env.netup:
+            Alarm.play_beep()
+            return
+
+        content = self.generate_content()
+        tts_client = self.get_tts_client()
+        text = "\n".join(content)
+        tts_client.play(text)
+
     def generate_content(self):
         """Loop through the configuration file and process each enabled item."""
         content_sections = self.env.get_enabled_sections("content")
