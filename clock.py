@@ -55,7 +55,7 @@ class Clock:
         self.main_window = AlarmWindow()
         self.settings_window = SettingsWindow()
 
-        self.cron = CronWriter()
+        self.cron = CronWriter(config_file)
         self.radio = RadioStreamer()
         self.kwargs = kwargs
 
@@ -66,6 +66,9 @@ class Clock:
 
         self.alarm_player = sound_the_alarm.Alarm(self.env)
 
+        if kwargs["fullscreen"]:
+            self.main_window.showFullScreen()
+
         # Setup references to main control buttons in both windows
         settings_button = self.main_window.control_buttons["Settings"]
         radio_button = self.main_window.control_buttons["Radio"]
@@ -73,6 +76,9 @@ class Clock:
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
         alarm_play_button = self.settings_window.control_buttons["Play now"]
+        console_button = self.settings_window.control_buttons["Show console"]
+        alarm_set_button = self.settings_window.numpad_buttons["set"]
+        alarm_clear_button = self.settings_window.numpad_buttons["clear"]
 
         # Disable sleep button if host system is not a Raspberry Pi
         if not self.env.is_rpi:
@@ -88,14 +94,18 @@ class Clock:
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
         # Set button handlers for buttons requiring interactions between helper classes
-        self.main_window.set_button_handler(settings_button, self.settings_window.show)
-        self.main_window.set_button_handler(radio_button, self.play_radio)
-        self.main_window.set_button_handler(sleep_button, Clock.toggle_screensaver)
+        # ** main window buttons **
+        settings_button.clicked.connect(self.settings_window.show)
+        radio_button.clicked.connect(self.play_radio)
+        sleep_button.clicked.connect(Clock.toggle_screensaver)
 
-        self.settings_window.set_button_handler(
-            brightness_button, self.toggle_display_backlight_brightness)
-        self.settings_window.set_button_handler(
-            alarm_play_button, self.alarm_player.sound_alarm_without_gui_or_radio)
+        # ** settings window buttons **
+        brightness_button.clicked.connect(self.toggle_display_backlight_brightness)
+        alarm_play_button.clicked.connect(self.alarm_player.sound_alarm_without_gui_or_radio)
+        console_button.clicked.connect(self.main_window.showNormal)
+
+        alarm_set_button.clicked.connect(self.set_alarm)
+        alarm_clear_button.clicked.connect(self.clear_alarm)
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
@@ -113,6 +123,25 @@ class Clock:
 
     def on_touch_event_handler(self, event):
         print("foo")
+
+    def set_alarm(self):
+        """Handler to alarm set button in the settings window. Validates the
+        time currently displaying and adds a cron entry. No alarm is set if
+        value is invalid.
+        """
+        time_str = self.settings_window.validate_input_alarm()
+        # if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
+        if time_str:
+            entry = self.cron.create_entry(time_str)
+            self.cron.add_entry(entry)
+            self.settings_window.active_alarm_time_label.setText(
+                "Alarm set for {}".format(time_str))
+
+        return
+
+    def clear_alarm(self):
+        self.cron.delete_entry()
+        self.settings_window.clear_alarm()
 
     def set_screensaver_timeout(self):
         """Blank the screen after a short timeout if it is currently night time
@@ -282,14 +311,12 @@ class AlarmWindow(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def set_button_handler(self, button, handler):
-        button.clicked.connect(handler)
-
 
 class SettingsWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.control_buttons = {}
+        self.numpad_buttons = {}
         self.initUI()
 
     def initUI(self):
@@ -322,15 +349,19 @@ class SettingsWindow(QWidget):
         for config in numpad_button_config:
             button = QPushButton(config.text, self)
 
-            # pass button text as parameter to the callback
             if config.slot is True:
-                slot = partial(self.update_alarm_time, config.text)
+                # create a partial function with the button text to pass to
+                # the handler
+                slot = partial(self.update_alarm_display, config.text)
                 button.clicked.connect(slot)
+            else:
+                self.numpad_buttons[config.text] = button
             right_grid.addWidget(button, *config.position)
 
         # Labels for displaying current active alarm time and time
         # set using the numpad controls.
-        self.set_alarm_time_label = QLabel("  :  ")
+        self.ALARM_LABEL_EMPTY = "  :  "
+        self.set_alarm_time_label = QLabel(self.ALARM_LABEL_EMPTY)
         self.set_alarm_time_label.setAlignment(Qt.AlignCenter)
         right_grid.addWidget(self.set_alarm_time_label, 5, 1)
 
@@ -374,7 +405,7 @@ class SettingsWindow(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def update_alarm_time(self, val):
+    def update_alarm_display(self, val):
         """Update the QLabel for displaying the alarm time set using the numpad."""
         # Compute number of digits in the currently displayed value
         current_display_value = self.set_alarm_time_label.text()
@@ -391,53 +422,30 @@ class SettingsWindow(QWidget):
             new_value[current_display_digits_num + 1] = val
 
         else:
-            new_value = list(val + " :  ")
+            new_value = list(val + self.ALARM_LABEL_EMPTY[1:])
 
         new_value = "".join(new_value)
         self.set_alarm_time_label.setText(new_value)
 
-    def set_alarm(self):
+    def validate_input_alarm(self):
         """Callback for "Set alarm" button: write a new cron entry for the alarm and
         display a message for the user. Existing cron alarms will be overwritten
         Invalid time values are not accepted.
         """
         try:
-            current_display_value = self.set_alarm_time_label.text()
-            t = time.strptime(current_display_value, "%H:%M")
+            entry_time = self.set_alarm_time_label.text()
+            time.strptime(entry_time, "%H:%M")
+            return entry_time
         except ValueError:
             self.active_alarm_time_label.setText("ERROR: Invalid time")
             return
 
-        # Define a cron entry with absolute paths to the Python interpreter and
-        # the alarm script to run (sound_the_alarm.py)
-        date_range = "1-5"
-        # if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
-        #    date_range = "*"
-
-        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(
-            min=t.tm_min,
-            hour=t.tm_hour,
-            date_range=date_range,
-            python_exec=sys.executable,
-            path_to_alarm=self.cron.alarm_path,
-            path_to_config=self.config_file)
-        self.cron.add_entry(entry)
-        self.current_alarm_time = entry_time
-        self.active_alarm_time_label("Alarm set to", entry_time)
-
     def clear_alarm(self):
-        """Callback for the "Clear alarm" button: remove the cron entry and
-        write a message in the status Label to notify user.
+        """Clear the time displayed on the alarm set label.
         """
-        self.cron.delete_entry()
+        self.set_alarm_time_label.setText(self.ALARM_LABEL_EMPTY)
         self.active_alarm_time_label.setText("Alarm cleared")
-        self.alarm_indicator.grid_remove()
-
         self.current_alarm_time = ""
-        self.clock_alarm_indicator_var.set("")
-
-    def set_button_handler(self, button, handler):
-        button.clicked.connect(handler)
 
 
 class RadioStreamer:
@@ -471,9 +479,10 @@ class RadioStreamer:
 class CronWriter:
     """Helper class for writes cron entries. Uses crontab via subprocess."""
 
-    def __init__(self):
+    def __init__(self, config_file):
         # format absolute paths to sound_the_alarm.py and the config file
-        self.alarm_path = os.path.abspath("sound_the_alarm.py")
+        self.path_to_alarm = os.path.abspath("sound_the_alarm.py")
+        self.config_file = config_file
 
     def get_crontab(self):
         """Return the current crontab"""
@@ -486,7 +495,7 @@ class CronWriter:
         """
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
         lines = crontab.split("\n")
-        alarm_line = [line for line in lines if self.alarm_path in line]
+        alarm_line = [line for line in lines if self.path_to_alarm in line]
 
         if alarm_line:
             split = alarm_line[0].split()
@@ -503,7 +512,7 @@ class CronWriter:
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
         crontab_lines = crontab.split("\n")
 
-        return [line for line in crontab_lines if self.alarm_path not in line]
+        return [line for line in crontab_lines if self.path_to_alarm not in line]
 
     def delete_entry(self):
         """Delete cron entry for sound_the_alarm.py."""
@@ -515,6 +524,25 @@ class CronWriter:
 
         # write as the new crontab
         self.write_crontab(crontab)
+
+    def create_entry(self, s, include_weekends=False):
+        """Given a HH:MM string, format it a valid cron entry."""
+        t = time.strptime(s, "%H:%M")
+
+        date_range = "1-5"
+        if include_weekends:
+            date_range = "*"
+
+        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(
+            min=t.tm_min,
+            hour=t.tm_hour,
+            date_range=date_range,
+            python_exec=sys.executable,
+            path_to_alarm=self.path_to_alarm,
+            path_to_config=self.config_file
+        )
+
+        return entry
 
     def add_entry(self, entry):
         """Add an entry for sound_the_alarm.py. Existing crontab is overwritten."""
