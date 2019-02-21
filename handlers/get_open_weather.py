@@ -15,6 +15,10 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
     def __init__(self, section_data):
         super().__init__(section_data)
+        api_key_file = section_data["key_file"]
+        with open(api_key_file) as f:
+            self.API_KEY = json.load(f)["key"]
+
         try:
             self.build()
         except KeyError as e:
@@ -22,15 +26,11 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
     def build(self):
         city_id = self.section_data["city_id"]
-        api_key_file = self.section_data["key_file"]
         units = self.section_data["units"]
-
-        with open(api_key_file) as f:
-            api_key = json.load(f)["key"]
 
         url = "http://api.openweathermap.org/data/2.5/weather"
         params = {
-            "APPID": api_key,
+            "APPID": self.API_KEY,
             "id": city_id,
             "units": "metric"
         }
@@ -106,6 +106,43 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             weather_string = "Failed to read openweathermap.org. "
 
         self.content = weather_string
+
+    def get_weather(self, city_id):
+        url = "http://api.openweathermap.org/data/2.5/weather"
+        params = {
+            "APPID": self.API_KEY,
+            "id": city_id,
+            "units": "metric"
+        }
+
+        r = requests.get(url, params=params)
+        return r.json()
+
+    @staticmethod
+    def format_response(response):
+        today_temp = response["main"]["temp"]
+        conditions = response["weather"][0]["description"]
+        wind = response["wind"]["speed"]  # wind speed in m/s
+
+        # Convert wind speed to km/h
+        wind_speed_kmh = OpenWeatherMapClient.ms_to_kmh(wind)
+        wind_chill = OpenWeatherMapClient.compute_wind_chill(today_temp, wind_speed_kmh)
+        wind_chill = round(wind_chill)
+
+        sunrise = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunrise"])
+        sunset = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunset"])
+
+        formatted = {
+            "temp": today_temp,
+            "conditions": conditions,
+            "wind_speed_ms": wind,
+            "wind_speed_kmh": wind_speed_kmh,
+            "wind_chill": wind_chill,
+            "sunrise": sunrise,
+            "sunset": sunset
+        }
+
+        return formatted
 
     @staticmethod
     def ms_to_kmh(wind_speed):
