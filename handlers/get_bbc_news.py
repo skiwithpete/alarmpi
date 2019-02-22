@@ -8,10 +8,6 @@ class NewsParser(apcontent.AlarmpiContent):
 
     def __init__(self, section_data):
         super().__init__(section_data)
-        try:
-            self.build()
-        except KeyError as e:
-            print("Error: missing key {} in configuration file.".format(e))
 
     def build(self):
         url = "https://feeds.bbci.co.uk/news/world/rss.xml"

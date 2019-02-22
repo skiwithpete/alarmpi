@@ -16,50 +16,27 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
     def __init__(self, section_data):
         super().__init__(section_data)
         api_key_file = section_data["key_file"]
+        self.city_id = section_data["city_id"]
+        self.units = section_data["units"]
+
         with open(api_key_file) as f:
             self.API_KEY = json.load(f)["key"]
 
-        try:
-            self.build()
-        except KeyError as e:
-            print("Error: missing key {} in configuration file.".format(e))
-
     def build(self):
-        city_id = self.section_data["city_id"]
-        units = self.section_data["units"]
-
-        url = "http://api.openweathermap.org/data/2.5/weather"
-        params = {
-            "APPID": self.API_KEY,
-            "id": city_id,
-            "units": "metric"
-        }
-
         try:
-            r = requests.get(url, params=params)
-            response_dictionary = r.json()
+            api_response = self.get_weather()
+            weather = OpenWeatherMapClient.format_response(api_response)
 
-            today_temp = response_dictionary["main"]["temp"]
-            conditions = response_dictionary["weather"][0]["description"]
-            wind = response_dictionary["wind"]["speed"]  # wind speed in m/s
-
-            # Convert wind speed to km/h for wind chill formula
-            wind_speed_kmh = OpenWeatherMapClient.ms_to_kmh(wind)
-            wind_chill = OpenWeatherMapClient.compute_wind_chill(today_temp, wind_speed_kmh)
-            wind_chill = round(wind_chill)
-
-            # the API seems to always return wind chill values as degrees Fahrenheit, manually convert
-            # to Celsius if specified
-            if units == "imperial":
-                # TODO
-                units = 1
-
-            sunrise = OpenWeatherMapClient.timesamp_to_time_str(
-                response_dictionary["sys"]["sunrise"])
-            sunset = OpenWeatherMapClient.timesamp_to_time_str(response_dictionary["sys"]["sunset"])
+            conditions = weather["conditions"]
+            temperature = weather["temp"]
+            wind_speed_kmh = weather["wind_speed_kmh"]
+            wind = weather["wind_speed_ms"]
+            wind_chill = weather["wind_chill"]
+            sunrise = weather["sunrise"]
+            sunset = weather["sunset"]
 
             weather_string = "Weather for today is {}. It is currently {} degrees ".format(
-                conditions, today_temp)
+                conditions, temperature)
 
             # Wind uses the Beaufort scale
             if wind_speed_kmh < 1:
@@ -107,11 +84,11 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
         self.content = weather_string
 
-    def get_weather(self, city_id):
+    def get_weather(self):
         url = "http://api.openweathermap.org/data/2.5/weather"
         params = {
             "APPID": self.API_KEY,
-            "id": city_id,
+            "id": self.city_id,
             "units": "metric"
         }
 
