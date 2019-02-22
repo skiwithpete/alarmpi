@@ -39,6 +39,7 @@ from PyQt5.QtGui import QPixmap
 import alarmenv
 import utils
 import sound_the_alarm
+from handlers import get_open_weather
 
 # Create namedtuples for storing button and label configurations
 ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
@@ -54,9 +55,6 @@ class Clock:
     def __init__(self, config_file, **kwargs):
         self.main_window = AlarmWindow()
         self.settings_window = SettingsWindow()
-
-        self.cron = CronWriter(config_file)
-        self.radio = RadioStreamer()
         self.kwargs = kwargs
 
         # Read the alarm configuration file and initialize and alarmenv object
@@ -64,7 +62,12 @@ class Clock:
         self.env = alarmenv.AlarmEnv(config_file)
         self.env.setup()
 
+        self.cron = CronWriter(config_file)
+        self.radio = RadioStreamer()
         self.alarm_player = sound_the_alarm.Alarm(self.env)
+
+        section = self.env.get_section("openweathermap")
+        self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
 
         if kwargs["fullscreen"]:
             self.main_window.showFullScreen()
@@ -93,6 +96,8 @@ class Clock:
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
+        self.setup_weather_polling()
+
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
         settings_button.clicked.connect(self.settings_window.show)
@@ -108,16 +113,18 @@ class Clock:
         alarm_clear_button.clicked.connect(self.clear_alarm)
 
     def radio_signal_handler(self, sig, frame):
-        """Signal handler for incoming radio stream requests. Used to receive SIGUSR1
-        signals from sound_the_alarm denoting a request to open a radio stream and to
-        set the radio button as pressed. Also runs a check to see whether the displayed
-        alarm time in the main window should be hidden (ie. no alarm the next day)."""
+        """Signal handler for incoming radio stream requests from sound_the_alarm.
+        Opens the stream and sets radio button state as pressed.
+        Also clears the main window's alarm display LCD widget if there is no alarm
+        the next day.
+        """
         self.play_radio()
         self.set_active_alarm_indicator()
 
     def wakeup_signal_handler(self, sig, frame):
         """Signal handler for waking up the screen. Sent by sound_the_alarm
-        upon the alarm. If the screen is blank, reset the screensaver activated by xset."""
+        upon the alarm. If the screen is blank, reset the screensaver activated by xset.
+        """
         self.toggle_screensaver("off")
         self.set_active_alarm_indicator()
 
@@ -129,19 +136,26 @@ class Clock:
         time currently displaying and adds a cron entry. No alarm is set if
         value is invalid.
         """
-        time_str = self.settings_window.validate_input_alarm()
+        time_str = self.settings_window.validate_alarm_input()
         # if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
         if time_str:
             entry = self.cron.create_entry(time_str)
             self.cron.add_entry(entry)
-            self.settings_window.active_alarm_time_label.setText(
+            self.settings_window.alarm_input_label.setText(
                 "Alarm set for {}".format(time_str))
+
+            # update main window alarm display
+            self.main_window.alarm_time_lcd.display(time_str)
 
         return
 
     def clear_alarm(self):
+        """Handler for settings window's clear button: removes the cron entry
+        and clears both window's alarm displays.
+        """
         self.cron.delete_entry()
         self.settings_window.clear_alarm()
+        self.main_window.alarm_time_lcd.display("")
 
     def set_screensaver_timeout(self):
         """Blank the screen after a short timeout if it is currently night time
@@ -169,17 +183,29 @@ class Clock:
         """Callback to the 'Play radio' button: open or close the radio stream
         depending on the button state.
         """
-        # Change the relief of the button
-        button = self.control_buttons["Radio"]
+        button = self.main_window.control_buttons["Radio"]
 
-        # Get the current state of the button. Note that this function runs after
-        # the click event. Ie. pressing isChecked returns True when the button
-        # was activated and thus when the radio should be played.
         button_checked = button.isChecked()
         if button_checked:
             self.radio.play(self.env.radio_url)
         else:
             self.radio.stop()
+
+    def setup_weather_polling(self):
+        _timer = QTimer()
+        _timer.timeout.connect(self.update_weather)
+        _timer.start(10*60*1000)  # 10 minute interval
+
+    def update_weather(self):
+        api_response = self.weather_parser.get_weather()
+        weather = get_open_weather.OpenWeatherMapClient.format_response(api_response)
+
+        temperature = weather["temp"]
+        wind = weather["wind_speed_ms"]
+        self.main_window.temperature_label.setText(temperature + "°C")
+        self.main_window.wind_speed_label.setText(wind + "m/s")
+        print(temperature)
+        print(wind)
 
     def toggle_display_backlight_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from system
@@ -245,7 +271,7 @@ class AlarmWindow(QWidget):
         _timer.start(1000)
 
         self.alarm_time_lcd = QLCDNumber(self)
-        self.alarm_time_lcd.display("0:00")
+        self.alarm_time_lcd.display("")
         self.alarm_time_lcd.setStyleSheet("border: 0px;")
         alarm_grid.addWidget(self.alarm_time_lcd, 1, 0)
 
@@ -278,11 +304,13 @@ class AlarmWindow(QWidget):
         left_grid.addWidget(train3, 2, 0)
 
         # ** Right grid: weather forecast **
-        temperature = QLabel("16°", self)
+        self.temperature_label = QLabel("16°C", self)
+        self.wind_speed_label = QLabel("3m/s", self)
+
         weather_container = QLabel(self)
         pixmap = QPixmap('day_sunny_1-512.png').scaledToWidth(48)
         weather_container.setPixmap(pixmap)
-        right_grid.addWidget(temperature, 0, 0, Qt.AlignRight)
+        right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
         right_grid.addWidget(weather_container, 0, 1, Qt.AlignRight)
 
         grid.addLayout(alarm_grid, 0, 1)
@@ -304,6 +332,9 @@ class AlarmWindow(QWidget):
     def tick(self):
         s = time.strftime("%H:%M:%S")
         self.clock_lcd.display(s)
+
+    def update_weather(self):
+        pass
 
     def center(self):
         qr = self.frameGeometry()
@@ -352,7 +383,7 @@ class SettingsWindow(QWidget):
             if config.slot is True:
                 # create a partial function with the button text to pass to
                 # the handler
-                slot = partial(self.update_alarm_display, config.text)
+                slot = partial(self.update_input_alarm_display, config.text)
                 button.clicked.connect(slot)
             else:
                 self.numpad_buttons[config.text] = button
@@ -361,12 +392,12 @@ class SettingsWindow(QWidget):
         # Labels for displaying current active alarm time and time
         # set using the numpad controls.
         self.ALARM_LABEL_EMPTY = "  :  "
-        self.set_alarm_time_label = QLabel(self.ALARM_LABEL_EMPTY)
-        self.set_alarm_time_label.setAlignment(Qt.AlignCenter)
-        right_grid.addWidget(self.set_alarm_time_label, 5, 1)
+        self.input_alarm_time_label = QLabel(self.ALARM_LABEL_EMPTY)
+        self.input_alarm_time_label.setAlignment(Qt.AlignCenter)
+        right_grid.addWidget(self.input_alarm_time_label, 5, 1)
 
-        self.active_alarm_time_label = QLabel("current alarm time: ")
-        right_grid.addWidget(self.active_alarm_time_label, 6, 0, 1, 3)
+        self.alarm_input_label = QLabel("current alarm time: ")
+        right_grid.addWidget(self.alarm_input_label, 6, 0, 1, 3)
 
         # ** Bottom level main buttons **
         control_button_config = [
@@ -405,10 +436,12 @@ class SettingsWindow(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
-    def update_alarm_display(self, val):
-        """Update the QLabel for displaying the alarm time set using the numpad."""
+    def update_input_alarm_display(self, val):
+        """Button handler for alarm input numpad. Updates the Label displaying
+        the time corresponding to the input.
+        """
         # Compute number of digits in the currently displayed value
-        current_display_value = self.set_alarm_time_label.text()
+        current_display_value = self.input_alarm_time_label.text()
         current_display_digits_num = sum(c.isdigit() for c in current_display_value)
 
         # The format for the alarm setup label is HH:MM. Depending on the length
@@ -425,26 +458,26 @@ class SettingsWindow(QWidget):
             new_value = list(val + self.ALARM_LABEL_EMPTY[1:])
 
         new_value = "".join(new_value)
-        self.set_alarm_time_label.setText(new_value)
+        self.input_alarm_time_label.setText(new_value)
 
-    def validate_input_alarm(self):
+    def validate_alarm_input(self):
         """Callback for "Set alarm" button: write a new cron entry for the alarm and
         display a message for the user. Existing cron alarms will be overwritten
         Invalid time values are not accepted.
         """
         try:
-            entry_time = self.set_alarm_time_label.text()
+            entry_time = self.input_alarm_time_label.text()
             time.strptime(entry_time, "%H:%M")
             return entry_time
         except ValueError:
-            self.active_alarm_time_label.setText("ERROR: Invalid time")
+            self.alarm_input_label.setText("ERROR: Invalid time")
             return
 
     def clear_alarm(self):
         """Clear the time displayed on the alarm set label.
         """
-        self.set_alarm_time_label.setText(self.ALARM_LABEL_EMPTY)
-        self.active_alarm_time_label.setText("Alarm cleared")
+        self.input_alarm_time_label.setText(self.ALARM_LABEL_EMPTY)
+        self.alarm_input_label.setText("Alarm cleared")
         self.current_alarm_time = ""
 
 
@@ -490,7 +523,7 @@ class CronWriter:
         return subprocess.check_output(["crontab", "-l"]).decode()
 
     def get_current_alarm(self):
-        """If an alarm has been set, return its time in HH: MM format. If not set
+        """If an alarm has been set, return its time in HH:MM format. If not set
         returns an empty string.
         """
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
