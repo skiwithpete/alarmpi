@@ -94,7 +94,10 @@ class Alarm:
             parser = class_(section)
 
             # call build to run the parser and store output
-            parser.build()
+            try:
+                parser.build()
+            except KeyError as e:
+                print("Error: missing key {} in configuration file.".format(e))
             contents.append(parser.get())
 
         # add ending phrase from the config file
