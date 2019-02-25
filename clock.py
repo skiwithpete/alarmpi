@@ -1,17 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-"""
-ZetCode PyQt5 tutorial
-
-In this example, we create a bit
-more complicated window layout using
-the QGridLayout manager.
-
-author: Jan Bodnar
-website: zetcode.com
-last edited: January 2015
-"""
+"""A PyQt5 clock radio application."""
 
 
 import time
@@ -39,7 +29,7 @@ from PyQt5.QtGui import QPixmap
 import alarmenv
 import utils
 import sound_the_alarm
-from handlers import get_open_weather
+from handlers import get_open_weather, get_train_arrivals
 
 # Create namedtuples for storing button and label configurations
 ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
@@ -72,6 +62,7 @@ class Clock:
         if kwargs["fullscreen"]:
             self.main_window.showFullScreen()
 
+    def setup_button_handlers(self):
         # Setup references to main control buttons in both windows
         settings_button = self.main_window.control_buttons["Settings"]
         radio_button = self.main_window.control_buttons["Radio"]
@@ -171,10 +162,10 @@ class Clock:
             nighttime = utils.nighttime(now, offset, alarm_time)
 
             if nighttime:
-                _timer = QTimer(self)
+                _timer = QTimer(self.main_window)
                 _timer.setSingleShot(True)
                 _timer.timeout.connect(Clock.toggle_screensaver)
-                _timer.start(2000)
+                _timer.start(2*60*1000)  # 2 minute timeout until screen blank
 
         except ValueError:
             return
@@ -192,20 +183,26 @@ class Clock:
             self.radio.stop()
 
     def setup_weather_polling(self):
-        _timer = QTimer()
+        # self.update_weather()
+        _timer = QTimer(self.main_window)
         _timer.timeout.connect(self.update_weather)
         _timer.start(10*60*1000)  # 10 minute interval
 
     def update_weather(self):
+        """Update the weather labels on the main window. Makes an API request
+        openweathermap.org for current temperature and windspeed.
+        """
         api_response = self.weather_parser.get_weather()
         weather = get_open_weather.OpenWeatherMapClient.format_response(api_response)
 
         temperature = weather["temp"]
         wind = weather["wind_speed_ms"]
-        self.main_window.temperature_label.setText(temperature + "°C")
-        self.main_window.wind_speed_label.setText(wind + "m/s")
-        print(temperature)
-        print(wind)
+
+        msg = "{}°C".format(round(temperature))
+        self.main_window.temperature_label.setText(msg)
+
+        msg = "{}m/s".format(round(wind))
+        self.main_window.wind_speed_label.setText(msg)
 
     def toggle_display_backlight_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from system
@@ -311,7 +308,8 @@ class AlarmWindow(QWidget):
         pixmap = QPixmap('day_sunny_1-512.png').scaledToWidth(48)
         weather_container.setPixmap(pixmap)
         right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
-        right_grid.addWidget(weather_container, 0, 1, Qt.AlignRight)
+        right_grid.addWidget(weather_container, 1, 0, Qt.AlignRight)
+        right_grid.addWidget(self.wind_speed_label, 2, 0, Qt.AlignRight)
 
         grid.addLayout(alarm_grid, 0, 1)
         grid.addLayout(left_grid, 0, 0)
