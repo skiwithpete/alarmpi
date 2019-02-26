@@ -29,7 +29,7 @@ from PyQt5.QtGui import QPixmap
 import alarmenv
 import utils
 import sound_the_alarm
-from handlers import get_open_weather, get_train_arrivals
+from handlers import get_open_weather, get_next_trains
 
 # Create namedtuples for storing button and label configurations
 ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
@@ -92,6 +92,7 @@ class Clock:
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
         settings_button.clicked.connect(self.settings_window.show)
+        radio_button.setCheckable(True)  # Set the Radio on/off button to a checkable button
         radio_button.clicked.connect(self.play_radio)
         sleep_button.clicked.connect(Clock.toggle_screensaver)
 
@@ -165,7 +166,7 @@ class Clock:
                 _timer = QTimer(self.main_window)
                 _timer.setSingleShot(True)
                 _timer.timeout.connect(Clock.toggle_screensaver)
-                _timer.start(2*60*1000)  # 2 minute timeout until screen blank
+                _timer.start(2*1000)  # 2 second timeout until screen blank
 
         except ValueError:
             return
@@ -176,6 +177,9 @@ class Clock:
         """
         button = self.main_window.control_buttons["Radio"]
 
+        # The radio button is a checkable: it will stay down until pressed again.
+        # Therefore the radio should start playing when the button is pressed and
+        # stop when not pressed. (The state change happends before this callback runs.)
         button_checked = button.isChecked()
         if button_checked:
             self.radio.play(self.env.radio_url)
@@ -183,10 +187,10 @@ class Clock:
             self.radio.stop()
 
     def setup_weather_polling(self):
-        # self.update_weather()
+        self.update_weather()
         _timer = QTimer(self.main_window)
         _timer.timeout.connect(self.update_weather)
-        _timer.start(10*60*1000)  # 10 minute interval
+        _timer.start(30*60*1000)  # 30 minute interval
 
     def update_weather(self):
         """Update the weather labels on the main window. Makes an API request
@@ -262,10 +266,7 @@ class AlarmWindow(QWidget):
         self.clock_lcd.setStyleSheet("border: 0px;")
         alarm_grid.addWidget(self.clock_lcd, 0, 0)
 
-        self.tick()
-        _timer = QTimer(self)
-        _timer.timeout.connect(self.tick)
-        _timer.start(1000)
+        self.setup_clock_polling()
 
         self.alarm_time_lcd = QLCDNumber(self)
         self.alarm_time_lcd.display("")
@@ -289,16 +290,14 @@ class AlarmWindow(QWidget):
                 button.clicked.connect(config.slot)
             bottom_grid.addWidget(button, *config.position)
 
-        # Set the Radio on/off button to a checkable button
-        self.control_buttons["Radio"].setCheckable(True)
-
         # ** Left grid: next 3 departing trains **
-        train1 = QLabel("U 6:54", self)
-        train2 = QLabel("E 7:14", self)
-        train3 = QLabel("U 7:33", self)
-        left_grid.addWidget(train1, 0, 0)
-        left_grid.addWidget(train2, 1, 0)
-        left_grid.addWidget(train3, 2, 0)
+        self.train_labels = []
+        for i in range(3):
+            train_label = QLabel("U 6:54", self)
+            self.train_labels.append(train_label)
+            left_grid.addWidget(train_label, i, 0)
+
+        self.setup_train_polling()
 
         # ** Right grid: weather forecast **
         self.temperature_label = QLabel("16°C", self)
@@ -327,12 +326,47 @@ class AlarmWindow(QWidget):
         self.setWindowTitle("Alarmpi")
         self.show()
 
+    def setup_clock_polling(self):
+        """Set the main LCD display to the current time and start polling for
+        with 1 second intervals.
+        """
+        self.tick()
+        _timer = QTimer(self)
+        _timer.timeout.connect(self.tick)
+        _timer.start(1000)
+
     def tick(self):
+        """Write current time to the main QLCDNumber widget."""
         s = time.strftime("%H:%M:%S")
         self.clock_lcd.display(s)
 
-    def update_weather(self):
-        pass
+    def setup_train_polling(self):
+        """Setup polling and displaying the next train departure times."""
+        self.update_trains()
+        _timer = QTimer(self)
+        _timer.timeout.connect(self.update_trains)
+        _timer.start(12*60*1000)
+
+    def update_trains(self):
+        """Fetch new train data from DigiTraffic API and display on the right sidebar."""
+        trains = get_next_trains.get_next_3_departures()
+
+        for train, label in zip(trains, self.train_labels):
+            msg = "{} {}".format(train["commuterLineID"], train["departureTime"].strftime("%H:%M"))
+            if train["cancelled"]:
+                msg = "CANCELLED"
+
+            label.setText(msg)
+
+        next_departure = trains[0]["departureTime"]
+        msec_until_next = get_next_trains.msecs_until_datetime(next_departure)
+
+        # Return a delay until the next departure: either a minimum of
+        # 12 minutes or the until the first train's departure time
+        min_limit_or_delay = max(12*60*1000, msec_until_next)
+        max_limit_or_delay = min(40*60*1000, msec_until_next)
+
+        return max(12*60*1000, msec_until_next)
 
     def center(self):
         qr = self.frameGeometry()
