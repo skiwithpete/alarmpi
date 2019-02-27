@@ -55,12 +55,21 @@ class Clock:
         self.cron = CronWriter(config_file)
         self.radio = RadioStreamer()
         self.alarm_player = sound_the_alarm.Alarm(self.env)
+        self.train_parser = get_next_trains.TrainParser()
 
         section = self.env.get_section("openweathermap")
         self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
 
         if kwargs["fullscreen"]:
             self.main_window.showFullScreen()
+
+    def setup(self):
+        """Setup various button handlers as well as weather and train data polling
+        for the main windows side bar.
+        """
+        self.setup_button_handlers()
+        self.setup_weather_polling()
+        self.setup_train_polling()
 
     def setup_button_handlers(self):
         # Setup references to main control buttons in both windows
@@ -86,8 +95,6 @@ class Clock:
         self.main_window.mouseReleaseEvent = self.on_touch_event_handler
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
-
-        self.setup_weather_polling()
 
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
@@ -208,6 +215,43 @@ class Clock:
         msg = "{}m/s".format(round(wind))
         self.main_window.wind_speed_label.setText(msg)
 
+    def setup_train_polling(self):
+        """Setup polling and displaying the next train departure times."""
+        self.update_trains()
+        _timer = QTimer(self.main_window)
+        _timer.timeout.connect(self.update_trains)
+        _timer.start(12*60*1000)
+
+    def update_trains(self):
+        """Fetch new train data from DigiTraffic API and display on the right sidebar."""
+        trains = self.train_parser.get_next_3_departures()
+
+        for train, label in zip(trains, self.main_window.train_labels):
+            line_id = train["commuterLineID"]
+            scheduled_time = train["scheduledTime"].strftime("%H:%M")
+
+            # If an estimate exists, display both values
+            if train["liveEstimateTime"]:
+                estimate_time = train["liveEstimateTime"].strftime("%H:%M")
+                msg = "{} {} => {}".format(line_id, scheduled_time, estimate_time)
+
+            else:
+                msg = "{} {}".format(line_id, scheduled_time)
+
+            if train["cancelled"]:
+                msg = "CANCELLED"
+
+            label.setText(msg)
+
+        # Return a delay until the next departure: either the measured time
+        # until the next departure or and upper/lower bound of 40min/12min
+        next_departure = trains[0]["scheduledTime"]
+        msec_until_next = self.train_parser.msecs_until_datetime(next_departure)
+
+        # pair the measured delay with the bounds, sort and return the middle value
+        waits_with_bounds = sorted([12*60*1000, msec_until_next, 40*60*1000])
+        return waits_with_bounds[1]
+
     def toggle_display_backlight_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from system
         file and sets it to either high or low depending on the current value.
@@ -293,15 +337,13 @@ class AlarmWindow(QWidget):
         # ** Left grid: next 3 departing trains **
         self.train_labels = []
         for i in range(3):
-            train_label = QLabel("U 6:54", self)
+            train_label = QLabel("N/A", self)
             self.train_labels.append(train_label)
             left_grid.addWidget(train_label, i, 0)
 
-        self.setup_train_polling()
-
         # ** Right grid: weather forecast **
-        self.temperature_label = QLabel("16°C", self)
-        self.wind_speed_label = QLabel("3m/s", self)
+        self.temperature_label = QLabel("N/A °C", self)
+        self.wind_speed_label = QLabel("N/A m/s", self)
 
         weather_container = QLabel(self)
         pixmap = QPixmap('day_sunny_1-512.png').scaledToWidth(48)
@@ -339,34 +381,6 @@ class AlarmWindow(QWidget):
         """Write current time to the main QLCDNumber widget."""
         s = time.strftime("%H:%M:%S")
         self.clock_lcd.display(s)
-
-    def setup_train_polling(self):
-        """Setup polling and displaying the next train departure times."""
-        self.update_trains()
-        _timer = QTimer(self)
-        _timer.timeout.connect(self.update_trains)
-        _timer.start(12*60*1000)
-
-    def update_trains(self):
-        """Fetch new train data from DigiTraffic API and display on the right sidebar."""
-        trains = get_next_trains.get_next_3_departures()
-
-        for train, label in zip(trains, self.train_labels):
-            msg = "{} {}".format(train["commuterLineID"], train["departureTime"].strftime("%H:%M"))
-            if train["cancelled"]:
-                msg = "CANCELLED"
-
-            label.setText(msg)
-
-        next_departure = trains[0]["departureTime"]
-        msec_until_next = get_next_trains.msecs_until_datetime(next_departure)
-
-        # Return a delay until the next departure: either a minimum of
-        # 12 minutes or the until the first train's departure time
-        min_limit_or_delay = max(12*60*1000, msec_until_next)
-        max_limit_or_delay = min(40*60*1000, msec_until_next)
-
-        return max(12*60*1000, msec_until_next)
 
     def center(self):
         qr = self.frameGeometry()

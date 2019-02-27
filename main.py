@@ -22,5 +22,5 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     ex = clock.Clock(args.config, **kwargs)
-    ex.setup_button_handlers()
+    ex.setup()
     sys.exit(app.exec_())
