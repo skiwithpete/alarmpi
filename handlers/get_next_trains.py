@@ -40,9 +40,14 @@ class TrainParser:
             scheduled_time_dt = self.utc_timestamp_to_local_datetime(row["scheduledTime"])
             live_estimate_time_dt = None
             if "liveEstimateTime" in row:
-                sort_key = "liveEstimateTime"
+                # Check that liveEstimateTime differs from scheduledTime by at least 1 minute
                 live_estimate_time_dt = self.utc_timestamp_to_local_datetime(
                     row["liveEstimateTime"])
+                td = live_estimate_time_dt - scheduled_time_dt
+                sort_key = "liveEstimateTime"
+
+                if abs(td.seconds) < 60:
+                    live_estimate_time_dt = None
 
             sort_dt = self.utc_timestamp_to_local_datetime(row[sort_key])
 
