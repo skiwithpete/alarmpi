@@ -10,6 +10,7 @@ import os
 import sys
 import subprocess
 import signal
+import logging
 from functools import partial
 from collections import namedtuple
 
@@ -35,6 +36,7 @@ from handlers import get_open_weather, get_next_trains
 ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
 ButtonConfig.__new__.__defaults__ = (
     None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
+logging.basicConfig(format="%(asctime)s %(message)s", level=logging.INFO)
 
 
 class Clock:
@@ -70,6 +72,10 @@ class Clock:
         self.setup_button_handlers()
         self.setup_weather_polling()
         self.setup_train_polling()
+        signal.signal(signal.SIGUSR1, self.radio_signal_handler)
+        signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
+
+        self.main_window.mouseReleaseEvent = self.on_touch_event_handler
 
     def setup_button_handlers(self):
         # Setup references to main control buttons in both windows
@@ -92,10 +98,6 @@ class Clock:
         self.current_alarm_time = self.cron.get_current_alarm()
         self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
-        self.main_window.mouseReleaseEvent = self.on_touch_event_handler
-        signal.signal(signal.SIGUSR1, self.radio_signal_handler)
-        signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
-
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
         settings_button.clicked.connect(self.settings_window.show)
@@ -117,13 +119,11 @@ class Clock:
         Also clears the main window's alarm display LCD widget if there is no alarm
         the next day.
         """
-        self.play_radio()
+        self.main_window.control_buttons["Radio"].click()  # emit a click signal
         self.set_active_alarm_indicator()
 
     def wakeup_signal_handler(self, sig, frame):
-        """Signal handler for waking up the screen. Sent by sound_the_alarm
-        upon the alarm. If the screen is blank, reset the screensaver activated by xset.
-        """
+        """Signal handler for waking up the screen."""
         self.toggle_screensaver("off")
         self.set_active_alarm_indicator()
 
@@ -165,18 +165,14 @@ class Clock:
         if not alarm_time:
             return
 
-        try:
-            offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
-            nighttime = utils.nighttime(now, offset, alarm_time)
+        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+        nighttime = utils.nighttime(now, offset, alarm_time)
 
-            if nighttime:
-                _timer = QTimer(self.main_window)
-                _timer.setSingleShot(True)
-                _timer.timeout.connect(Clock.toggle_screensaver)
-                _timer.start(2*1000)  # 2 second timeout until screen blank
-
-        except ValueError:
-            return
+        if nighttime:
+            _timer = QTimer(self.main_window)
+            _timer.setSingleShot(True)
+            _timer.timeout.connect(Clock.toggle_screensaver)
+            _timer.start(2*1000)  # 2 second timeout until screen blank
 
     def play_radio(self):
         """Callback to the 'Play radio' button: open or close the radio stream
@@ -203,6 +199,7 @@ class Clock:
         """Update the weather labels on the main window. Makes an API request
         openweathermap.org for current temperature and windspeed.
         """
+        logging.info("Updating weather")
         api_response = self.weather_parser.get_weather()
         weather = get_open_weather.OpenWeatherMapClient.format_response(api_response)
 
@@ -215,6 +212,14 @@ class Clock:
         msg = "{}m/s".format(round(wind))
         self.main_window.wind_speed_label.setText(msg)
 
+        # Update the icon
+        icon_id = api_response["weather"][0]["icon"]
+        icon_binary = get_open_weather.OpenWeatherMapClient.get_weather_icon(icon_id)
+
+        pixmap = QPixmap()
+        pixmap.loadFromData(icon_binary)
+        self.main_window.weather_container.setPixmap(pixmap)
+
     def setup_train_polling(self):
         """Setup polling and displaying the next train departure times."""
         self.update_trains()
@@ -224,6 +229,7 @@ class Clock:
 
     def update_trains(self):
         """Fetch new train data from DigiTraffic API and display on the right sidebar."""
+        logging.info("Updating trains")
         trains = self.train_parser.get_next_3_departures()
 
         for train, label in zip(trains, self.main_window.train_labels):
@@ -272,6 +278,29 @@ class Clock:
         with open(PATH, "w") as f:
             f.write(str(new_brightness))
 
+    def set_active_alarm_indicator(self):
+        """Updates the main window label displaying set alarm time. By default the
+        alarm only plays on weekdays. If so, empty the label after friday's alarm.
+        """
+        # Do nothing if alarm plays on weekends
+        if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
+            return
+
+        # Do nothing if no alarm set
+        alarm_time = self.current_alarm_time  # string: HH:MM
+        if not alarm_time:
+            return
+
+        # Weekend detection: is current date between friday's alarm and
+        # nightmode_offset before monday's alarm
+        now = datetime.datetime.now()
+        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+        weekend = utils.weekend(now, offset, alarm_time)
+        if weekend:
+            self.main_window.alarm_time_lcd.display("")
+        else:
+            self.main_window.alarm_time_lcd.display(alarm_time)
+
     @staticmethod
     def toggle_screensaver(state="on"):
         """Use the xset utility to either activate the screen saver(the default)
@@ -315,6 +344,8 @@ class AlarmWindow(QWidget):
         self.alarm_time_lcd = QLCDNumber(self)
         self.alarm_time_lcd.display("")
         self.alarm_time_lcd.setStyleSheet("border: 0px;")
+        self.alarm_time_lcd.setMaximumHeight(49)
+        self.alarm_time_lcd.setContentsMargins(5, 5, 5, 100)
         alarm_grid.addWidget(self.alarm_time_lcd, 1, 0)
 
         # ** Bottom grid: main UI control buttons **
@@ -337,19 +368,16 @@ class AlarmWindow(QWidget):
         # ** Left grid: next 3 departing trains **
         self.train_labels = []
         for i in range(3):
-            train_label = QLabel("N/A", self)
+            train_label = QLabel("", self)
             self.train_labels.append(train_label)
             left_grid.addWidget(train_label, i, 0)
 
         # ** Right grid: weather forecast **
-        self.temperature_label = QLabel("N/A °C", self)
-        self.wind_speed_label = QLabel("N/A m/s", self)
-
-        weather_container = QLabel(self)
-        pixmap = QPixmap('day_sunny_1-512.png').scaledToWidth(48)
-        weather_container.setPixmap(pixmap)
+        self.temperature_label = QLabel("", self)
+        self.wind_speed_label = QLabel("", self)
+        self.weather_container = QLabel(self)
         right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
-        right_grid.addWidget(weather_container, 1, 0, Qt.AlignRight)
+        right_grid.addWidget(self.weather_container, 1, 0, Qt.AlignRight)
         right_grid.addWidget(self.wind_speed_label, 2, 0, Qt.AlignRight)
 
         grid.addLayout(alarm_grid, 0, 1)

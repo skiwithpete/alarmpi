@@ -122,6 +122,15 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         return formatted
 
     @staticmethod
+    def get_weather_icon(icon_id):
+        """Get weather icon matching an id from the response.
+        https://openweathermap.org/weather-conditions
+        """
+        url = "http://openweathermap.org/img/w/{}.png".format(icon_id)
+        r = requests.get(url)
+        return r.content  # return binary content
+
+    @staticmethod
     def ms_to_kmh(wind_speed):
         """Convert wind speed measure from meters/second to kilometres/hour."""
         return wind_speed * 3.6
