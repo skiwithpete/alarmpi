@@ -48,7 +48,7 @@ class AlarmEnv:
             (note: this does not valide the file!)
         """
         try:
-            for section in self.get_sections(excludes=["main", "alarm"]):
+            for section in self.get_sections(excludes=["main", "alarm", "polling"]):
                 section_type = self.get_value(section, "type")
 
                 if section_type in ("content", "tts"):

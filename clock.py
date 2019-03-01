@@ -70,8 +70,13 @@ class Clock:
         for the main windows side bar.
         """
         self.setup_button_handlers()
-        self.setup_weather_polling()
-        self.setup_train_polling()
+
+        if self.env.get_value("polling", "weather", fallback=False) == "1":
+            self.setup_weather_polling()
+
+        if self.env.get_value("polling", "train", fallback=False) == "1":
+            self.setup_train_polling()
+
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
@@ -589,7 +594,7 @@ class CronWriter:
     def __init__(self, config_file):
         # format absolute paths to sound_the_alarm.py and the config file
         self.path_to_alarm = os.path.abspath("sound_the_alarm.py")
-        self.config_file = config_file
+        self.config_file = os.path.abspath(config_file)
 
     def get_crontab(self):
         """Return the current crontab"""
