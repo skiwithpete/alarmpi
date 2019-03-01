@@ -23,7 +23,8 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QApplication,
     QSizePolicy,
-    QDesktopWidget
+    QDesktopWidget,
+    QCheckBox
 )
 from PyQt5.QtGui import QPixmap
 
@@ -80,6 +81,13 @@ class Clock:
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
+        # Set main window's alarm time display to cron's time
+        self.current_alarm_time = self.cron.get_current_alarm()
+        self.main_window.alarm_time_lcd.display(self.current_alarm_time)
+
+        msg = "current alarm time: {}".format(self.current_alarm_time)
+        self.settings_window.alarm_input_label.setText(msg)
+
         self.main_window.mouseReleaseEvent = self.on_touch_event_handler
 
     def setup_button_handlers(self):
@@ -98,10 +106,6 @@ class Clock:
         if not self.env.is_rpi:
             sleep_button.setEnabled(False)
             brightness_button.setEnabled(False)
-
-        # Set main window's alarm time display to cron's time
-        self.current_alarm_time = self.cron.get_current_alarm()
-        self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
@@ -133,7 +137,7 @@ class Clock:
         self.set_active_alarm_indicator()
 
     def on_touch_event_handler(self, event):
-        print("foo")
+        print("clicked")
 
     def set_alarm(self):
         """Handler to alarm set button in the settings window. Validates the
@@ -147,6 +151,10 @@ class Clock:
             self.cron.add_entry(entry)
             self.settings_window.alarm_input_label.setText(
                 "Alarm set for {}".format(time_str))
+
+            # clear the label showing the selected
+            self.settings_window.input_alarm_time_label.setText(
+                self.settings_window.ALARM_LABEL_EMPTY)
 
             # update main window alarm display
             self.main_window.alarm_time_lcd.display(time_str)
@@ -315,9 +323,6 @@ class Clock:
         if state == "on":
             cmd = "xset s activate".split()
 
-        # set required env variables so we don't need to run the whole command
-        # with shell=True
-        # Note: the user folder is assumed to be 'pi'
         # env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
         env = {"DISPLAY": ":0"}
         subprocess.run(cmd, env=env)
@@ -438,7 +443,7 @@ class SettingsWindow(QWidget):
         bottom_grid = QGridLayout()
 
         # ** Right grid: numpad for settings the alarm **
-        instruction_label = QLabel("Set alarm HH:MM")
+        instruction_label = QLabel("Set alarm HH:MM", self)
         right_grid.addWidget(instruction_label, 0, 0, 1, 3)
 
         numpad_button_config = [
@@ -475,7 +480,7 @@ class SettingsWindow(QWidget):
         self.input_alarm_time_label.setAlignment(Qt.AlignCenter)
         right_grid.addWidget(self.input_alarm_time_label, 5, 1)
 
-        self.alarm_input_label = QLabel("current alarm time: ")
+        self.alarm_input_label = QLabel(self)
         right_grid.addWidget(self.alarm_input_label, 6, 0, 1, 3)
 
         # ** Bottom level main buttons **
@@ -496,8 +501,10 @@ class SettingsWindow(QWidget):
             bottom_grid.addWidget(button, *config.position)
 
         # ** Left grid: misc settings **
-        test_label = QLabel("foo", self)
-        left_grid.addWidget(test_label, 1, 0)
+        self.readaloud_checkbox = QCheckBox("Readaloud", self)
+        self.weekend_checkbox = QCheckBox("Include weekends", self)
+        left_grid.addWidget(self.readaloud_checkbox, 1, 0)
+        left_grid.addWidget(self.weekend_checkbox, 0, 0)
 
         grid.addLayout(left_grid, 0, 0)
         grid.addLayout(right_grid, 0, 1)
@@ -550,6 +557,7 @@ class SettingsWindow(QWidget):
             return entry_time
         except ValueError:
             self.alarm_input_label.setText("ERROR: Invalid time")
+            self.input_alarm_time_label.setText(self.ALARM_LABEL_EMPTY)
             return
 
     def clear_alarm(self):
