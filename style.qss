@@ -1,0 +1,15 @@
+QLCDNumber {
+  color: #FF1414;
+  font-weight: bold;
+  border: 0px;
+}
+
+/*
+AlarmWindow {
+  background-color: #090201;
+}
+*/
+
+AlarmWindow QLabel {
+  color: #FF1414;
+}

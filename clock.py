@@ -78,6 +78,13 @@ class Clock:
         if self.env.get_value("polling", "train", fallback=False) == "1":
             self.setup_train_polling()
 
+        # Setup settings window's checkboxes:
+        # set initial values to config values and set handlers
+        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
+        self.settings_window.readaloud_checkbox.setChecked(tts_enabled)
+        weekends = self.env.config_has_match("alarm", "include_weekends", "1")
+        self.settings_window.weekend_checkbox.setChecked(weekends)
+
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
@@ -85,6 +92,7 @@ class Clock:
         self.current_alarm_time = self.cron.get_current_alarm()
         self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
+        # Also set the setting's window alarm time label
         msg = "current alarm time: {}".format(self.current_alarm_time)
         self.settings_window.alarm_input_label.setText(msg)
 
@@ -121,6 +129,10 @@ class Clock:
 
         alarm_set_button.clicked.connect(self.set_alarm)
         alarm_clear_button.clicked.connect(self.clear_alarm)
+
+        # Checkboxes
+        self.settings_window.readaloud_checkbox.stateChanged.connect(self.enable_tts)
+        self.settings_window.weekend_checkbox.stateChanged.connect(self.enable_weekends)
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests from sound_the_alarm.
@@ -314,6 +326,24 @@ class Clock:
         else:
             self.main_window.alarm_time_lcd.display(alarm_time)
 
+    def enable_tts(self):
+        """Callback to the checkbox enabling TTS feature: set the config
+        to match the selected value.
+        """
+        state = "0"
+        if self.settings_window.readaloud_checkbox.isChecked():
+            state = "1"
+        self.env.config.set("main", "readaloud", state)
+
+    def enable_weekends(self):
+        """Callback to the checkbox enabling TTS feature: set the config
+        to match the selected value.
+        """
+        state = "0"
+        if self.settings_window.weekend_checkbox.isChecked():
+            state = "1"
+        self.env.config.set("alarm", "include_weekends", state)
+
     @staticmethod
     def toggle_screensaver(state="on"):
         """Use the xset utility to either activate the screen saver(the default)
@@ -344,18 +374,23 @@ class AlarmWindow(QWidget):
         right_grid = QGridLayout()
         bottom_grid = QGridLayout()
 
+        # alarm_grid.setObjectName("alarm_grid")
+
+        RED = "#FF1414"
+        BLACK = "#090201"
+
+        self.setStyleSheet(open("style.qss", "r").read())
+        self.setAutoFillBackground(True)
+
         # ** Center grid: current and alarm time displays **
         self.clock_lcd = QLCDNumber(8, self)
-        self.clock_lcd.setStyleSheet("border: 0px;")
         alarm_grid.addWidget(self.clock_lcd, 0, 0)
 
         self.setup_clock_polling()
 
         self.alarm_time_lcd = QLCDNumber(self)
         self.alarm_time_lcd.display("")
-        self.alarm_time_lcd.setStyleSheet("border: 0px;")
         self.alarm_time_lcd.setMaximumHeight(49)
-        self.alarm_time_lcd.setContentsMargins(5, 5, 5, 100)
         alarm_grid.addWidget(self.alarm_time_lcd, 1, 0)
 
         # ** Bottom grid: main UI control buttons **
@@ -384,8 +419,8 @@ class AlarmWindow(QWidget):
 
         # ** Right grid: weather forecast **
         self.temperature_label = QLabel("", self)
-        self.wind_speed_label = QLabel("", self)
         self.weather_container = QLabel(self)
+        self.wind_speed_label = QLabel("", self)
         right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
         right_grid.addWidget(self.weather_container, 1, 0, Qt.AlignRight)
         right_grid.addWidget(self.wind_speed_label, 2, 0, Qt.AlignRight)
