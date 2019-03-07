@@ -103,6 +103,7 @@ class Clock:
         settings_button = self.main_window.control_buttons["Settings"]
         radio_button = self.main_window.control_buttons["Radio"]
         sleep_button = self.main_window.control_buttons["Sleep"]
+        close_button = self.main_window.control_buttons["Close"]
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
         alarm_play_button = self.settings_window.control_buttons["Play now"]
@@ -120,7 +121,8 @@ class Clock:
         settings_button.clicked.connect(self.settings_window.show)
         radio_button.setCheckable(True)  # Set the Radio on/off button to a checkable button
         radio_button.clicked.connect(self.play_radio)
-        sleep_button.clicked.connect(Clock.toggle_screensaver)
+        sleep_button.clicked.connect(lambda: Clock.toggle_screensaver("on"))
+        close_button.clicked.connect(self.cleanup_and_exit)
 
         # ** settings window buttons **
         brightness_button.clicked.connect(self.toggle_display_backlight_brightness)
@@ -344,6 +346,13 @@ class Clock:
             state = "1"
         self.env.config.set("alarm", "include_weekends", state)
 
+    def cleanup_and_exit(self):
+        """Callback to the close button. Close any existing radio streams and the
+        application itself.
+        """
+        self.radio.stop()
+        QApplication.instance().quit()
+
     @staticmethod
     def toggle_screensaver(state="on"):
         """Use the xset utility to either activate the screen saver(the default)
@@ -398,7 +407,7 @@ class AlarmWindow(QWidget):
             ButtonConfig(text="Settings", position=(0, 0)),
             ButtonConfig(text="Sleep", position=(0, 1)),
             ButtonConfig(text="Radio", position=(0, 2)),
-            ButtonConfig(text="Close", position=(0, 3), slot=QApplication.instance().quit)
+            ButtonConfig(text="Close", position=(0, 3))
         ]
 
         for config in button_configs:
