@@ -31,27 +31,17 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
 
 ### Main Features
  * A spoken greeting based on time of day
- * Reads the day's weather using Yahoo Weather
+ * Reads the day's weather from openweathermap.org
  * Reads latest news from BBC World RSS feed
- * Plays internet radio streams using `mplayer`
+ * Plays internet radio streams
  * Alarm scheduling via cron
- * GUI with current time
+ * GUI displaying current time built with PyQt5
 
 
 ![Main window](resources/clock_main.png)
 
 ![schedule window](resources/clock_schedule.png)
 
-
-#### Changes to the original project:
- * Ported to Python 3 (Python 2 is unsupported)
- * Changed naming conventions to be more PEP 8 compliant
- * Added option to stream an internet radio station
- * Removed features not applicable to my use case
- * Reorganized file structure
- * Changed available text-to-speech engines, see [config_readme.md](./config_readme.md)
- * Changed audio processing to use in-memory objects, thus removing the need to setup a ramdrive
- * Added unit tests
 
 ### Hardware setup
 This project is built around the following hardware.
@@ -61,7 +51,7 @@ This project is built around the following hardware.
 
 Apart from the speaker these aren't requirements per se. The project is mostly a couple of Python scripts which will likely run on many Linux platforms. The GUI does have two bindings to a Raspberry Pi: the buttons for toggling screen brightness and putting it to sleep are disabled on a different system.
 
-It's also possible to run the alarm without the GUI on a headless setup.
+It's also possible to run the alarm without the GUI on a headless setup, see Usage below.
 
 
 
@@ -72,25 +62,75 @@ It's also possible to run the alarm without the GUI on a headless setup.
 
   These include the Festival text-to-speech engine, the command line movie player mplayer and audio libraries enabling playback of mp3 files directly in Python.
 
- 2. Next, install required Python packages:
+ 2. Next, install required Python packages.
 
-  ```pip install -r requirements.txt```
+ These can either be installed inside a virtualenv or directly under system Python. While using a virtualenv is recommended, it does come with an extra step when the target system is a Raspberry Pi. This project is buit upon PyQt5, a GUI library which is not natively available on ARM platforms - there are no binaries on PyPI (at the time of writing, March 5th, 2019), so it cannot be installed with pip. Instead PyQt5 needs to be compiled from source, see below.
 
-  Or better yet, use a virtualenv
+ Thus, options for installing Python packages include:
 
+ **Raspberry Pi with virtualenv**
+  1. Create and activate the environment with
+ ```
+ python3 -m virtualenv venv
+ source venv/bin/activate
+ ```
+  2. Download SIP  
+  https://www.riverbankcomputing.com/software/sip/download  
+  According to the documentation, SIP is a
+  > tool that makes it very easy to create Python bindings for C and C++ libraries. It was originally developed to create PyQt, the Python bindings for the Qt toolkit, but can be used to create bindings for any C or C++ library.
+
+  3. Extract the archive and build the module
+     ```
+     tar -xvf sip-4.19.14.tar.gz
+     python sip-4.19.14/configure.py --sip-module PyQt5.sip --no-tools
+     make
+     sudo make install
+     sudo make clean
+     ```
+  4. Download PyQt5  
+  https://riverbankcomputing.com/software/pyqt/download5  
+
+  5. Extract and build
+    ```
+     tar -xvf PyQt5_gpl-5.12.tar.gz
+     python PyQt5_gpl-5.12/configure.py
+     make
+     sudo make install
+     sudo make clean
+     ```
+    This will take a long time!
+
+  6. Finally, install the rest of Python packages via `pip`:
   ```
-  python3 -m virtualenv env
-  source env/bin/activate
   pip install -r requirements.txt
   ```
 
- 3. If you haven't done so already, initialize crontab with
+ **Raspberry Pi with system Python**
+  1. Outside a virtualenv PyQt5 can be installed as a system package with `apt`:
+  ```
+  apt update
+  apt install python3-pyqt5
+  ```
+  2. Install the rest of Python packages via `pip`:
+  ```
+  pip install -r requirements.txt
+  ```
 
- ```crontab -e```
-
-  and follow the instructions.
-
-   * This script uses cron to schedule the alarm and hence modifies the user's crontab. You may therefore want to create a backup of an existing crontab with `crontab -l > cron.backup` before running the script. It can be restored with `crontab cron.backup`.  
+ **Ubuntu, x86**
+  1. on a non-arm machine, everything can be installed directly with `pip`
+  ```
+  pip install pyqt5
+  pip install -r requirements.txt
+  ```
+ 3. After Python requirements are installed, initialize crontab with `crontab -e` and follow the instructions (if you haven't done so already).
+   * `cron` is used to schedule the alarm. You may want to create a backup of an existing crontab with
+   ```
+   crontab cron.backup
+   ```
+   before running the script. It can be restored with
+   ```
+   crontab -l > cron.backup
+   ```
 
  4. Optionally, run unit tests with
 
@@ -107,11 +147,11 @@ or
 python sound_the_alarm.py [path/to/configuration/file]
 ```
 
-The first form opens a GUI for displaying current time and scheduling the alarm, see the screenshots above. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.
+The first runs a GUI version. It displays the current time and includes options for scheduling the alarm. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.
 
-In a headless Raspberry Pi environment running the GUI will fail since Tkinter cannot be initialized. Instead, use the second form to play the alarm directly and add a cron entry manually to schedule it.
+The second form generates an alarm based on the configuration file and plays it. This can be used as a CLI interface for the alarm. Use cron to manually schedule an alarm.
 
-Scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a separate `mplayer` process. The GUI's _Play radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but using the second form of the script you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
+In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a new `mplayer` process separate from the Python process running the alarm. The GUI's _Radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but in CLI mode you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
 
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [config_readme.md](./config_readme.md) for instructions. By default `alarm.config` will be used.
 

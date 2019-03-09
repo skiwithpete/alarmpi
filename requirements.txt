@@ -33,8 +33,6 @@ PyAutoGUI==0.9.39
 pydub==0.22.1
 Pygments==2.2.0
 PyMsgBox==1.0.6
-PyQt5==5.11.3
-PyQt5-sip==4.19.13
 PyScreeze==0.1.18
 python-dateutil==2.8.0
 python3-xlib==0.15
