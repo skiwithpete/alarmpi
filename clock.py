@@ -107,7 +107,7 @@ class Clock:
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
         alarm_play_button = self.settings_window.control_buttons["Play now"]
-        console_button = self.settings_window.control_buttons["Show console"]
+        window_button = self.settings_window.control_buttons["Toggle window"]
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
 
@@ -127,7 +127,7 @@ class Clock:
         # ** settings window buttons **
         brightness_button.clicked.connect(self.toggle_display_backlight_brightness)
         alarm_play_button.clicked.connect(self.alarm_player.sound_alarm_without_gui_or_radio)
-        console_button.clicked.connect(self.main_window.showNormal)
+        window_button.clicked.connect(self.toggle_display_mode)
 
         alarm_set_button.clicked.connect(self.set_alarm)
         alarm_clear_button.clicked.connect(self.clear_alarm)
@@ -284,6 +284,18 @@ class Clock:
         # pair the measured delay with the bounds, sort and return the middle value
         waits_with_bounds = sorted([12*60*1000, msec_until_next, 40*60*1000])
         return waits_with_bounds[1]
+
+    def toggle_display_mode(self):
+        """Change main window dispaly mode between fullscreen and normal
+        depending on current its mode.
+        """
+        if self.main_window.windowState() == Qt.WindowFullScreen:
+            self.main_window.showNormal()
+        else:
+            self.main_window.showFullScreen()
+            # Keep the settings window active to prevent main window from
+            # burying it
+            self.settings_window.activateWindow()
 
     def toggle_display_backlight_brightness(self):
         """Reads Raspberry pi touch display's current brightness values from system
@@ -530,7 +542,7 @@ class SettingsWindow(QWidget):
         # ** Bottom level main buttons **
         control_button_config = [
             ButtonConfig(text="Play now", position=(0, 0)),
-            ButtonConfig(text="Show console", position=(0, 1)),
+            ButtonConfig(text="Toggle window", position=(0, 1)),
             ButtonConfig(text="Toggle brightness", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3), slot=self.close)
         ]
