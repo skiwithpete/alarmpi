@@ -85,15 +85,21 @@ class AlarmWindow(QWidget):
         for i in range(3):
             train_label = QLabel("", self)
             self.train_labels.append(train_label)
-            left_grid.addWidget(train_label, i, 0)
+            left_grid.addWidget(train_label, i, 0, Qt.AlignTop)
+
+        # Set a non zero strectfactor to the bottom rows of both side bars, so
+        # the last item takes all the remaining space and all QLabels appear
+        # on top of each other
+        left_grid.setRowStretch(2, 1)
+        right_grid.setRowStretch(2, 1)
 
         # ** Right grid: weather forecast **
         self.temperature_label = QLabel("", self)
-        self.weather_container = QLabel(self)
         self.wind_speed_label = QLabel("", self)
+        self.weather_container = QLabel(self)
         right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
-        right_grid.addWidget(self.weather_container, 1, 0, Qt.AlignRight)
-        right_grid.addWidget(self.wind_speed_label, 2, 0, Qt.AlignRight)
+        right_grid.addWidget(self.wind_speed_label, 1, 0, Qt.AlignRight)
+        right_grid.addWidget(self.weather_container, 2, 0, Qt.AlignRight | Qt.AlignTop)
 
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(left_grid, 0, 0)
