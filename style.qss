@@ -4,12 +4,11 @@ QLCDNumber {
   border: 0px;
 }
 
-
 AlarmWindow {
   background-color: #090201;
 }
 
-
 AlarmWindow QLabel {
   color: #FF1414;
+  font: 16pt;
 }
