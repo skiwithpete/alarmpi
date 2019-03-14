@@ -5,7 +5,6 @@
 
 
 import time
-import logging
 from functools import partial
 from collections import namedtuple
 
@@ -26,7 +25,6 @@ from PyQt5.QtWidgets import (
 ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
 ButtonConfig.__new__.__defaults__ = (
     None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
-logging.basicConfig(format="%(asctime)s %(message)s", level=logging.INFO)
 
 
 class AlarmWindow(QWidget):
@@ -58,9 +56,12 @@ class AlarmWindow(QWidget):
 
         self.alarm_time_lcd = QLCDNumber(8, self)
         self.alarm_time_lcd.display("")
-        self.alarm_time_lcd.setMinimumHeight(49)
+        self.alarm_time_lcd.setMinimumHeight(30)
         self.alarm_time_lcd.setSegmentStyle(QLCDNumber.Flat)
         alarm_grid.addWidget(self.alarm_time_lcd, 1, 0, 1, 1, Qt.AlignTop)
+
+        #alarm_grid.setRowStretch(0, 3)
+        #alarm_grid.setRowStretch(1, 1)
 
         # ** Bottom grid: main UI control buttons **
         button_configs = [
@@ -84,8 +85,8 @@ class AlarmWindow(QWidget):
         self.train_labels = []
         for i in range(3):
             train_label = QLabel("", self)
-            self.train_labels.append(train_label)
             left_grid.addWidget(train_label, i, 0, Qt.AlignTop)
+            self.train_labels.append(train_label)
 
         # Set a non zero strectfactor to the bottom rows of both side bars, so
         # the last item takes all the remaining space and all QLabels appear
@@ -111,7 +112,7 @@ class AlarmWindow(QWidget):
         base_layout.setRowStretch(1, 1)
 
         self.setLayout(base_layout)
-        self.resize(600, 320)
+        self.resize(620, 420)
         self.center()
 
         self.setWindowTitle("Alarmpi")
@@ -139,6 +140,11 @@ class AlarmWindow(QWidget):
 
 
 class SettingsWindow(QWidget):
+    ALARM_INPUT_ERROR = "ERROR: Invalid time"
+    ALARM_INPUT_SUCCESS = "Alarm set for {}"
+    ALARM_INPUT_CLEAR = "Alarm cleared"
+    ALARM_LABEL_EMPTY = "  :  "
+
     def __init__(self):
         super().__init__()
         self.control_buttons = {}
@@ -146,7 +152,7 @@ class SettingsWindow(QWidget):
         self.initUI()
 
     def initUI(self):
-        grid = QGridLayout()
+        base_layout = QGridLayout()
 
         # subgrids for positioning elements
         left_grid = QGridLayout()
@@ -154,26 +160,27 @@ class SettingsWindow(QWidget):
         bottom_grid = QGridLayout()
 
         # ** Right grid: numpad for settings the alarm **
-        instruction_label = QLabel("Set alarm HH:MM", self)
-        right_grid.addWidget(instruction_label, 0, 0, 1, 3)
-
         numpad_button_config = [
-            ButtonConfig(text="1", position=(1, 0), slot=True),
-            ButtonConfig(text="2", position=(1, 1), slot=True),
-            ButtonConfig(text="3", position=(1, 2), slot=True),
-            ButtonConfig(text="4", position=(2, 0), slot=True),
-            ButtonConfig(text="5", position=(2, 1), slot=True),
-            ButtonConfig(text="6", position=(2, 2), slot=True),
-            ButtonConfig(text="7", position=(3, 0), slot=True),
-            ButtonConfig(text="8", position=(3, 1), slot=True),
-            ButtonConfig(text="9", position=(3, 2), slot=True),
-            ButtonConfig(text="0", position=(4, 1), slot=True),
-            ButtonConfig(text="set", position=(5, 0)),
-            ButtonConfig(text="clear", position=(5, 2))
+            ButtonConfig(text="1", position=(0, 0), slot=True),
+            ButtonConfig(text="2", position=(0, 1), slot=True),
+            ButtonConfig(text="3", position=(0, 2), slot=True),
+            ButtonConfig(text="4", position=(1, 0), slot=True),
+            ButtonConfig(text="5", position=(1, 1), slot=True),
+            ButtonConfig(text="6", position=(1, 2), slot=True),
+            ButtonConfig(text="7", position=(2, 0), slot=True),
+            ButtonConfig(text="8", position=(2, 1), slot=True),
+            ButtonConfig(text="9", position=(2, 2), slot=True),
+            ButtonConfig(text="0", position=(3, 1), slot=True),
+            ButtonConfig(text="set", position=(4, 0)),
+            ButtonConfig(text="clear", position=(4, 2))
         ]
 
         for config in numpad_button_config:
             button = QPushButton(config.text, self)
+            button.setSizePolicy(
+                QSizePolicy.Preferred,
+                QSizePolicy.Expanding  # buttons should expand in vertical direction
+            )
 
             if config.slot is True:
                 # create a partial function with the button text to pass to
@@ -186,20 +193,16 @@ class SettingsWindow(QWidget):
 
         # Labels for displaying current active alarm time and time
         # set using the numpad controls.
-        self.ALARM_LABEL_EMPTY = "  :  "
-        self.input_alarm_time_label = QLabel(self.ALARM_LABEL_EMPTY)
+        self.input_alarm_time_label = QLabel(SettingsWindow.ALARM_LABEL_EMPTY)
         self.input_alarm_time_label.setAlignment(Qt.AlignCenter)
-        right_grid.addWidget(self.input_alarm_time_label, 5, 1)
-
-        self.alarm_input_label = QLabel(self)
-        right_grid.addWidget(self.alarm_input_label, 6, 0, 1, 3)
+        right_grid.addWidget(self.input_alarm_time_label, 4, 1)
 
         # ** Bottom level main buttons **
         control_button_config = [
             ButtonConfig(text="Play now", position=(0, 0)),
             ButtonConfig(text="Toggle window", position=(0, 1)),
             ButtonConfig(text="Toggle brightness", position=(0, 2)),
-            ButtonConfig(text="Close", position=(0, 3), slot=self.close)
+            ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
         ]
 
         for config in control_button_config:
@@ -214,18 +217,43 @@ class SettingsWindow(QWidget):
         # ** Left grid: misc settings **
         self.readaloud_checkbox = QCheckBox("Readaloud", self)
         self.weekend_checkbox = QCheckBox("Include weekends", self)
-        left_grid.addWidget(self.readaloud_checkbox, 1, 0)
+        self.nightmode_checkbox = QCheckBox("Nightmode active", self)
+        self.alarm_time_status_label = QLabel(self)
+        self.alarm_time_error_label = QLabel(self)
+        self.alarm_time_error_label.setStyleSheet("color: #FF1414;")
+
         left_grid.addWidget(self.weekend_checkbox, 0, 0)
+        left_grid.addWidget(self.readaloud_checkbox, 1, 0)
+        left_grid.addWidget(self.nightmode_checkbox, 2, 0)
+        left_grid.addWidget(self.alarm_time_status_label, 3, 0)
+        left_grid.addWidget(self.alarm_time_error_label, 4, 0)
 
-        grid.addLayout(left_grid, 0, 0)
-        grid.addLayout(right_grid, 0, 1)
-        grid.addLayout(bottom_grid, 1, 0, 1, 2)
+        base_layout.addLayout(left_grid, 0, 0)
+        base_layout.addLayout(right_grid, 0, 1)
+        base_layout.addLayout(bottom_grid, 1, 0, 1, 2)
 
-        self.setLayout(grid)
-        self.resize(500, 300)
+        # Set stretch factors to rows so the button row doesn't take too much space
+        base_layout.setRowStretch(0, 2)
+        base_layout.setRowStretch(1, 1)
+
+        self.setLayout(base_layout)
+        self.resize(570, 420)
         self.center()
 
         self.setWindowTitle("Settings")
+
+    def clear_labels_and_close(self):
+        """Button handler for 'close' Button: clear any temporary status messages
+        before closing the window.
+        """
+        if self.alarm_time_error_label.text() == SettingsWindow.ALARM_INPUT_ERROR:
+            self.alarm_time_error_label.setText("")
+
+        # Clear the status label if it not displaying a valid alarm time
+        if self.alarm_time_status_label.text() == SettingsWindow.ALARM_INPUT_CLEAR:
+            self.alarm_time_status_label.setText("")
+
+        self.close()
 
     def center(self):
         qr = self.frameGeometry()
@@ -252,7 +280,7 @@ class SettingsWindow(QWidget):
             new_value[current_display_digits_num + 1] = val
 
         else:
-            new_value = list(val + self.ALARM_LABEL_EMPTY[1:])
+            new_value = list(val + SettingsWindow.ALARM_LABEL_EMPTY[1:])
 
         new_value = "".join(new_value)
         self.input_alarm_time_label.setText(new_value)
@@ -267,13 +295,13 @@ class SettingsWindow(QWidget):
             time.strptime(entry_time, "%H:%M")
             return entry_time
         except ValueError:
-            self.alarm_input_label.setText("ERROR: Invalid time")
-            self.input_alarm_time_label.setText(self.ALARM_LABEL_EMPTY)
+            self.alarm_time_error_label.setText(SettingsWindow.ALARM_INPUT_ERROR)
+            self.input_alarm_time_label.setText(SettingsWindow.ALARM_LABEL_EMPTY)
             return
 
     def clear_alarm(self):
-        """Clear the time displayed on the alarm set label.
-        """
-        self.input_alarm_time_label.setText(self.ALARM_LABEL_EMPTY)
-        self.alarm_input_label.setText("Alarm cleared")
+        """Clear the time displayed on the alarm set label."""
+        self.input_alarm_time_label.setText(SettingsWindow.ALARM_LABEL_EMPTY)
+        self.alarm_time_status_label.setText(SettingsWindow.ALARM_INPUT_CLEAR)
         self.current_alarm_time = ""
+        self.alarm_time_error_label.setText("")
