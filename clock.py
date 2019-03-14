@@ -12,7 +12,7 @@ import subprocess
 import signal
 import logging
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPixmap
 
@@ -48,6 +48,12 @@ class Clock:
 
         if kwargs["fullscreen"]:
             self.main_window.showFullScreen()
+            self.main_window.setCursor(Qt.BlankCursor)
+            self.settings_window.setCursor(Qt.BlankCursor)
+
+        if kwargs["debug"]:
+            self.env.config.set("polling", "weather", "0")
+            self.env.config.set("polling", "train", "0")
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
@@ -77,7 +83,7 @@ class Clock:
 
         # Also set the setting's window alarm time label
         msg = "current alarm time: {}".format(self.current_alarm_time)
-        self.settings_window.alarm_input_label.setText(msg)
+        self.settings_window.alarm_time_status_label.setText(msg)
 
         self.main_window.mouseReleaseEvent = self.on_touch_event_handler
 
@@ -109,7 +115,9 @@ class Clock:
 
         # ** settings window buttons **
         brightness_button.clicked.connect(self.toggle_display_backlight_brightness)
+        #alarm_play_thread = AlarmPlayThread(self.alarm_player.sound_alarm_without_gui_or_radio)
         alarm_play_button.clicked.connect(self.alarm_player.sound_alarm_without_gui_or_radio)
+
         window_button.clicked.connect(self.toggle_display_mode)
 
         alarm_set_button.clicked.connect(self.set_alarm)
@@ -146,12 +154,13 @@ class Clock:
         if time_str:
             entry = self.cron.create_entry(time_str)
             self.cron.add_entry(entry)
-            self.settings_window.alarm_input_label.setText(
-                "Alarm set for {}".format(time_str))
 
-            # clear the label showing the selected
+            alarm_time_msg = GUIWidgets.SettingsWindow.ALARM_INPUT_SUCCESS.format(time_str)
+            self.settings_window.alarm_time_status_label.setText(alarm_time_msg)
+
+            # clear the label showing the selected time
             self.settings_window.input_alarm_time_label.setText(
-                self.settings_window.ALARM_LABEL_EMPTY)
+                GUIWidgets.SettingsWindow.ALARM_LABEL_EMPTY)
 
             # update main window alarm display
             self.main_window.alarm_time_lcd.display(time_str)
@@ -360,6 +369,18 @@ class Clock:
         # env = {"XAUTHORITY": "/home/pi/.Xauthority", "DISPLAY": ":0"}
         env = {"DISPLAY": ":0"}
         subprocess.run(cmd, env=env)
+
+
+class AlarmPlayThread(QThread):
+    signal = pyqtSignal("PyQt_PyObject")
+
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+
+    # run method gets called when we start the thread
+    def run(self):
+        self.callback()
 
 
 class RadioStreamer:
