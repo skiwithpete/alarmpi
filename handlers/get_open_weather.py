@@ -28,7 +28,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             weather = OpenWeatherMapClient.format_response(api_response)
 
             conditions = weather["conditions"]
-            temperature = weather["temp"]
+            temperature = int(weather["temp"])
             wind_speed_kmh = weather["wind_speed_kmh"]
             wind = weather["wind_speed_ms"]
             wind_chill = weather["wind_chill"]

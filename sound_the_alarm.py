@@ -3,7 +3,6 @@
 import subprocess
 import argparse
 import importlib
-import os.path
 import os
 import sys
 import inspect
@@ -25,6 +24,8 @@ import alarmenv
 BASE = os.getcwd()
 if len(sys.argv) > 1:
     BASE = os.path.dirname(sys.argv[1])  # get dirname from the path to sound_the_alarm.py
+
+PIDFILE = os.path.join(BASE, "pidfile")
 
 # alias USRSIGnals for clarity
 RADIO_PLAY_SIGNAL = signal.SIGUSR1
@@ -60,7 +61,7 @@ class Alarm:
         # If the GUI is running, send a signal to it to use its RadioStreamer.
         # Signalling also sets the GUI's radio button as pressed.
         # If GUI is not running, call mplayer directly.
-        if self.env.radio_url:
+        if self.env.radio_url and self.env.config_has_match("radio", "enabled", "1"):
             if pid:
                 os.kill(pid, RADIO_PLAY_SIGNAL)
             else:
@@ -153,18 +154,13 @@ class Alarm:
 
     @staticmethod
     def gui_running():
-        """Check if the GUI is running. Uses pgrep to get pid of a
-        running 'python main.py' process owned by the currently logged in user.
+        """Determine whether the GUI is running from the existance of the pidfile.
+        Return the pid if running.
         """
-        user = getpass.getuser()
-
-        # look for python processes running main.py owned by the currently logged
-        # in user.
-        cmd = ["pgrep", "-u", user, "-f", "python .*(alarmpi/)?main.py"]
-        p = subprocess.run(cmd, stdout=subprocess.PIPE)
         try:
-            return int(p.stdout)
-        except ValueError:
+            with open(PIDFILE) as f:
+                return int(f.read().strip())
+        except (FileNotFoundError, ValueError):
             return False
 
     @staticmethod

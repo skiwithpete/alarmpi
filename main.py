@@ -7,7 +7,9 @@
 import argparse
 import clock
 import sys
+import os
 import logging
+import sound_the_alarm
 from PyQt5.QtWidgets import QApplication
 
 logging.basicConfig(
@@ -15,6 +17,16 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
 )
+
+
+def write_pidfile():
+    pid = os.getpid()
+    with open(sound_the_alarm.PIDFILE, "w") as f:
+        f.write(str(pid))
+
+
+def clear_pidfile():
+    os.remove(sound_the_alarm.PIDFILE)
 
 
 if __name__ == "__main__":
@@ -29,6 +41,11 @@ if __name__ == "__main__":
     kwargs = {"fullscreen": args.fullscreen, "debug": args.debug}
 
     app = QApplication(sys.argv)
+    write_pidfile()
+
     ex = clock.Clock(args.config, **kwargs)
     ex.setup()
-    sys.exit(app.exec_())
+    res = app.exec_()
+    clear_pidfile()
+
+    sys.exit(res)
