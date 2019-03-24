@@ -143,6 +143,8 @@ class Clock:
 
     def on_touch_event_handler(self, event):
         print("clicked")
+        self.set_screensaver_timeout()
+        self.set_active_alarm_indicator()
 
     def set_alarm(self):
         """Handler to alarm set button in the settings window. Validates the
@@ -165,8 +167,6 @@ class Clock:
             # update main window alarm display
             self.main_window.alarm_time_lcd.display(time_str)
 
-        return
-
     def clear_alarm(self):
         """Handler for settings window's clear button: removes the cron entry
         and clears both window's alarm displays.
@@ -179,18 +179,18 @@ class Clock:
         """Blank the screen after a short timeout if it is currently night time
         (ie. nightmode_offset hours before alarm time).
         """
-        now = datetime.datetime.now()
         alarm_time = self.current_alarm_time  # HH:MM
         if not alarm_time:
             return
 
         offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+        now = datetime.datetime.now()
         nighttime = utils.nighttime(now, offset, alarm_time)
 
         if nighttime:
             _timer = QTimer(self.main_window)
             _timer.setSingleShot(True)
-            _timer.timeout.connect(Clock.toggle_screensaver)
+            _timer.timeout.connect(lambda: Clock.toggle_screensaver("on"))
             _timer.start(2*1000)  # 2 second timeout until screen blank
 
     def play_radio(self):
@@ -397,7 +397,7 @@ class RadioStreamer:
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
         """
-        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(url).split()
+        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 3".format(url).split()
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
         self.process = subprocess.Popen(cmd)
