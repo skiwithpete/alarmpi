@@ -74,6 +74,13 @@ class Clock:
         weekends = self.env.config_has_match("alarm", "include_weekends", "1")
         self.settings_window.weekend_checkbox.setChecked(weekends)
 
+        # set nightmode as enabled if non zero offset specified in the config
+        self.original_nightmode_offset = self.env.get_value(
+            "alarm", "nightmode_offset", fallback="8")
+
+        nightmode = (self.original_nightmode_offset != "0")
+        self.settings_window.nightmode_checkbox.setChecked(nightmode)
+
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
@@ -85,9 +92,13 @@ class Clock:
         msg = "current alarm time: {}".format(self.current_alarm_time)
         self.settings_window.alarm_time_status_label.setText(msg)
 
+        self.screen_blank_timer = QTimer(self.main_window)
+        self.screen_blank_timer.setSingleShot(True)
+
         self.main_window.mouseReleaseEvent = self.on_touch_event_handler
 
     def setup_button_handlers(self):
+        """Setup button handlers for the main window and settings window."""
         # Setup references to main control buttons in both windows
         settings_button = self.main_window.control_buttons["Settings"]
         radio_button = self.main_window.control_buttons["Radio"]
@@ -107,7 +118,7 @@ class Clock:
 
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
-        settings_button.clicked.connect(self.settings_window.show)
+        settings_button.clicked.connect(self.open_settings_window)
         radio_button.setCheckable(True)  # Set the Radio on/off button to a checkable button
         radio_button.clicked.connect(self.play_radio)
         sleep_button.clicked.connect(lambda: Clock.toggle_screensaver("on"))
@@ -119,13 +130,20 @@ class Clock:
         alarm_play_button.clicked.connect(self.alarm_player.sound_alarm_without_gui_or_radio)
 
         window_button.clicked.connect(self.toggle_display_mode)
-
         alarm_set_button.clicked.connect(self.set_alarm)
         alarm_clear_button.clicked.connect(self.clear_alarm)
 
-        # Checkboxes
+        # Settings window checkboxes
         self.settings_window.readaloud_checkbox.stateChanged.connect(self.enable_tts)
         self.settings_window.weekend_checkbox.stateChanged.connect(self.enable_weekends)
+        self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nigtmode)
+
+    def open_settings_window(self):
+        """Callback for opening the settings window. Also clears timer for blanking
+        the screen (if active).
+        """
+        self.screen_blank_timer.stop()
+        self.settings_window.show()
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests from sound_the_alarm.
@@ -147,12 +165,10 @@ class Clock:
         self.set_active_alarm_indicator()
 
     def set_alarm(self):
-        """Handler to alarm set button in the settings window. Validates the
-        time currently displaying and adds a cron entry. No alarm is set if
-        value is invalid.
+        """Handler for settings window's 'set' button. Validates the suer selected
+        time and adds a cron entry (if valid). No alarm is set if value is invalid.
         """
         time_str = self.settings_window.validate_alarm_input()
-        # if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
         if time_str:
             entry = self.cron.create_entry(time_str)
             self.cron.add_entry(entry)
@@ -168,8 +184,8 @@ class Clock:
             self.main_window.alarm_time_lcd.display(time_str)
 
     def clear_alarm(self):
-        """Handler for settings window's clear button: removes the cron entry
-        and clears both window's alarm displays.
+        """Handler for settings window's 'clear' button. Removes the cron entry
+        (if any) and clears both window's alarm displays.
         """
         self.cron.delete_entry()
         self.settings_window.clear_alarm()
@@ -188,10 +204,8 @@ class Clock:
         nighttime = utils.nighttime(now, offset, alarm_time)
 
         if nighttime:
-            _timer = QTimer(self.main_window)
-            _timer.setSingleShot(True)
-            _timer.timeout.connect(lambda: Clock.toggle_screensaver("on"))
-            _timer.start(2*1000)  # 2 second timeout until screen blank
+            self.screen_blank_timer.timeout.connect(lambda: Clock.toggle_screensaver("on"))
+            self.screen_blank_timer.start(3*1000)  # 3 second timeout until screen blank
 
     def play_radio(self):
         """Callback to the 'Play radio' button: open or close the radio stream
@@ -209,6 +223,7 @@ class Clock:
             self.radio.stop()
 
     def setup_weather_polling(self):
+        """Setup polling for updating the weather every 30 minutes."""
         self.update_weather()
         _timer = QTimer(self.main_window)
         _timer.timeout.connect(self.update_weather)
@@ -240,7 +255,7 @@ class Clock:
         self.main_window.weather_container.setPixmap(pixmap)
 
     def setup_train_polling(self):
-        """Setup polling and displaying the next train departure times."""
+        """Setup polling for next train departure times every 12 minutes."""
         self.update_trains()
         _timer = QTimer(self.main_window)
         _timer.timeout.connect(self.update_trains)
@@ -349,6 +364,15 @@ class Clock:
         if self.settings_window.weekend_checkbox.isChecked():
             state = "1"
         self.env.config.set("alarm", "include_weekends", state)
+
+    def enable_nigtmode(self):
+        """Callback to the checkbox enabling TTS feature: set the config
+        to match the selected value.
+        """
+        state = "0"
+        if self.settings_window.nightmode_checkbox.isChecked():
+            state = self.original_nightmode_offset
+        self.env.config.set("alarm", "nightmode_offset", state)
 
     def cleanup_and_exit(self):
         """Callback to the close button. Close any existing radio streams and the
