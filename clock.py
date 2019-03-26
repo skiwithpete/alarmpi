@@ -11,6 +11,7 @@ import sys
 import subprocess
 import signal
 import logging
+import json
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
@@ -54,6 +55,8 @@ class Clock:
         if kwargs["debug"]:
             self.env.config.set("polling", "weather", "0")
             self.env.config.set("polling", "train", "0")
+
+            self.main_window.keyPressEvent = self.keyPressEvent
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
@@ -136,7 +139,7 @@ class Clock:
         # Settings window checkboxes
         self.settings_window.readaloud_checkbox.stateChanged.connect(self.enable_tts)
         self.settings_window.weekend_checkbox.stateChanged.connect(self.enable_weekends)
-        self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nigtmode)
+        self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nightmode)
 
     def open_settings_window(self):
         """Callback for opening the settings window. Also clears timer for blanking
@@ -365,7 +368,7 @@ class Clock:
             state = "1"
         self.env.config.set("alarm", "include_weekends", state)
 
-    def enable_nigtmode(self):
+    def enable_nightmode(self):
         """Callback to the checkbox enabling TTS feature: set the config
         to match the selected value.
         """
@@ -380,6 +383,15 @@ class Clock:
         """
         self.radio.stop()
         QApplication.instance().quit()
+
+    def keyPressEvent(self, event):
+        """Custom keyPressEvent handler for debuggin purposes: prints the current
+        contents configuration.
+        """
+        if event.key() == Qt.Key_S:
+            config = {section: dict(self.env.config[section])
+                      for section in self.env.config.sections()}
+            print(json.dumps(config, indent=4))
 
     @staticmethod
     def toggle_screensaver(state="on"):
