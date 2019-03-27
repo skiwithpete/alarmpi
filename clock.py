@@ -33,7 +33,6 @@ class Clock:
     def __init__(self, config_file, **kwargs):
         self.main_window = GUIWidgets.AlarmWindow()
         self.settings_window = GUIWidgets.SettingsWindow()
-        self.kwargs = kwargs
 
         # Read the alarm configuration file and initialize and alarmenv object
         self.config_file = config_file
@@ -97,7 +96,7 @@ class Clock:
 
         self.screen_blank_timer = QTimer(self.main_window)
         self.screen_blank_timer.setSingleShot(True)
-        self.screen_blank_timer.timeout.connect(lambda: rpi_utils.toggle_screen_blank("on"))
+        self.screen_blank_timer.timeout.connect(lambda: rpi_utils.toggle_screen_state("off"))
 
         self.main_window.mouseReleaseEvent = self.on_release_event_handler
 
@@ -125,7 +124,7 @@ class Clock:
         settings_button.clicked.connect(self.open_settings_window)
         radio_button.setCheckable(True)  # Set the Radio on/off button to a checkable button
         radio_button.clicked.connect(self.play_radio)
-        sleep_button.clicked.connect(lambda: rpi_utils.toggle_screen_blank("on"))
+        sleep_button.clicked.connect(lambda: rpi_utils.toggle_screen_state("off"))
         close_button.clicked.connect(self.cleanup_and_exit)
 
         # ** settings window buttons **
@@ -160,13 +159,20 @@ class Clock:
 
     def wakeup_signal_handler(self, sig, frame):
         """Signal handler for waking up the screen."""
-        rpi_utils.toggle_screen_blank("off")
+        rpi_utils.toggle_screen_state("on")
         self.set_active_alarm_indicator()
 
     def on_release_event_handler(self, event):
         print("clicked")
-        self.set_screen_blank_timeout()
+        # get screen state before the event
+        old_screen_state_powered = rpi_utils.screen_is_powered()
+
+        rpi_utils.toggle_screen_state("on")
         self.set_active_alarm_indicator()
+
+        # set screen blanking timeout if the screen was blank before the event
+        if not old_screen_state_powered:
+            self.set_screen_blank_timeout()
 
     def set_alarm(self):
         """Handler for settings window's 'set' button. Validates the suer selected
@@ -207,6 +213,7 @@ class Clock:
         now = datetime.datetime.now()
         nighttime = utils.nighttime(now, offset, alarm_time)
 
+        # set a new timeout for blanking the screen was blank before the click event
         if nighttime:
             self.screen_blank_timer.start(3*1000)  # 3 second timeout until screen blank
 

@@ -7,7 +7,6 @@ import os
 import sys
 import inspect
 import signal
-import getpass
 
 import pydub
 import pydub.playback

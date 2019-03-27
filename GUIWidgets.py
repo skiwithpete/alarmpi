@@ -60,9 +60,6 @@ class AlarmWindow(QWidget):
         self.alarm_time_lcd.setSegmentStyle(QLCDNumber.Flat)
         alarm_grid.addWidget(self.alarm_time_lcd, 1, 0, 1, 1, Qt.AlignTop)
 
-        #alarm_grid.setRowStretch(0, 3)
-        #alarm_grid.setRowStretch(1, 1)
-
         # ** Bottom grid: main UI control buttons **
         button_configs = [
             ButtonConfig(text="Settings", position=(0, 0)),
