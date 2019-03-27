@@ -35,7 +35,7 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
  * Reads latest news from BBC World RSS feed
  * Plays internet radio streams
  * Alarm scheduling via cron
- * GUI displaying current time built with PyQt5
+ * A PyQt5 based GUI
 
 
 ![Main window](resources/clock_main.png)
@@ -64,7 +64,7 @@ It's also possible to run the alarm without the GUI on a headless setup, see Usa
 
  2. Next, install required Python packages.
 
- These can either be installed inside a virtualenv or directly under system Python. While using a virtualenv is recommended, it does come with an extra step when the target system is a Raspberry Pi. This project is buit upon PyQt5, a GUI library which is not natively available on ARM platforms - there are no binaries on PyPI (at the time of writing, March 5th, 2019), so it cannot be installed with pip. Instead PyQt5 needs to be compiled from source, see below.
+ These can either be installed inside a virtualenv or directly under system Python. While using a virtualenv is recommended, using one does come with an extra step when the target system is a Raspberry Pi. This project is buit using PyQt5, a GUI library for which there is no PyPI package available for ARM platforms (at the time of writing, March 5th, 2019), so it cannot be installed with pip. Instead PyQt5 needs to be compiled from source, see below.
 
  Thus, options for installing Python packages include:
 
@@ -165,8 +165,6 @@ positional arguments:
 
 optional arguments:
   -h, --help     show this help message and exit
-  --init-config  re-create the default configuration file alarm.config.
-                 Overwrites existing file.
 ```
 
 The GUI also supports a fullscreen mode:
@@ -179,4 +177,5 @@ positional arguments:
 optional arguments:
   -h, --help    show this help message and exit
   --fullscreen  launch the script in fullscreen mode
+  --debug       launch in debug mode
 ```
