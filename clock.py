@@ -63,6 +63,7 @@ class Clock:
         """
         self.setup_button_handlers()
 
+        # TODO check for an API key
         if self.env.get_value("polling", "weather", fallback=False) == "1":
             self.setup_weather_polling()
 
@@ -105,7 +106,7 @@ class Clock:
         # Setup references to main control buttons in both windows
         settings_button = self.main_window.control_buttons["Settings"]
         radio_button = self.main_window.control_buttons["Radio"]
-        sleep_button = self.main_window.control_buttons["Sleep"]
+        blank_button = self.main_window.control_buttons["Blank"]
         close_button = self.main_window.control_buttons["Close"]
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
@@ -114,9 +115,9 @@ class Clock:
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
 
-        # Disable sleep and brightness buttons if host system is not a Raspberry Pi
+        # Disable blank and brightness buttons if host system is not a Raspberry Pi
         if not self.env.is_rpi:
-            sleep_button.setEnabled(False)
+            blank_button.setEnabled(False)
             brightness_button.setEnabled(False)
 
         # Set button handlers for buttons requiring interactions between helper classes
@@ -124,7 +125,7 @@ class Clock:
         settings_button.clicked.connect(self.open_settings_window)
         radio_button.setCheckable(True)  # Set the Radio on/off button to a checkable button
         radio_button.clicked.connect(self.play_radio)
-        sleep_button.clicked.connect(lambda: rpi_utils.toggle_screen_state("off"))
+        blank_button.clicked.connect(lambda: rpi_utils.toggle_screen_state("off"))
         close_button.clicked.connect(self.cleanup_and_exit)
 
         # ** settings window buttons **

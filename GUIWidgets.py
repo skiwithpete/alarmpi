@@ -63,7 +63,7 @@ class AlarmWindow(QWidget):
         # ** Bottom grid: main UI control buttons **
         button_configs = [
             ButtonConfig(text="Settings", position=(0, 0)),
-            ButtonConfig(text="Sleep", position=(0, 1)),
+            ButtonConfig(text="Blank", position=(0, 1)),
             ButtonConfig(text="Radio", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3))
         ]

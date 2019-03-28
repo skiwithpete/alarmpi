@@ -68,7 +68,7 @@ def get_and_set_screen_state(state):
     previous value.
     """
     PATH = "/sys/class/backlight/rpi_backlight/bl_power"
-    with open(PATH, "w+") as f:
+    with open(PATH, "r+") as f:
         previous_value = f.read().strip()
 
         f.seek(0)
