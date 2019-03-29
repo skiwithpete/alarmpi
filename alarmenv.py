@@ -44,8 +44,8 @@ class AlarmEnv:
         """Validate configuration file: checks that
          1 content and tts sections have 'type', 'enabled' and 'handler' keys
          2 sections other than [main] have a 'type' key
-         3 if a section with 'key_file' is enabled, the key is non-empty
-            (note: this does not valide the file!)
+         3 if a section with 'key_file' is enabled, the key points to an existing file
+            (note: this does not valide the contents of the file!)
         """
         try:
             for section in self.get_sections(excludes=["main", "alarm", "polling"]):
@@ -58,9 +58,11 @@ class AlarmEnv:
                 # check for 'key_file' key on enabled sections
                 key_file_match = self.config.has_option(section, "key_file")
                 enabled = self.get_value(section, "enabled") == "1"
-                # if found, check value is not empty
+                # if found, check that it points to an existing file
                 if key_file_match and enabled:
-                    self.get_value(section, "key_file")
+                    key_file_path = self.config.get(section, "key_file")
+                    assert os.path.isfile(
+                        key_file_path), "No such API keyfile: {}".format(key_file_path)
 
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             raise RuntimeError("Invalid configuration: ", e)
