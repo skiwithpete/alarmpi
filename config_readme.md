@@ -75,7 +75,6 @@ You can either modify the provided configuration file `alarm.config` or create a
 ```
 python main.py my_config.config
 ```
-A read only copy of the default configuration file is also provided.
 
 ### Extending the alarm with custom content
 Extending the alarm with you're own content is simple:
