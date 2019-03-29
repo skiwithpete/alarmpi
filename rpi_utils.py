@@ -63,8 +63,8 @@ def screen_is_powered():
     return value == "0"
 
 
-def get_and_set_screen_state(state):
-    """Read the current screen power state and set it to state. Returns the
+def get_and_set_screen_state(new_state):
+    """Read the current screen power state and set it to new_state. Returns the
     previous value.
     """
     PATH = "/sys/class/backlight/rpi_backlight/bl_power"
@@ -73,7 +73,7 @@ def get_and_set_screen_state(state):
 
         f.seek(0)
         value = 1
-        if state == "on":
+        if new_state == "on":
             value = 0
         f.write(str(value))
 

@@ -44,8 +44,9 @@ class Clock:
         self.alarm_player = sound_the_alarm.Alarm(self.env)
         self.train_parser = get_next_trains.TrainParser()
 
-        section = self.env.get_section("openweathermap")
-        self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
+        if self.env.get_value("openweathermap", "enabled", fallback="0") == "1":
+            section = self.env.get_section("openweathermap")
+            self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
 
         if kwargs["fullscreen"]:
             self.main_window.showFullScreen()
@@ -63,11 +64,16 @@ class Clock:
         """
         self.setup_button_handlers()
 
-        # TODO check for an API key
-        if self.env.get_value("polling", "weather", fallback=False) == "1":
+        weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
+        weather_api_key_exists = self.env.get_value("openweathermap", "key_file", fallback=False)
+        weather_polling_enabled = self.env.get_value("polling", "weather", fallback=False) == "1"
+
+        train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
+
+        if weather_enabled and weather_api_key_exists and weather_polling_enabled:
             self.setup_weather_polling()
 
-        if self.env.get_value("polling", "train", fallback=False) == "1":
+        if train_polling_enabled:
             self.setup_train_polling()
 
         # Setup settings window's checkboxes:
@@ -123,8 +129,17 @@ class Clock:
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
         settings_button.clicked.connect(self.open_settings_window)
-        radio_button.setCheckable(True)  # Set the Radio on/off button to a checkable button
-        radio_button.clicked.connect(self.play_radio)
+
+        # Disable the radio button is no url provided in the configuration
+        radio_stream_url = self.env.get_value("radio", "url", fallback=False)
+        if not radio_stream_url:
+            radio_button.setEnabled(False)
+
+        # ...otherwise set the button as an on/off toggle
+        else:
+            radio_button.setCheckable(True)
+            radio_button.clicked.connect(self.play_radio)
+
         blank_button.clicked.connect(lambda: rpi_utils.toggle_screen_state("off"))
         close_button.clicked.connect(self.cleanup_and_exit)
 
@@ -160,14 +175,21 @@ class Clock:
 
     def wakeup_signal_handler(self, sig, frame):
         """Signal handler for waking up the screen."""
-        rpi_utils.toggle_screen_state("on")
+        if self.env.is_rpi:
+            rpi_utils.toggle_screen_state("on")
         self.set_active_alarm_indicator()
 
     def on_release_event_handler(self, event):
         print("clicked")
+
+        # If not running on Raspberry Pi, update main window's alarm without
+        # setting a screen blanking timeout
+        if not self.env.is_rpi:
+            self.set_active_alarm_indicator()
+            return
+
         # get screen state before the event
         old_screen_state_powered = rpi_utils.screen_is_powered()
-
         rpi_utils.toggle_screen_state("on")
         self.set_active_alarm_indicator()
 

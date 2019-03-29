@@ -119,7 +119,7 @@ class Alarm:
             tts_section = tts[0]
             class_ = self.get_content_parser_class(tts_section)
             # read the path to the keyfile if provided/applicable
-            key_file = self.env.get_value(tts_section, "key_file")
+            key_file = self.env.get_value(tts_section, "key_file", fallback=False)
             client = class_(keyfile=key_file)
 
         # by default, use Festival tts client
