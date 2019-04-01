@@ -103,17 +103,17 @@ class Clock:
 
         self.screen_blank_timer = QTimer(self.main_window)
         self.screen_blank_timer.setSingleShot(True)
-        self.screen_blank_timer.timeout.connect(lambda: rpi_utils.toggle_screen_state("off"))
+        self.screen_blank_timer.timeout.connect(self.blank_screen_and_hide_control_buttons)
 
         self.main_window.mouseReleaseEvent = self.on_release_event_handler
 
     def setup_button_handlers(self):
         """Setup button handlers for the main window and settings window."""
         # Setup references to main control buttons in both windows
-        settings_button = self.main_window.control_buttons["Settings"]
-        radio_button = self.main_window.control_buttons["Radio"]
-        blank_button = self.main_window.control_buttons["Blank"]
-        close_button = self.main_window.control_buttons["Close"]
+        self.settings_button = self.main_window.control_buttons["Settings"]
+        self.radio_button = self.main_window.control_buttons["Radio"]
+        self.blank_button = self.main_window.control_buttons["Blank"]
+        self.close_button = self.main_window.control_buttons["Close"]
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
         alarm_play_button = self.settings_window.control_buttons["Play now"]
@@ -123,25 +123,25 @@ class Clock:
 
         # Disable blank and brightness buttons if host system is not a Raspberry Pi
         if not self.env.is_rpi:
-            blank_button.setEnabled(False)
+            self.blank_button.setEnabled(False)
             brightness_button.setEnabled(False)
 
         # Set button handlers for buttons requiring interactions between helper classes
         # ** main window buttons **
-        settings_button.clicked.connect(self.open_settings_window)
+        self.settings_button.clicked.connect(self.open_settings_window)
 
-        # Disable the radio button is no url provided in the configuration
+        # Disable the radio button if no url provided in the configuration
         radio_stream_url = self.env.get_value("radio", "url", fallback=False)
         if not radio_stream_url:
-            radio_button.setEnabled(False)
+            self.radio_button.setEnabled(False)
 
         # ...otherwise set the button as an on/off toggle
         else:
-            radio_button.setCheckable(True)
-            radio_button.clicked.connect(self.play_radio)
+            self.radio_button.setCheckable(True)
+            self.radio_button.clicked.connect(self.play_radio)
 
-        blank_button.clicked.connect(lambda: rpi_utils.toggle_screen_state("off"))
-        close_button.clicked.connect(self.cleanup_and_exit)
+        self.blank_button.clicked.connect(self.blank_screen_and_hide_control_buttons)
+        self.close_button.clicked.connect(self.cleanup_and_exit)
 
         # ** settings window buttons **
         brightness_button.clicked.connect(rpi_utils.toggle_display_backlight_brightness)
@@ -176,25 +176,26 @@ class Clock:
     def wakeup_signal_handler(self, sig, frame):
         """Signal handler for waking up the screen."""
         if self.env.is_rpi:
-            rpi_utils.toggle_screen_state("on")
+            self.enable_screen_and_show_control_buttons()
         self.set_active_alarm_indicator()
 
     def on_release_event_handler(self, event):
-        print("clicked")
-
-        # If not running on Raspberry Pi, update main window's alarm without
-        # setting a screen blanking timeout
-        if not self.env.is_rpi:
-            self.set_active_alarm_indicator()
-            return
-
-        # get screen state before the event
-        old_screen_state_powered = rpi_utils.screen_is_powered()
-        rpi_utils.toggle_screen_state("on")
+        """Event handler for touching the screen: update the main window's alarm
+        time label and, if on a Raspberry Pi and nighttime, set a timeout for blanking
+        the screen.
+        """
         self.set_active_alarm_indicator()
 
+        # If not running on Raspberry Pi exit early
+        if not self.env.is_rpi:
+            return
+
+        # get screen state before the event occured and set it as enabled
+        old_screen_state = rpi_utils.get_and_set_screen_state("on")
+        self.show_control_buttons()
+
         # set screen blanking timeout if the screen was blank before the event
-        if not old_screen_state_powered:
+        if old_screen_state == "off":
             self.set_screen_blank_timeout()
 
     def set_alarm(self):
@@ -359,6 +360,35 @@ class Clock:
             self.main_window.alarm_time_lcd.display("")
         else:
             self.main_window.alarm_time_lcd.display(alarm_time)
+
+    def blank_screen_and_hide_control_buttons(self):
+        """Callback to turning the screen off: turn off backlight power and
+        hide the main window's control buttons to prevent accidentally hitting
+        them when the screen in blank.
+        """
+        rpi_utils.toggle_screen_state("off")
+        self.hide_control_buttons()
+
+    def enable_screen_and_show_control_buttons(self):
+        """Callback to turning the screen on: re-enable backlight power and show
+        the main window's control buttons.
+        """
+        rpi_utils.toggle_screen_state("on")
+        self.show_control_buttons()
+
+    def hide_control_buttons(self):
+        """Hides the main window's bottom row buttons."""
+        self.settings_button.hide()
+        self.radio_button.hide()
+        self.blank_button.hide()
+        self.close_button.hide()
+
+    def show_control_buttons(self):
+        """Showes the main window's bottom row buttons."""
+        self.settings_button.show()
+        self.radio_button.show()
+        self.blank_button.show()
+        self.close_button.show()
 
     def enable_tts(self):
         """Callback to the checkbox enabling TTS feature: set the config

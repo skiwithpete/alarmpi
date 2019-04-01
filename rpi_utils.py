@@ -77,7 +77,9 @@ def get_and_set_screen_state(new_state):
             value = 0
         f.write(str(value))
 
-    return previous_value
+    if previous_value == 0:
+        return "on"
+    return "off"
 
 
 def toggle_screen_state_xset(state="on"):
