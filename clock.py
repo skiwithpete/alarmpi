@@ -116,7 +116,7 @@ class Clock:
         self.close_button = self.main_window.control_buttons["Close"]
 
         brightness_button = self.settings_window.control_buttons["Toggle brightness"]
-        alarm_play_button = self.settings_window.control_buttons["Play now"]
+        self.alarm_play_button = self.settings_window.control_buttons["Play now"]
         window_button = self.settings_window.control_buttons["Toggle window"]
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
@@ -145,8 +145,9 @@ class Clock:
 
         # ** settings window buttons **
         brightness_button.clicked.connect(rpi_utils.toggle_display_backlight_brightness)
-        #alarm_play_thread = AlarmPlayThread(self.alarm_player.sound_alarm_without_gui_or_radio)
-        alarm_play_button.clicked.connect(self.alarm_player.sound_alarm_without_gui_or_radio)
+        self.alarm_play_thread = AlarmPlayThread(self.env)
+        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
+        self.alarm_play_button.clicked.connect(self.play_alarm)
 
         window_button.clicked.connect(self.toggle_display_mode)
         alarm_set_button.clicked.connect(self.set_alarm)
@@ -255,6 +256,19 @@ class Clock:
             self.radio.play(self.env.radio_url)
         else:
             self.radio.stop()
+
+    def play_alarm(self):
+        """Callback to the 'Play now' button: starts playing the alarm in a separate
+        thread.
+        """
+        self.alarm_play_thread.start()
+        # Disable the button. As is, clicking the button while the alarm is already playing
+        # won't do anything anyway, since the thread playing the alarm is busy.
+        self.alarm_play_button.setEnabled(False)
+
+    def finish_playing_alarm(self):
+        """Finishing action to playing the alarm: re-enable the button."""
+        self.alarm_play_button.setEnabled(True)
 
     def setup_weather_polling(self):
         """Setup polling for updating the weather every 30 minutes."""
@@ -435,15 +449,19 @@ class Clock:
 
 
 class AlarmPlayThread(QThread):
-    signal = pyqtSignal("PyQt_PyObject")
+    signal = pyqtSignal(int)
 
-    def __init__(self, callback):
+    def __init__(self, env):
         super().__init__()
-        self.callback = callback
+        self.env = env
 
     # run method gets called when we start the thread
     def run(self):
-        self.callback()
+        alarm = sound_the_alarm.Alarm(self.env)
+        alarm.sound_alarm_without_gui_or_radio()
+
+        # inform the main thread that playing has finished
+        self.signal.emit(1)
 
 
 class RadioStreamer:
