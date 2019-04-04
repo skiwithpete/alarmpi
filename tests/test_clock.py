@@ -1,110 +1,130 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import sys
 import datetime
 import unittest
 from unittest import TestCase
 from unittest.mock import patch
+from PyQt5.QtWidgets import QApplication
 
 import clock
+import GUIWidgets
+
+app = QApplication(sys.argv)
+
+
+class ClockGUITestCase(TestCase):
+    """Test cases for logic functions in GUIWidgets"""
+
+    def setUp(self):
+        self.settings_window = GUIWidgets.SettingsWindow()
+        self.main_window = GUIWidgets.AlarmWindow()
+
+    def test_hour_update_alarm_display_time(self):
+        """Does update_input_alarm_display write the correct time value to the
+        settings window's set alarm time label?
+        """
+        # update when label is initially empty
+        self.settings_window.input_alarm_time_label.setText(
+            GUIWidgets.SettingsWindow.ALARM_LABEL_EMPTY)
+        self.settings_window.update_input_alarm_display("0")
+        val = self.settings_window.input_alarm_time_label.text()
+        self.assertEqual(val, "0 :  ")
+
+        # add second digit
+        self.settings_window.update_input_alarm_display("7")
+        val = self.settings_window.input_alarm_time_label.text()
+        self.assertEqual(val, "07:  ")
+
+        self.settings_window.update_input_alarm_display("1")
+        val = self.settings_window.input_alarm_time_label.text()
+        self.assertEqual(val, "07:1 ")
+
+        self.settings_window.update_input_alarm_display("8")
+        val = self.settings_window.input_alarm_time_label.text()
+        self.assertEqual(val, "07:18")
+
+        # 5th call should start from the beginning
+        self.settings_window.update_input_alarm_display("1")
+        val = self.settings_window.input_alarm_time_label.text()
+        self.assertEqual(val, "1 :  ")
+
+    def test_validate_alarm_input_rejects_invalid_input(self):
+        """Does validate_alarm_input reject invalid input format and set user
+        information labels accordingly.
+        """
+        # set the label to an invalid value and call the method
+        self.settings_window.input_alarm_time_label.setText("25:01")
+        self.settings_window.validate_alarm_input()
+
+        # check labels contain expected error values
+        error_value = self.settings_window.alarm_time_error_label.text()
+        alarm_time_value = self.settings_window.input_alarm_time_label.text()
+
+        self.assertEqual(error_value, "ERROR: Invalid time")
+        self.assertEqual(alarm_time_value, "  :  ")
+
+    def test_validate_alarm_input_returns_valid_input(self):
+        """Does validate_alarm_input reject invalid input format and set user
+        information labels accordingly.
+        """
+        # set the label to an invalid value and call the method
+        self.settings_window.input_alarm_time_label.setText("16:34")
+        val = self.settings_window.validate_alarm_input()
+        self.assertEqual(val, "16:34")
+
+    def test_clear_alarm_changes_current_alarm_time(self):
+        """Does clear_alarm process the correct cleanup tasks:
+         * set user information labels
+         * set active alarm time to empty string
+        """
+        self.settings_window.clear_alarm()
+
+        val = self.settings_window.input_alarm_time_label.text()
+        self.assertEqual(val, "  :  ")
+
+        val = self.settings_window.alarm_time_status_label.text()
+        self.assertEqual(val, "Alarm cleared")
+
+        self.assertEqual(self.settings_window.current_alarm_time, "")
+
+        val = self.settings_window.alarm_time_error_label.text()
+        self.assertEqual(val, "")
 
 
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
-    @patch("clock.RadioStreamer")
     @patch("alarmenv.AlarmEnv.setup")
     @patch("clock.CronWriter.get_current_alarm")
-    def setUp(self, mock_get_current_alarm, mock_setup, mock_RadioStreamer):
+    def setUp(self, mock_get_current_alarm, mock_setup):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
-        self.app = clock.Clock("")
+        self.app = clock.Clock("dummy.config")
 
-    def test_hour_update_alarm_display_time(self):
-        """Does update_alarm_display_time set proper value on hour input?"""
-        self.app.update_alarm_display_time("hour", 2)
-        new_value = self.app.alarm_time_var.get()
-        self.assertEqual(new_value, "02:00")
-
-    def test_minute_update_alarm_display_time(self):
-        """Does update_alarm_display_time set proper value on minute input?"""
-        self.app.update_alarm_display_time("minute", 10)
-        new_value = self.app.alarm_time_var.get()
-        self.assertEqual(new_value, "00:10")
-
-    @patch("clock.Clock.set_alarm_status_message")
-    @patch("clock.CronWriter.add_cron_entry")
-    def test_set_alarm_changes_current_alarm_time(self, mock_add_cron_entry, mock_set_status_message):
-        """Does set_alarm process the correct tasks:
-          1 call CronWriter
-          2 update the internal alarm time instance variable
-          3 write status message to alarm setup window for user
-        """
-        # run update_alarm_display_time so set_alarm reads a value other than 00:00
-        self.app.update_alarm_display_time("hour", 17)
-        self.app.set_alarm()
-
-        # was CronWriter used?
-        mock_add_cron_entry.assert_called()
-
-        # was current_alarm_time changed?
-        res = self.app.current_alarm_time
-        self.assertEqual(res, "17:00")
-
-        # was a new status message written to the setup window?
-        mock_set_status_message.assert_called()
-
-    @patch("clock.CronWriter.delete_cron_entry")
-    def test_clear_alarm_changes_current_alarm_time(self, mock_delete_cron_entry):
-        """Does clear_alarm process proper clearing tasks?"""
-        # run update_alarm_display_time so set_alarm reads a value other than 00:00
-        self.app.create_alarm_window()
-        self.app.clear_alarm()
-
-        # was CronWriter used?
-        mock_delete_cron_entry.assert_called()
-
-        # was current_alarm_time changed?
-        res = self.app.current_alarm_time
-        self.assertEqual(res, "")
-
-    @patch("clock.utils.weekend")
-    def test_alarm_indicator_off_during_weekend(self, mock_weekend):
+    @patch("PyQt5.QtWidgets.QLCDNumber.display")
+    @patch("utils.weekend")
+    @patch("alarmenv.AlarmEnv.get_value")
+    def test_alarm_indicator_off_during_weekend(self, mock_get_value, mock_weekend, mock_display):
         """Is the main window's active alarm indicator blank during the weekend?"""
         mock_weekend.return_value = True
+        mock_get_value.side_effect = ["0", "8"]  # include_weekends=0, nightmode_offset=8
+        self.app.current_alarm_time = True
 
         self.app.set_active_alarm_indicator()
-        new_value = self.app.clock_alarm_indicator_var.get()
-        self.assertEqual(new_value, "")
+        mock_display.assert_called_with("")
 
-    @patch("clock.utils.weekend")
-    def test_alarm_indicator_on_during_weekdays(self, mock_weekend):
+    @patch("PyQt5.QtWidgets.QLCDNumber.display")
+    @patch("utils.weekend")
+    @patch("alarmenv.AlarmEnv.get_value")
+    def test_alarm_indicator_on_during_weekdays(self, mock_get_value, mock_weekend, mock_display):
         """Is the main window's active alarm indicator on during weekdays?"""
         mock_weekend.return_value = False
+        mock_get_value.side_effect = ["0", "8"]  # include_weekends=0, nightmode_offset=8
+        self.app.current_alarm_time = "16:08"
 
         self.app.set_active_alarm_indicator()
-        new_value = self.app.clock_alarm_indicator_var.get()
-        self.assertEqual(new_value, "17:00")
-
-    def test_play_radio_opens_stream_when_not_opened(self):
-        """Does play_radio open a new radio stream if one is not already playing?"""
-        self.app.radio.is_playing.return_value = False
-
-        # Create necessary instance attributes to ensure this test will run
-        # as these aren't created in __init__,
-        # An ugly hack :(
-        self.app.radio_button = clock.tk.Button()
-        self.app.env.radio_url = "mock_url"
-
-        self.app.play_radio()
-        self.app.radio.play.assert_called_with("mock_url")
-
-    def test_play_radio_closes_existing_stream(self):
-        """Does play_radio close existing stream when one is already playing?"""
-        self.app.radio.is_playing.return_value = True
-
-        self.app.radio_button = clock.tk.Button()
-        self.app.play_radio()
-        self.app.radio.stop.assert_called()
+        mock_display.assert_called_with("16:08")
 
 
 class RadioStreamerTestCase(TestCase):
@@ -139,10 +159,10 @@ class CronWriterTestCase(TestCase):
 
     @classmethod
     def setUpClass(self):
-        self.cron_writer = clock.CronWriter()
+        self.cron_writer = clock.CronWriter("dummy.config")
 
     @patch("subprocess.check_output")
-    def test_empty_string_returned_as_alarm_when_no_alarm_set(self, mock_subprocess_check_output):
+    def test_empty_string_returned_as_alarm_when_no_alarm_in_crontab(self, mock_subprocess_check_output):
         """Does get_current_alarm return an empty string if no alarm in crontab?"""
 
         # setup a mock crontab with no call to sound_the_alarm.py
@@ -157,9 +177,9 @@ class CronWriterTestCase(TestCase):
         self.assertEqual(res, "")
 
     @patch("subprocess.check_output")
-    def test_alarm_time_returned_when_alarm_set(self, mock_subprocess_check_output):
+    def test_alarm_time_returned_when_alarm_in_crontab(self, mock_subprocess_check_output):
         """Does get_current_alarm return the corresponding alarm time if alarm is set?"""
-        path = self.cron_writer.alarm_path
+        path = self.cron_writer.path_to_alarm
         mock_subprocess_check_output.return_value = """
         # Mock crontable
         # m h  dom mon dow   command
@@ -175,7 +195,7 @@ class CronWriterTestCase(TestCase):
         """Does get_crontab_lines_without_alarm return all lines except the one containing
         the alarm?
         """
-        alarm_line = "16 4 * * 1-5 python {}".format(self.cron_writer.alarm_path)
+        alarm_line = "16 4 * * 1-5 python {}".format(self.cron_writer.path_to_alarm)
         mock_subprocess_check_output.return_value = """
         # Mock crontable
         # m h  dom mon dow   command
@@ -192,10 +212,13 @@ class CronWriterTestCase(TestCase):
 
 if __name__ == "__main__":
     """Create test suites from both classes and run tests."""
-    suite = unittest.TestLoader().loadTestsFromTestCase(CronWriterTestCase)
+    suite = unittest.TestLoader().loadTestsFromTestCase(ClockTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
-    suite = unittest.TestLoader().loadTestsFromTestCase(ClockTestCase)
+    suite = unittest.TestLoader().loadTestsFromTestCase(ClockGUITestCase)
+    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    suite = unittest.TestLoader().loadTestsFromTestCase(CronWriterTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(RadioStreamerTestCase)
