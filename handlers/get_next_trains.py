@@ -18,9 +18,6 @@ from dateutil import tz
 
 class TrainParser:
 
-    def __init__(self):
-        pass
-
     def get_next_3_departures(self):
         """Get departure times of the next 3 trains stopping at Espoo station."""
         response = self.fetch_daily_train_data()

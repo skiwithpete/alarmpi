@@ -93,6 +93,9 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         }
 
         r = requests.get(url, params=params)
+        if r.status_code != 200:
+            raise ValueError("Could not connect to openweathermap.org. Maybe API key is invalid?")
+
         return r.json()
 
     @staticmethod

@@ -48,12 +48,12 @@ class Clock:
             section = self.env.get_section("openweathermap")
             self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
 
-        if kwargs["fullscreen"]:
+        if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
             self.main_window.setCursor(Qt.BlankCursor)
             self.settings_window.setCursor(Qt.BlankCursor)
 
-        if kwargs["debug"]:
+        if kwargs.get("debug"):
             self.env.config.set("polling", "weather", "0")
             self.env.config.set("polling", "train", "0")
             self.main_window.keyPressEvent = self.debug_key_press_event
@@ -200,7 +200,7 @@ class Clock:
             self.set_screen_blank_timeout()
 
     def set_alarm(self):
-        """Handler for settings window's 'set' button. Validates the suer selected
+        """Handler for settings window's 'set' button. Validates the user selected
         time and adds a cron entry (if valid). No alarm is set if value is invalid.
         """
         time_str = self.settings_window.validate_alarm_input()

@@ -9,7 +9,7 @@ import subprocess
 
 
 def set_display_backlight_brightness(brightness):
-    """Set backlight brithness to value between 0 and 255."""
+    """Set backlight brightness to value between 0 and 255."""
     assert brightness >= 0 and brightness <= 255
 
     PATH = "/sys/class/backlight/rpi_backlight/brightness"

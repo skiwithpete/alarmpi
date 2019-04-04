@@ -43,7 +43,8 @@ class AlarmWindow(QWidget):
         right_grid = QGridLayout()
         bottom_grid = QGridLayout()
 
-        self.setStyleSheet(open("style.qss", "r").read())
+        with open("style.qss") as f:
+            self.setStyleSheet(f.read())
         self.setAutoFillBackground(True)
 
         # ** Center grid: current and alarm time displays **
@@ -261,6 +262,9 @@ class SettingsWindow(QWidget):
     def update_input_alarm_display(self, val):
         """Button handler for alarm input numpad. Updates the Label displaying
         the time corresponding to the input.
+        Args:
+            val (string): a single digit string to write as the next character
+            to the label.
         """
         # Compute number of digits in the currently displayed value
         current_display_value = self.input_alarm_time_label.text()
