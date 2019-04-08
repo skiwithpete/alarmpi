@@ -91,14 +91,14 @@ It's also possible to run the alarm without the GUI on a headless setup, see Usa
   https://riverbankcomputing.com/software/pyqt/download5  
 
   5. Extract and build
-    ```
+     ```
      tar -xvf PyQt5_gpl-5.12.tar.gz
      python PyQt5_gpl-5.12/configure.py
      make
      sudo make install
      sudo make clean
      ```
-    This will take a long time!
+     This will take a long time!
 
   6. Finally, install the rest of Python packages via `pip`:
   ```
