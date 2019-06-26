@@ -333,10 +333,13 @@ class Clock:
 
         # Return a delay until the next departure: either the measured time
         # until the next departure or and upper/lower bound of 40min/12min
-        next_departure = trains[0]["scheduledTime"]
-        msec_until_next = self.train_parser.msecs_until_datetime(next_departure)
+        if not trains:
+            msec_until_next = 12*60*1000  # set a delay of 12 minutes if no trains received
+        else:
+            next_departure = trains[0]["scheduledTime"]
+            msec_until_next = self.train_parser.msecs_until_datetime(next_departure)
 
-        # pair the measured delay with the bounds, sort and return the middle value
+        # pair the delay with the bounds, sort and return the middle value
         waits_with_bounds = sorted([12*60*1000, msec_until_next, 40*60*1000])
         return waits_with_bounds[1]
 
