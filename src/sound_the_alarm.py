@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import subprocess
 import argparse
 import importlib
@@ -10,7 +11,8 @@ import signal
 
 import pydub
 import pydub.playback
-import alarmenv
+
+from src import alarmenv
 
 
 # If this script was called via cron, we need an absolute path to the 'install'

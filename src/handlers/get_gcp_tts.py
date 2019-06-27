@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import io
+
 import pydub
 import pydub.playback
-
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-import aptts
+from src import aptts
 
 
 class GoogleCloudTTS(aptts.AlarmpiTTS):

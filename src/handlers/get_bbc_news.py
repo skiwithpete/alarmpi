@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import feedparser
-import apcontent
+from src import apcontent
 
 
 class NewsParser(apcontent.AlarmpiContent):

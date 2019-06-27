@@ -5,7 +5,7 @@ import requests
 import datetime
 import json
 
-import apcontent
+from src import apcontent
 
 
 class OpenWeatherMapClient(apcontent.AlarmpiContent):

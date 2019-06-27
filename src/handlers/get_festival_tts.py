@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import subprocess
 
-import aptts
+from src import aptts
 
 
 class FestivalTTSManager(aptts.AlarmpiTTS):

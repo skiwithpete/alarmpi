@@ -11,7 +11,13 @@ class AlarmEnv:
     """Parses the configuration file to a readable object."""
 
     def __init__(self, config_file):
-        self.config_file = config_file
+        """Setup an absolute path to the configuration file and a parser.
+        params
+            config_file (str): name (not path!) of the configuration file in /configs to use.
+        """
+        path_to_config = os.path.join(os.path.dirname(__file__), "..", "configs", config_file)
+
+        self.config_file = path_to_config
         self.config = configparser.ConfigParser()
         # Determine whether the host system is a Raspberry Pi by checking
         # the existance of a system brightness file.

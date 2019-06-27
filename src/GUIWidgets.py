@@ -43,7 +43,7 @@ class AlarmWindow(QWidget):
         right_grid = QGridLayout()
         bottom_grid = QGridLayout()
 
-        with open("style.qss") as f:
+        with open("src/style.qss") as f:
             self.setStyleSheet(f.read())
         self.setAutoFillBackground(True)
 

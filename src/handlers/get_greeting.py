@@ -4,7 +4,7 @@ import time
 import datetime
 import num2words
 
-import apcontent
+from src import apcontent
 
 
 class Greeting(apcontent.AlarmpiContent):

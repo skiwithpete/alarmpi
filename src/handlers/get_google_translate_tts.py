@@ -7,7 +7,7 @@ import io
 import pydub
 import pydub.playback
 
-import aptts
+from src import aptts
 
 
 class GoogleTranslateTTSManager(aptts.AlarmpiTTS):

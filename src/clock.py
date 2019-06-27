@@ -17,12 +17,12 @@ from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPixmap
 
-import alarmenv
-import utils
-import sound_the_alarm
-import GUIWidgets
-import rpi_utils
-from handlers import get_open_weather, get_next_trains
+from src import alarmenv
+from src import utils
+from src import sound_the_alarm
+from src import GUIWidgets
+from src import rpi_utils
+from src.handlers import get_open_weather, get_next_trains
 
 
 class Clock:
@@ -31,6 +31,11 @@ class Clock:
     """
 
     def __init__(self, config_file, **kwargs):
+        """Setup GUI windows and various configuration objects.
+        params
+            config_file (str): name (not path!) of the configuration file in /configs to use.
+            kwargs (dict): additional command line paramters passed from main.py
+        """
         self.main_window = GUIWidgets.AlarmWindow()
         self.settings_window = GUIWidgets.SettingsWindow()
 
@@ -500,8 +505,8 @@ class CronWriter:
 
     def __init__(self, config_file):
         # format absolute paths to sound_the_alarm.py and the config file
-        self.path_to_alarm = os.path.abspath("sound_the_alarm.py")
-        self.config_file = os.path.abspath(config_file)
+        self.path_to_alarm_runner = os.path.abspath("sound_the_alarm.py")
+        self.config_file = config_file
 
     def get_crontab(self):
         """Return the current crontab"""
@@ -514,7 +519,7 @@ class CronWriter:
         """
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
         lines = crontab.split("\n")
-        alarm_line = [line for line in lines if self.path_to_alarm in line]
+        alarm_line = [line for line in lines if self.path_to_alarm_runner in line]
 
         if alarm_line:
             split = alarm_line[0].split()
@@ -531,7 +536,7 @@ class CronWriter:
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
         crontab_lines = crontab.split("\n")
 
-        return [line for line in crontab_lines if self.path_to_alarm not in line]
+        return [line for line in crontab_lines if self.path_to_alarm_runner not in line]
 
     def delete_entry(self):
         """Delete cron entry for sound_the_alarm.py."""
@@ -552,12 +557,12 @@ class CronWriter:
         if include_weekends:
             date_range = "*"
 
-        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm} {path_to_config}".format(
+        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm_runner} {path_to_config}".format(
             min=t.tm_min,
             hour=t.tm_hour,
             date_range=date_range,
             python_exec=sys.executable,
-            path_to_alarm=self.path_to_alarm,
+            path_to_alarm_runner=self.path_to_alarm_runner,
             path_to_config=self.config_file
         )
 
