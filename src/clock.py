@@ -19,7 +19,7 @@ from PyQt5.QtGui import QPixmap
 
 from src import alarmenv
 from src import utils
-from src import sound_the_alarm
+from src import alarm_builder
 from src import GUIWidgets
 from src import rpi_utils
 from src.handlers import get_open_weather, get_next_trains
@@ -46,7 +46,7 @@ class Clock:
 
         self.cron = CronWriter(config_file)
         self.radio = RadioStreamer()
-        self.alarm_player = sound_the_alarm.Alarm(self.env)
+        self.alarm_player = alarm_builder.Alarm(self.env)
         self.train_parser = get_next_trains.TrainParser()
 
         if self.env.get_value("openweathermap", "enabled", fallback="0") == "1":
@@ -171,7 +171,7 @@ class Clock:
         self.settings_window.show()
 
     def radio_signal_handler(self, sig, frame):
-        """Signal handler for incoming radio stream requests from sound_the_alarm.
+        """Signal handler for incoming radio stream requests from alarm_builder.
         Opens the stream and sets radio button state as pressed.
         Also clears the main window's alarm display LCD widget if there is no alarm
         the next day.
@@ -465,7 +465,7 @@ class AlarmPlayThread(QThread):
 
     # run method gets called when we start the thread
     def run(self):
-        alarm = sound_the_alarm.Alarm(self.env)
+        alarm = alarm_builder.Alarm(self.env)
         alarm.sound_alarm_without_gui_or_radio()
 
         # inform the main thread that playing has finished
@@ -504,8 +504,8 @@ class CronWriter:
     """Helper class for writes cron entries. Uses crontab via subprocess."""
 
     def __init__(self, config_file):
-        # format absolute paths to sound_the_alarm.py and the config file
-        self.path_to_alarm_runner = os.path.abspath("sound_the_alarm.py")
+        # format absolute paths to alarm_builder.py and the config file
+        self.path_to_alarm_runner = os.path.abspath("alarm_builder.py")
         self.config_file = config_file
 
     def get_crontab(self):
@@ -539,7 +539,7 @@ class CronWriter:
         return [line for line in crontab_lines if self.path_to_alarm_runner not in line]
 
     def delete_entry(self):
-        """Delete cron entry for sound_the_alarm.py."""
+        """Delete cron entry for alarm_builder.py."""
         crontab_lines = self.get_crontab_lines_without_alarm()
 
         # Remove any extra empty lines from the end and keep just one
@@ -569,7 +569,7 @@ class CronWriter:
         return entry
 
     def add_entry(self, entry):
-        """Add an entry for sound_the_alarm.py. Existing crontab is overwritten."""
+        """Add an entry for alarm_builder.py. Existing crontab is overwritten."""
         crontab_lines = self.get_crontab_lines_without_alarm()
 
         # Add new entry and overwrite the crontab file

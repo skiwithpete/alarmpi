@@ -7,7 +7,7 @@ https://www.digitraffic.fi/en/railway-traffic/
 https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
 
 This module differs from the other content handlers in that it is not a subclass
-of AlarmpiContent and not called by sound_the_alarm. Instead this serves
+of AlarmpiContent and not called by alarm_builder. Instead this serves
 as a pure helper class to clock for fetching the next train departures.
 """
 

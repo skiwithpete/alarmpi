@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import subprocess
-import argparse
 import importlib
 import os
 import sys
@@ -12,19 +11,19 @@ import signal
 import pydub
 import pydub.playback
 
-from src import alarmenv
+from src.handlers import get_festival_tts
 
 
 # If this script was called via cron, we need an absolute path to the 'install'
 # directory (ie. location of the alarmpi base directory).
 # Since cron runs this script with absolute paths as
-# /path/to/python /path/to/sound_the_alarm.py /path/to/alarm.config, we can
+# /path/to/python /path/to/alarm_builder.py /path/to/alarm.config, we can
 # use sys.argv to format an absolute path from the 2nd argument.
 # This is a bit of a hack, there's probably a better way...
 
 BASE = os.getcwd()
 if len(sys.argv) > 1:
-    BASE = os.path.dirname(sys.argv[1])  # get dirname from the path to sound_the_alarm.py
+    BASE = os.path.dirname(sys.argv[1])  # get dirname from the path to alarm_builder.py
 
 PIDFILE = os.path.join(BASE, "pidfile")
 
@@ -38,7 +37,7 @@ class Alarm:
     def __init__(self, env):
         self.env = env
 
-    def main(self):
+    def build_and_play(self):
         """Read the configuration file, create and play the corresponding alarm."""
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
         pid = Alarm.gui_running()
@@ -126,7 +125,6 @@ class Alarm:
 
         # by default, use Festival tts client
         else:
-            from handlers import get_festival_tts
             client = get_festival_tts.FestivalTTSManager()
 
         return client
@@ -136,7 +134,7 @@ class Alarm:
         # use importlib to dynamically import the correct module within
         # the 'handlers' package.
         handler_module_name = self.env.get_value(section_name, "handler")[:-3]
-        path_to_module = "handlers.{}".format(handler_module_name)
+        path_to_module = "src.handlers.{}".format(handler_module_name)
         handler_module = importlib.import_module(path_to_module)
 
         # Inspect the handler module for classes and return the first class.
@@ -172,17 +170,3 @@ class Alarm:
         pydub.playback.play(beep)
 
         return path
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Play the alarm using a specified configuration file")
-    parser.add_argument("config", metavar="config", nargs="?",
-                        default="alarm.config", help="path to an alarm configuration file. Defaults to alarm.config")
-    args = parser.parse_args()
-
-    env = alarmenv.AlarmEnv(args.config)
-    env.setup()
-
-    app = Alarm(env)
-    app.main()

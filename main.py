@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Entrypoint for the project, runs the clock GUI. The GUI can be used to
-# schedule an alarm. To run the alarm directly, run sound_the_alarm.py.
+# schedule an alarm. To run the alarm directly, run alarm_builder.py.
 
 import argparse
 import sys
@@ -12,7 +12,7 @@ import logging
 from PyQt5.QtWidgets import QApplication
 
 from src import clock
-from src import sound_the_alarm
+from src import alarm_builder
 
 
 logging.basicConfig(
@@ -24,12 +24,12 @@ logging.basicConfig(
 
 def write_pidfile():
     pid = os.getpid()
-    with open(sound_the_alarm.PIDFILE, "w") as f:
+    with open(alarm_builder.PIDFILE, "w") as f:
         f.write(str(pid))
 
 
 def clear_pidfile():
-    os.remove(sound_the_alarm.PIDFILE)
+    os.remove(alarm_builder.PIDFILE)
 
 
 if __name__ == "__main__":

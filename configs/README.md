@@ -71,7 +71,7 @@ This enables the two polling features of the main window. When enabled
 Both polling features are disabled by default.
 
 ### Using a custom configuration
-You can either modify the provided configuration file `alarm.config` or create a new file and pass that to `sound_the_alarm.py` and `main.py` via a command line argument, eg.
+You can either modify the provided configuration file `alarm.config` or create a new file and pass that to `alarm_builder.py` and `main.py` via a command line argument, eg.
 ```
 python main.py my_config.config
 ```

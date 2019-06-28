@@ -165,7 +165,7 @@ class CronWriterTestCase(TestCase):
     def test_empty_string_returned_as_alarm_when_no_alarm_in_crontab(self, mock_subprocess_check_output):
         """Does get_current_alarm return an empty string if no alarm in crontab?"""
 
-        # setup a mock crontab with no call to sound_the_alarm.py
+        # setup a mock crontab with no call to alarm_builder.py
         mock_subprocess_check_output.return_value = """
         # Mock crontable
         # m h  dom mon dow   command

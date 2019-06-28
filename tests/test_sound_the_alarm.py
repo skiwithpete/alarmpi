@@ -7,7 +7,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import alarmenv
-import sound_the_alarm
+import alarm_builder
 import handlers.get_bbc_news
 import handlers.get_festival_tts
 import handlers.get_gcp_tts
@@ -17,18 +17,18 @@ import handlers.get_open_weather
 
 
 class AlarmProcessingTestCase(TestCase):
-    """Test cases for sound_the_alarm: is an alarm processed according
+    """Test cases for alarm_builder: is an alarm processed according
     to the configuration file?
     """
 
     def setUp(self):
         """Create an Alarm object using a dummy AlarmEnv."""
         env = alarmenv.AlarmEnv("mock_config_file")
-        self.alarm = sound_the_alarm.Alarm(env)
+        self.alarm = alarm_builder.Alarm(env)
         self.alarm.env.radio_url = False
 
     @patch("alarmenv.AlarmEnv.get_value")
-    @patch("sound_the_alarm.Alarm.get_content_parser_class")
+    @patch("alarm_builder.Alarm.get_content_parser_class")
     @patch("alarmenv.AlarmEnv.get_enabled_sections")
     def test_first_enabled_tts_client_chosen(self, mock_get_enabled_sections, mock_get_content_parser_class, mock_get_value):
         """Does get_tts_client choose the first enabled client?"""
@@ -69,8 +69,8 @@ class AlarmProcessingTestCase(TestCase):
             created_class = self.alarm.get_content_parser_class("")
             self.assertIs(created_class, response_class)
 
-    @patch("sound_the_alarm.Alarm.play_beep")
-    @patch("sound_the_alarm.Alarm.gui_running")
+    @patch("alarm_builder.Alarm.play_beep")
+    @patch("alarm_builder.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
     def test_beep_played_when_no_network(self, mock_config_has_match, mock_gui_running, mock_play_beep):
         """Is the beep played when no network connection is detected?"""
@@ -81,8 +81,8 @@ class AlarmProcessingTestCase(TestCase):
 
         mock_play_beep.assert_called()
 
-    @patch("sound_the_alarm.Alarm.play_beep")
-    @patch("sound_the_alarm.Alarm.gui_running")
+    @patch("alarm_builder.Alarm.play_beep")
+    @patch("alarm_builder.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
     def test_beep_played_when_no_readaloud(self, mock_config_has_match, mock_gui_running, mock_play_beep):
         """Is the beep played when readaloud = 0 is set in the configuration?"""
@@ -93,10 +93,10 @@ class AlarmProcessingTestCase(TestCase):
 
         mock_play_beep.assert_called()
 
-    @patch("sound_the_alarm.Alarm.play_radio")
-    @patch("sound_the_alarm.Alarm.get_tts_client")
-    @patch("sound_the_alarm.Alarm.generate_content")
-    @patch("sound_the_alarm.Alarm.gui_running")
+    @patch("alarm_builder.Alarm.play_radio")
+    @patch("alarm_builder.Alarm.get_tts_client")
+    @patch("alarm_builder.Alarm.generate_content")
+    @patch("alarm_builder.Alarm.gui_running")
     @patch("alarmenv.AlarmEnv.config_has_match")
     def test_radio_played_when_enabled(self, mock_config_has_match, mock_gui_running, mock_generate_content, mock_get_tts_client, mock_play_radio):
         """Is a radio stream opened when radio is enabled in the config?"""

@@ -144,21 +144,21 @@ python main.py [path/to/configuration/file]
 ```
 or
 ```
-python sound_the_alarm.py [path/to/configuration/file]
+python alarm_builder.py [path/to/configuration/file]
 ```
 
 The first runs a GUI version. It displays the current time and includes options for scheduling the alarm. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.
 
 The second form generates an alarm based on the configuration file and plays it. This can be used as a CLI interface for the alarm. Use cron to manually schedule an alarm.
 
-In either case, scheduling an alarm is done by adding a new cron entry to `sound_the_alarm.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a new `mplayer` process separate from the Python process running the alarm. The GUI's _Radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but in CLI mode you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
+In either case, scheduling an alarm is done by adding a new cron entry to `alarm_builder.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a new `mplayer` process separate from the Python process running the alarm. The GUI's _Radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but in CLI mode you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
 
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [config_readme.md](./config_readme.md) for instructions. By default `alarm.config` will be used.
 
 Note that while the alarm time can be set from the GUI, the date cannot. The alarm is hard coded to occur every monday to friday at the specified time.
 
 
-The interface to `sound_the_alarm.py` is:
+The interface to `alarm_builder.py` is:
 ```
 positional arguments:
   config         path to the config file

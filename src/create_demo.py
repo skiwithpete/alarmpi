@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sound_the_alarm
+import alarm_builder
 import alarmenv
 import handlers.get_gcp_tts
 
@@ -10,7 +10,7 @@ import handlers.get_gcp_tts
 
 if __name__ == "__main__":
     alarm_env = alarmenv.AlarmEnv("alarm.config")
-    content = sound_the_alarm.generate_content(alarm_env)
+    content = alarm_builder.generate_content(alarm_env)
     text = "\n".join(content)
 
     tts = handlers.get_gcp_tts.GoogleCloudTTS(keyfile="Alarmpi-cdb50622e298.json")
