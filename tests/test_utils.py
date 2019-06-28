@@ -5,7 +5,7 @@ import unittest
 import datetime
 from unittest import TestCase
 
-import utils
+from src import utils
 
 
 class UtilsTestCase(TestCase):

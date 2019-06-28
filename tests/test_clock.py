@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import datetime
 import unittest
 from unittest import TestCase
 from unittest.mock import patch
 from PyQt5.QtWidgets import QApplication
 
-import clock
-import GUIWidgets
+from src import clock
+from src import GUIWidgets
+
 
 app = QApplication(sys.argv)
 
@@ -96,15 +96,15 @@ class ClockGUITestCase(TestCase):
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
-    @patch("alarmenv.AlarmEnv.setup")
-    @patch("clock.CronWriter.get_current_alarm")
+    @patch("src.alarmenv.AlarmEnv.setup")
+    @patch("src.clock.CronWriter.get_current_alarm")
     def setUp(self, mock_get_current_alarm, mock_setup):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
         self.app = clock.Clock("dummy.config")
 
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    @patch("utils.weekend")
-    @patch("alarmenv.AlarmEnv.get_value")
+    @patch("src.utils.weekend")
+    @patch("src.alarmenv.AlarmEnv.get_value")
     def test_alarm_indicator_off_during_weekend(self, mock_get_value, mock_weekend, mock_display):
         """Is the main window's active alarm indicator blank during the weekend?"""
         mock_weekend.return_value = True
@@ -115,8 +115,8 @@ class ClockTestCase(TestCase):
         mock_display.assert_called_with("")
 
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    @patch("utils.weekend")
-    @patch("alarmenv.AlarmEnv.get_value")
+    @patch("src.utils.weekend")
+    @patch("src.alarmenv.AlarmEnv.get_value")
     def test_alarm_indicator_on_during_weekdays(self, mock_get_value, mock_weekend, mock_display):
         """Is the main window's active alarm indicator on during weekdays?"""
         mock_weekend.return_value = False
@@ -145,7 +145,7 @@ class RadioStreamerTestCase(TestCase):
         res = self.radio.is_playing()
         self.assertTrue(res)
 
-    @patch("clock.subprocess.Popen")
+    @patch("subprocess.Popen")
     def test_stop_clears_active_process(self, mock_Popen):
         """Does stop clear the list of running processes?"""
         self.radio.play("mock_url")
@@ -179,7 +179,7 @@ class CronWriterTestCase(TestCase):
     @patch("subprocess.check_output")
     def test_alarm_time_returned_when_alarm_in_crontab(self, mock_subprocess_check_output):
         """Does get_current_alarm return the corresponding alarm time if alarm is set?"""
-        path = self.cron_writer.path_to_alarm
+        path = self.cron_writer.path_to_alarm_runner
         mock_subprocess_check_output.return_value = """
         # Mock crontable
         # m h  dom mon dow   command
@@ -195,7 +195,7 @@ class CronWriterTestCase(TestCase):
         """Does get_crontab_lines_without_alarm return all lines except the one containing
         the alarm?
         """
-        alarm_line = "16 4 * * 1-5 python {}".format(self.cron_writer.path_to_alarm)
+        alarm_line = "16 4 * * 1-5 python {}".format(self.cron_writer.path_to_alarm_runner)
         mock_subprocess_check_output.return_value = """
         # Mock crontable
         # m h  dom mon dow   command

@@ -6,7 +6,7 @@ import unittest
 from unittest import TestCase
 from unittest.mock import patch
 
-import alarmenv
+from src import alarmenv
 
 
 class AlarmEnvTestCase(TestCase):
@@ -17,7 +17,7 @@ class AlarmEnvTestCase(TestCase):
     def setUp(self):
         self.env = alarmenv.AlarmEnv("")
 
-    @patch("alarmenv.AlarmEnv.get_sections")
+    @patch("src.alarmenv.AlarmEnv.get_sections")
     def test_validate_config_raises_runtime_error_on_invalid(self, mock_get_sections):
         """Does validate_config raise RuntimeError when configparser detects invalid
         options?
@@ -32,7 +32,7 @@ class AlarmEnvTestCase(TestCase):
         env = alarmenv.AlarmEnv("foo.config")  # create a new AlarmEnv with non-existing file
         self.assertRaises(RuntimeError, env.setup)
 
-    @patch("alarmenv.AlarmEnv.get_value")
+    @patch("src.alarmenv.AlarmEnv.get_value")
     def test_no_match_on_invalid_config_section(self, mock_get_value):
         """Does config_has_match return False on invalid section name?"""
         mock_get_value.return_value = "mock_response"
@@ -40,7 +40,7 @@ class AlarmEnvTestCase(TestCase):
         match = self.env.config_has_match("nosuchsection", "type", "value")
         self.assertFalse(match)
 
-    @patch("alarmenv.AlarmEnv.get_value")
+    @patch("src.alarmenv.AlarmEnv.get_value")
     def test_match_on_valid_config_keys(self, mock_get_value):
         """Does config_has_match return True on valid section, option, key combination?"""
         mock_get_value.return_value = "value"
@@ -59,8 +59,8 @@ class AlarmEnvTestCase(TestCase):
                              "google_translate_tts", "festival_tts", "radio"]
         self.assertEqual(read_sections, filtered_sections)
 
-    @patch("alarmenv.AlarmEnv.config_has_match")
-    @patch("alarmenv.AlarmEnv.get_sections")
+    @patch("src.alarmenv.AlarmEnv.config_has_match")
+    @patch("src.alarmenv.AlarmEnv.get_sections")
     def test_read_content_sections(self, mock_get_sections, mock_config_has_match):
         """Does get_enabled_type_sections return correct content section names?"""
         mock_get_sections.return_value = ["greeting", "openweathermap", "BBC_news"]
