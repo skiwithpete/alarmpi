@@ -4,7 +4,6 @@
 import subprocess
 import importlib
 import os
-import sys
 import inspect
 import signal
 
@@ -14,17 +13,8 @@ import pydub.playback
 from src.handlers import get_festival_tts
 
 
-# If this script was called via cron, we need an absolute path to the 'install'
-# directory (ie. location of the alarmpi base directory).
-# Since cron runs this script with absolute paths as
-# /path/to/python /path/to/alarm_builder.py /path/to/alarm.config, we can
-# use sys.argv to format an absolute path from the 2nd argument.
-# This is a bit of a hack, there's probably a better way...
-
-BASE = os.getcwd()
-if len(sys.argv) > 1:
-    BASE = os.path.dirname(sys.argv[1])  # get dirname from the path to alarm_builder.py
-
+# get path to the root folder
+BASE = os.path.join(os.path.dirname(__file__), "..")
 PIDFILE = os.path.join(BASE, "pidfile")
 
 # alias USRSIGnals for clarity
