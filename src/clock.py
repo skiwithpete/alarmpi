@@ -86,7 +86,6 @@ class Clock:
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
         self.settings_window.readaloud_checkbox.setChecked(tts_enabled)
         weekends = self.env.config_has_match("alarm", "include_weekends", "1")
-        self.settings_window.weekend_checkbox.setChecked(weekends)
 
         # set nightmode as enabled if non zero offset specified in the config
         self.original_nightmode_offset = self.env.get_value(
@@ -99,12 +98,23 @@ class Clock:
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
         # Set main window's alarm time display to cron's time
-        self.current_alarm_time = self.cron.get_current_alarm()
-        self.main_window.alarm_time_lcd.display(self.current_alarm_time)
+        active, self.current_alarm_time = self.cron.get_current_alarm()
+        if active:
+            self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
-        # Also set the setting's window alarm time label
-        msg = "current alarm time: {}".format(self.current_alarm_time)
-        self.settings_window.alarm_time_status_label.setText(msg)
+            # Also set the setting's window notifications: alarm time label
+            msg = "current alarm time: {}".format(self.current_alarm_time)
+            self.settings_window.alarm_time_status_label.setText(msg)
+
+            # ...and status message on the left panel
+            alarm_time_msg = GUIWidgets.SettingsWindow.ALARM_INPUT_SUCCESS.format(
+                self.current_alarm_time)
+            self.settings_window.alarm_time_status_label.setText(alarm_time_msg)
+
+        # If there's an alarm in cron, set time as the selected time in settings window regardless
+        # of whether enabled or not.
+        if self.current_alarm_time:
+            self.settings_window.input_alarm_time_label.setText(self.current_alarm_time)
 
         self.screen_blank_timer = QTimer(self.main_window)
         self.screen_blank_timer.setSingleShot(True)
@@ -160,7 +170,6 @@ class Clock:
 
         # Settings window checkboxes
         self.settings_window.readaloud_checkbox.stateChanged.connect(self.enable_tts)
-        self.settings_window.weekend_checkbox.stateChanged.connect(self.enable_weekends)
         self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nightmode)
 
     def open_settings_window(self):
@@ -180,10 +189,14 @@ class Clock:
         self.set_active_alarm_indicator()
 
     def wakeup_signal_handler(self, sig, frame):
-        """Signal handler for waking up the screen."""
+        """Signal handler for waking up the screen: enable the screen and
+        comment out the cron entry.
+        """
         if self.env.is_rpi:
             self.enable_screen_and_show_control_buttons()
         self.set_active_alarm_indicator()
+
+        self.cron.disable_entry()
 
     def on_release_event_handler(self, event):
         """Event handler for touching the screen: update the main window's alarm
@@ -208,6 +221,8 @@ class Clock:
         """Handler for settings window's 'set' button. Validates the user selected
         time and adds a cron entry (if valid). No alarm is set if value is invalid.
         """
+        # overwrite existing line
+
         time_str = self.settings_window.validate_alarm_input()
         if time_str:
             entry = self.cron.create_entry(time_str)
@@ -421,15 +436,6 @@ class Clock:
             state = "1"
         self.env.config.set("main", "readaloud", state)
 
-    def enable_weekends(self):
-        """Callback to the checkbox enabling TTS feature: set the config
-        to match the selected value.
-        """
-        state = "0"
-        if self.settings_window.weekend_checkbox.isChecked():
-            state = "1"
-        self.env.config.set("alarm", "include_weekends", state)
-
     def enable_nightmode(self):
         """Callback to the checkbox enabling TTS feature: set the config
         to match the selected value.
@@ -505,41 +511,65 @@ class CronWriter:
 
     def __init__(self, config_file):
         # format absolute paths to alarm_builder.py and the config file
-        self.path_to_alarm_runner = os.path.abspath("alarm_builder.py")
+        self.path_to_alarm_runner = os.path.abspath("play_alarm.py")
         self.config_file = config_file
 
-    def get_crontab(self):
-        """Return the current crontab"""
-        # check_output returns a byte string
-        return subprocess.check_output(["crontab", "-l"]).decode()
-
-    def get_current_alarm(self):
-        """If an alarm has been set, return its time in HH:MM format. If not set
-        returns an empty string.
-        """
+    def get_cron_lines(self):
+        """Return crontab as list of lines."""
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
         lines = crontab.split("\n")
-        alarm_line = [line for line in lines if self.path_to_alarm_runner in line]
+        return lines
 
-        if alarm_line:
-            split = alarm_line[0].split()
+    def get_current_alarm(self):
+        """Check if there's an alarm line in crontab and return it's time HH:MM format
+        as well as the status (enabled / disabled). If no alarm set, returns empty
+        string as time.
+        If there are multiple lines in cron, only the first is processed.
+        Return
+            a tuple of (enabled, alarm time) where tuple is a boolean denoting whether
+            the alarm has been commented out or not.
+        """
+        cron_lines = self.get_cron_lines()
+        alarm_lines = [line for line in cron_lines if self.path_to_alarm_runner in line]
+
+        if alarm_lines:
+            line = alarm_lines[0]
+            # strip comment symbol and whitespace from the start (if any)
+            split = line.lstrip("# ").split()
             minute = split[0]
             hour = split[1]
 
-            return hour.zfill(2) + ":" + minute.zfill(2)
+            time = hour.zfill(2) + ":" + minute.zfill(2)
+            enabled = "#" not in line
 
-        return ""
+            return (enabled, time)
+
+        return (False, "")
 
     def get_crontab_lines_without_alarm(self):
         """Return the crontab as a newline delimited list without alarm entries."""
-        # check_output returns a byte string
-        crontab = subprocess.check_output(["crontab", "-l"]).decode()
-        crontab_lines = crontab.split("\n")
+        cron_lines = self.get_cron_lines()
+        return [line for line in cron_lines if self.path_to_alarm_runner not in line]
 
-        return [line for line in crontab_lines if self.path_to_alarm_runner not in line]
+    def disable_entry(self):
+        """Comment out existing alarm entry in cron."""
+        cron_lines = self.get_cron_lines()
+        alarm_lines = [line for line in cron_lines if self.path_to_alarm_runner in line]
+
+        if alarm_lines:
+            line = alarm_lines[0]
+            idx = cron_lines.index(line)
+
+            # overwrite the original line
+            if "#" not in line:
+                disabled_line = "# " + line
+                cron_lines[idx] = disabled_line
+
+        # write as the new crontab
+        self.write_crontab(cron_lines)
 
     def delete_entry(self):
-        """Delete cron entry for alarm_builder.py."""
+        """Remove cron line matching alarm entry."""
         crontab_lines = self.get_crontab_lines_without_alarm()
 
         # Remove any extra empty lines from the end and keep just one

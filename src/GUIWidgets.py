@@ -214,18 +214,17 @@ class SettingsWindow(QWidget):
 
         # ** Left grid: misc settings **
         self.readaloud_checkbox = QCheckBox("Readaloud", self)
-        self.weekend_checkbox = QCheckBox("Include weekends", self)
         self.nightmode_checkbox = QCheckBox("Nightmode active", self)
         self.alarm_time_status_label = QLabel(self)
         self.alarm_time_error_label = QLabel(self)
         self.alarm_time_error_label.setStyleSheet("color: #FF1414;")
 
-        left_grid.addWidget(self.weekend_checkbox, 0, 0)
-        left_grid.addWidget(self.readaloud_checkbox, 1, 0)
-        left_grid.addWidget(self.nightmode_checkbox, 2, 0)
+        left_grid.addWidget(self.readaloud_checkbox, 0, 0)
+        left_grid.addWidget(self.nightmode_checkbox, 1, 0)
         left_grid.addWidget(self.alarm_time_status_label, 3, 0)
         left_grid.addWidget(self.alarm_time_error_label, 4, 0)
 
+        # Add grids to base layout
         base_layout.addLayout(left_grid, 0, 0)
         base_layout.addLayout(right_grid, 0, 1)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 2)
