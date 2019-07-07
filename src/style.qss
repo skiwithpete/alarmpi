@@ -10,5 +10,5 @@ AlarmWindow {
 
 AlarmWindow QLabel {
   color: #FF1414;
-  font: 16pt;
+  font: 18pt;
 }

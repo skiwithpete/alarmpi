@@ -85,7 +85,6 @@ class Clock:
         # set initial values to config values and set handlers
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
         self.settings_window.readaloud_checkbox.setChecked(tts_enabled)
-        weekends = self.env.config_has_match("alarm", "include_weekends", "1")
 
         # set nightmode as enabled if non zero offset specified in the config
         self.original_nightmode_offset = self.env.get_value(
@@ -186,7 +185,6 @@ class Clock:
         the next day.
         """
         self.main_window.control_buttons["Radio"].click()  # emit a click signal
-        self.set_active_alarm_indicator()
 
     def wakeup_signal_handler(self, sig, frame):
         """Signal handler for waking up the screen: enable the screen and
@@ -194,7 +192,7 @@ class Clock:
         """
         if self.env.is_rpi:
             self.enable_screen_and_show_control_buttons()
-        self.set_active_alarm_indicator()
+        self.main_window.alarm_time_lcd.display("")
 
         self.cron.disable_entry()
 
@@ -203,8 +201,6 @@ class Clock:
         time label and, if on a Raspberry Pi and nighttime, set a timeout for blanking
         the screen.
         """
-        self.set_active_alarm_indicator()
-
         # If not running on Raspberry Pi exit early
         if not self.env.is_rpi:
             return
@@ -374,29 +370,6 @@ class Clock:
             # Keep the settings window active to prevent main window from
             # burying it
             self.settings_window.activateWindow()
-
-    def set_active_alarm_indicator(self):
-        """Updates the main window label displaying set alarm time. By default the
-        alarm only plays on weekdays. If so, empty the label after friday's alarm.
-        """
-        # Do nothing if alarm plays on weekends
-        if self.env.get_value("alarm", "include_weekends", fallback="0") == "1":
-            return
-
-        # Do nothing if no alarm set
-        alarm_time = self.current_alarm_time  # string: HH:MM
-        if not alarm_time:
-            return
-
-        # Weekend detection: is current date between friday's alarm and
-        # nightmode_offset before monday's alarm
-        now = datetime.datetime.now()
-        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
-        weekend = utils.weekend(now, offset, alarm_time)
-        if weekend:
-            self.main_window.alarm_time_lcd.display("")
-        else:
-            self.main_window.alarm_time_lcd.display(alarm_time)
 
     def blank_screen_and_hide_control_buttons(self):
         """Callback to turning the screen off: turn off backlight power and
@@ -579,18 +552,15 @@ class CronWriter:
         # write as the new crontab
         self.write_crontab(crontab)
 
-    def create_entry(self, s, include_weekends=False):
-        """Given a HH:MM string, format it a valid cron entry."""
+    def create_entry(self, s):
+        """Given a HH:MM string, format it a valid cron entry. Date part is set
+        to *, ie. every day.
+        """
         t = time.strptime(s, "%H:%M")
 
-        date_range = "1-5"
-        if include_weekends:
-            date_range = "*"
-
-        entry = "{min} {hour} * * {date_range} {python_exec} {path_to_alarm_runner} {path_to_config}".format(
+        entry = "{min} {hour} * * * {python_exec} {path_to_alarm_runner} {path_to_config}".format(
             min=t.tm_min,
             hour=t.tm_hour,
-            date_range=date_range,
             python_exec=sys.executable,
             path_to_alarm_runner=self.path_to_alarm_runner,
             path_to_config=self.config_file
