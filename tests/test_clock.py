@@ -102,30 +102,6 @@ class ClockTestCase(TestCase):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
         self.app = clock.Clock("dummy.config")
 
-    @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    @patch("src.utils.weekend")
-    @patch("src.alarmenv.AlarmEnv.get_value")
-    def test_alarm_indicator_off_during_weekend(self, mock_get_value, mock_weekend, mock_display):
-        """Is the main window's active alarm indicator blank during the weekend?"""
-        mock_weekend.return_value = True
-        mock_get_value.side_effect = ["0", "8"]  # include_weekends=0, nightmode_offset=8
-        self.app.current_alarm_time = True
-
-        self.app.set_active_alarm_indicator()
-        mock_display.assert_called_with("")
-
-    @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    @patch("src.utils.weekend")
-    @patch("src.alarmenv.AlarmEnv.get_value")
-    def test_alarm_indicator_on_during_weekdays(self, mock_get_value, mock_weekend, mock_display):
-        """Is the main window's active alarm indicator on during weekdays?"""
-        mock_weekend.return_value = False
-        mock_get_value.side_effect = ["0", "8"]  # include_weekends=0, nightmode_offset=8
-        self.app.current_alarm_time = "16:08"
-
-        self.app.set_active_alarm_indicator()
-        mock_display.assert_called_with("16:08")
-
 
 class RadioStreamerTestCase(TestCase):
     """Test cases for RadioStreamer: does streaming radio work correctly?"""
@@ -163,7 +139,7 @@ class CronWriterTestCase(TestCase):
 
     @patch("subprocess.check_output")
     def test_empty_string_returned_as_alarm_when_no_alarm_in_crontab(self, mock_subprocess_check_output):
-        """Does get_current_alarm return an empty string if no alarm in crontab?"""
+        """Does get_current_alarm return an empty response if no alarm in crontab?"""
 
         # setup a mock crontab with no call to alarm_builder.py
         mock_subprocess_check_output.return_value = """
@@ -174,7 +150,8 @@ class CronWriterTestCase(TestCase):
 
         """.encode("utf8")  # return value should be bytes
         res = self.cron_writer.get_current_alarm()
-        self.assertEqual(res, "")
+        expected_res = (False, "")
+        self.assertEqual(res, expected_res)
 
     @patch("subprocess.check_output")
     def test_alarm_time_returned_when_alarm_in_crontab(self, mock_subprocess_check_output):
@@ -182,25 +159,43 @@ class CronWriterTestCase(TestCase):
         path = self.cron_writer.path_to_alarm_runner
         mock_subprocess_check_output.return_value = """
         # Mock crontable
-        # m h  dom mon dow   command
+        # m h  dom mon dow command
 
-        16 4 * * 1-5 python {}
+        16 4 * * * python {}
 
         """.format(path).encode("utf8")
         res = self.cron_writer.get_current_alarm()
-        self.assertEqual(res, "04:16")
+        expected_res = (True, "04:16")
+
+        self.assertEqual(res, expected_res)
+
+    @patch("subprocess.check_output")
+    def test_alarm_status_is_disabled_when_commented_out_in_crontab(self, mock_subprocess_check_output):
+        """Does get_current_alarm return the alarm with a disabled status when alarm is commented out?"""
+        path = self.cron_writer.path_to_alarm_runner
+        mock_subprocess_check_output.return_value = """
+        # Mock crontable
+        # m h  dom mon dow command
+
+        # 16 4 * * * python {}
+
+        """.format(path).encode("utf8")
+        res = self.cron_writer.get_current_alarm()
+        expected_res = (False, "04:16")
+
+        self.assertEqual(res, expected_res)
 
     @patch("subprocess.check_output")
     def test_crontab_lines_returned_without_alarm(self, mock_subprocess_check_output):
         """Does get_crontab_lines_without_alarm return all lines except the one containing
         the alarm?
         """
-        alarm_line = "16 4 * * 1-5 python {}".format(self.cron_writer.path_to_alarm_runner)
+        alarm_line = "16 4 * * * python {}".format(self.cron_writer.path_to_alarm_runner)
         mock_subprocess_check_output.return_value = """
         # Mock crontable
-        # m h  dom mon dow   command
+        # m h  dom mon dow command
 
-        1 2 * *  3 command arg
+        1 2 * * 3 command1 arg1
         {}
         4 5 * * * command2 arg2
 
