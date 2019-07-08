@@ -139,7 +139,6 @@ class AlarmWindow(QWidget):
 
 class SettingsWindow(QWidget):
     ALARM_INPUT_ERROR = "ERROR: Invalid time"
-    ALARM_INPUT_SUCCESS = "Alarm set for {}"
     ALARM_INPUT_CLEAR = "Alarm cleared"
     ALARM_LABEL_EMPTY = "  :  "
 
@@ -305,3 +304,8 @@ class SettingsWindow(QWidget):
         self.alarm_time_status_label.setText(SettingsWindow.ALARM_INPUT_CLEAR)
         self.current_alarm_time = ""
         self.alarm_time_error_label.setText("")
+
+    def set_alarm_input_success_message_with_time(self, time):
+        """Helper function for setting the left pane alarm time label."""
+        msg = "Alarm set for {}".format(time)
+        self.alarm_time_status_label.setText(msg)

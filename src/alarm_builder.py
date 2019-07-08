@@ -19,7 +19,7 @@ PIDFILE = os.path.join(BASE, "pidfile")
 
 # alias USRSIGnals for clarity
 RADIO_PLAY_SIGNAL = signal.SIGUSR1
-WAKEUP_SIGNAL = signal.SIGUSR2
+SCREEN_WAKEUP_SIGNAL = signal.SIGUSR2
 
 
 class Alarm:
@@ -36,7 +36,7 @@ class Alarm:
         # paly a beeping sound effect isntead of making a series of API calls.
         if not self.env.netup or not tts_enabled:
             if pid:
-                os.kill(pid, WAKEUP_SIGNAL)
+                os.kill(pid, SCREEN_WAKEUP_SIGNAL)
             Alarm.play_beep()
             return
 
@@ -44,7 +44,7 @@ class Alarm:
         tts_client = self.get_tts_client()
         text = "\n".join(content)
         if pid:
-            os.kill(pid, WAKEUP_SIGNAL)
+            os.kill(pid, SCREEN_WAKEUP_SIGNAL)
         tts_client.play(text)
 
         # Play the radio stream if enabled:
