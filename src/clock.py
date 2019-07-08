@@ -106,9 +106,7 @@ class Clock:
             self.settings_window.alarm_time_status_label.setText(msg)
 
             # ...and status message on the left panel
-            alarm_time_msg = GUIWidgets.SettingsWindow.ALARM_INPUT_SUCCESS.format(
-                self.current_alarm_time)
-            self.settings_window.alarm_time_status_label.setText(alarm_time_msg)
+            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
 
         # If there's an alarm in cron, set time as the selected time in settings window regardless
         # of whether enabled or not.
@@ -172,11 +170,23 @@ class Clock:
         self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nightmode)
 
     def open_settings_window(self):
-        """Callback for opening the settings window. Also clears timer for blanking
-        the screen (if active).
+        """Callback for opening the settings window. Checks whether an alarm time should
+        be displayed (ie. is there an alarm line in cron)
+        Also clears timer for blanking the screen (if active).
         """
         self.screen_blank_timer.stop()
         self.settings_window.show()
+
+        # Check current alarm status and set info labels accordingly
+        active, self.current_alarm_time = self.cron.get_current_alarm()
+        if active:
+            msg = "current alarm time: {}".format(self.current_alarm_time)
+            self.settings_window.alarm_time_status_label.setText(msg)
+            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
+
+        # clear the left panel info text if no alarm active
+        else:
+            self.settings_window.alarm_time_status_label.setText("")
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests from alarm_builder.
@@ -223,9 +233,7 @@ class Clock:
         if time_str:
             entry = self.cron.create_entry(time_str)
             self.cron.add_entry(entry)
-
-            alarm_time_msg = GUIWidgets.SettingsWindow.ALARM_INPUT_SUCCESS.format(time_str)
-            self.settings_window.alarm_time_status_label.setText(alarm_time_msg)
+            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
 
             # clear the label showing the selected time
             self.settings_window.input_alarm_time_label.setText(
