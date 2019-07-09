@@ -306,6 +306,6 @@ class SettingsWindow(QWidget):
         self.alarm_time_error_label.setText("")
 
     def set_alarm_input_success_message_with_time(self, time):
-        """Helper function for setting the left pane alarm time label."""
+        """Helper function for setting the left pane alarm time info label."""
         msg = "Alarm set for {}".format(time)
         self.alarm_time_status_label.setText(msg)

@@ -101,18 +101,6 @@ class Clock:
         if active:
             self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
-            # Also set the setting's window notifications: alarm time label
-            msg = "current alarm time: {}".format(self.current_alarm_time)
-            self.settings_window.alarm_time_status_label.setText(msg)
-
-            # ...and status message on the left panel
-            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
-
-        # If there's an alarm in cron, set time as the selected time in settings window regardless
-        # of whether enabled or not.
-        if self.current_alarm_time:
-            self.settings_window.input_alarm_time_label.setText(self.current_alarm_time)
-
         self.screen_blank_timer = QTimer(self.main_window)
         self.screen_blank_timer.setSingleShot(True)
         self.screen_blank_timer.timeout.connect(self.blank_screen_and_hide_control_buttons)
@@ -174,19 +162,28 @@ class Clock:
         be displayed (ie. is there an alarm line in cron)
         Also clears timer for blanking the screen (if active).
         """
-        self.screen_blank_timer.stop()
-        self.settings_window.show()
-
-        # Check current alarm status and set info labels accordingly
         active, self.current_alarm_time = self.cron.get_current_alarm()
-        if active:
-            msg = "current alarm time: {}".format(self.current_alarm_time)
-            self.settings_window.alarm_time_status_label.setText(msg)
-            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
 
-        # clear the left panel info text if no alarm active
+        # For active alarms, write time to left pane info label as well as to the
+        # right pane numpad time label.
+        if active:
+            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
+            self.settings_window.input_alarm_time_label.setText(self.current_alarm_time)
+
+        # If deactivated alarm in cron, clear status message but display alarm time
+        # numpad
+        elif self.current_alarm_time:
+            self.settings_window.alarm_time_status_label.setText("")
+            self.settings_window.input_alarm_time_label.setText(self.current_alarm_time)
+
+        # Finally, if no alarm in cron, empty both labels
         else:
             self.settings_window.alarm_time_status_label.setText("")
+            self.settings_window.input_alarm_time_label.setText("")
+
+        # Clear any screen blanking timer and display the window
+        self.screen_blank_timer.stop()
+        self.settings_window.show()
 
     def radio_signal_handler(self, sig, frame):
         """Signal handler for incoming radio stream requests from alarm_builder.
@@ -227,8 +224,6 @@ class Clock:
         """Handler for settings window's 'set' button. Validates the user selected
         time and adds a cron entry (if valid). No alarm is set if value is invalid.
         """
-        # overwrite existing line
-
         time_str = self.settings_window.validate_alarm_input()
         if time_str:
             entry = self.cron.create_entry(time_str)
