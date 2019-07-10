@@ -6,20 +6,26 @@ The file specifies which components of the alarm are enabled and which text-to-s
 ### alarm.config description
 
 **[main]**  
-  * **readaloud=0** disables TTS. The contents of the enabled sections will still be printed to stdout and a beeping sound effect will play as the alarm.
-  * **nthost** determines a url to test for network connectivity. While many of the alarm components rely on API calls, an alarm should play even when the network is down. In this case a beeping sound effect will play.
-  * **end** an ending greeting to be used by the TTS client after all components, apart from radio stream, have been processed.
+* **readaloud=0**
+ * Disables TTS. The contents of the enabled sections will still be printed to stdout and a beeping sound effect will play as the alarm.
+* **nthost**
+ * Determines a url to test for network connectivity. While many of the alarm components rely on API calls, an alarm should play even when the network is down. In this case a beeping sound effect will play.
+* **end**
+ * An ending greeting to be used by the TTS client after all components, apart from radio stream, have been processed.
 
 **[alarm]**  
-  * **include_weekends** By default the alarm only plays on weekdays. Enabling this features also runs the alarm on weekends. Note that the alarm date cannot be fine-tuned any further.
-  * **nightmode_offset** determines nightmode. During nightmode the screen will automatically blank after a short while of touching the screen. Nightmode begins **nightmode_offset** hours before the alarm time.
-    * Only takes effect on a Raspberry Pi
+* **nightmode_offset**
+ * Number of hours before alarm time to label as _nightmode_. During nightmode the screen will automatically blank after a short while of touching the screen.
+* **set_brightness**
+ * Whether to set screen brightness to full when the alarm triggers.
+
+* **Note:** both of these settings only take effect on a Raspberry Pi
 
 **[greeting], [openweathermap], [BBC_news]**  
   * These are the three main content sections determining actual content of the alarm.
   * `handler` points to a module in the `/handlers` directory responsible for creating the content.
 
-   * **[openweathermap]** needs some additional configuration including an API key to openweathermap.org and a cityid for the city whose weather to forecast. See https://openweathermap.org/appid for registering for an API key and http://bulk.openweathermap.org/sample/ for cityid codes.
+  * **[openweathermap]** needs some additional configuration including an API key to openweathermap.org and a cityid for the city whose weather to forecast. See https://openweathermap.org/appid for registering for an API key and http://bulk.openweathermap.org/sample/ for cityid codes.
    * API key should be placed in a simple json file of
    ```
    {

@@ -115,7 +115,7 @@ python main.py [configuration_file]
 ```
 or
 ```
-python alarm_builder.py [configuration_file]
+python play_alarm.py [configuration_file]
 ```
 where `[configuration_file]` is a valid alarm configuration file in the `configs/` folder
 
@@ -124,11 +124,13 @@ The first runs a GUI version. It displays the current time and includes options 
 
 The second form generates an alarm based on the configuration file and plays it. This can be used as a CLI interface for the alarm. Use cron to manually schedule an alarm.
 
-In either case, scheduling an alarm is done by adding a new cron entry to `alarm_builder.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a new `mplayer` process separate from the Python process running the alarm. The GUI's _Radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but in CLI mode you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
+In either case, scheduling an alarm is done by adding a new cron entry to `play_alarm.py`, either through the GUI or manually. **This means the alarm will play regardless of whether the GUI is running or not!** Also note that if enabled, the radio stream spawns a new `mplayer` process separate from the Python process running the alarm. The GUI's _Radio_ as well as _Close_ buttons take care of terminating this process when the radio is turned off, but in CLI mode you need to terminate the stream separately. This can be done with the included `stop.sh` shell script.
+
+When used from the GUI, the alarm works in a toggle basis. Once the alarm triggers, it will be deactivated and needs to be reset from the settings window in order to trigger again the next time. However, alarm time is stored and need not be re-entered unless manually cleared from the settings window. 
 
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [configs/README.md](./configs/README.md) for instructions. By default `alarm.config` will be used.
 
-Note that while the alarm time can be set from the GUI, the date cannot. The alarm is hard coded to occur every monday to friday at the specified time.
+
 
 
 The full interface to `main.py` is:
