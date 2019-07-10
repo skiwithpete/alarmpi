@@ -81,8 +81,7 @@ class Clock:
         if train_polling_enabled:
             self.setup_train_polling()
 
-        # Setup settings window's checkboxes:
-        # set initial values to config values and set handlers
+        # Setup settings window's checkbox initial values:
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
         self.settings_window.readaloud_checkbox.setChecked(tts_enabled)
 
@@ -93,6 +92,10 @@ class Clock:
         nightmode = (self.original_nightmode_offset != "0")
         self.settings_window.nightmode_checkbox.setChecked(nightmode)
 
+        alarm_brightness_enabled = self.env.config_has_match("alarm", "set_brightness", "1")
+        self.settings_window.alarm_brightness_checkbox.setChecked(alarm_brightness_enabled)
+
+        # Setup signal handlers for alarm_builder.py signals
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
@@ -153,9 +156,11 @@ class Clock:
         alarm_set_button.clicked.connect(self.set_alarm)
         alarm_clear_button.clicked.connect(self.clear_alarm)
 
-        # Settings window checkboxes
+        # Settings window checkbox callbacks
         self.settings_window.readaloud_checkbox.stateChanged.connect(self.enable_tts)
         self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nightmode)
+        self.settings_window.alarm_brightness_checkbox.stateChanged.connect(
+            self.enable_alarm_brightness_change)
 
     def open_settings_window(self):
         """Callback for opening the settings window. Checks whether an alarm time should
@@ -198,11 +203,15 @@ class Clock:
         """Signal handler for waking up the screen: enable the screen and
         comment out the cron entry.
         """
+        self.main_window.alarm_time_lcd.display("")
+        self.cron.disable_entry()
+
         if self.env.is_rpi:
             self.enable_screen_and_show_control_buttons()
-        self.main_window.alarm_time_lcd.display("")
 
-        self.cron.disable_entry()
+            # Check if brightness should be set to full
+            if self.env.config_has_match("alarm", "set_brightness", "1"):
+                rpi_utils.set_display_backlight_brightness(255)
 
     def on_release_event_handler(self, event):
         """Event handler for touching the screen: update the main window's alarm
@@ -417,6 +426,15 @@ class Clock:
         if self.settings_window.nightmode_checkbox.isChecked():
             state = self.original_nightmode_offset
         self.env.config.set("alarm", "nightmode_offset", state)
+
+    def enable_alarm_brightness_change(self):
+        """Callback to the checkbox enabling brightness change on alarm: set the config
+        to match the selected value.
+        """
+        state = "0"
+        if self.settings_window.alarm_brightness_checkbox.isChecked():
+            state = "1"
+        self.env.config.set("alarm", "set_brightness", state)
 
     def cleanup_and_exit(self):
         """Callback to the close button. Close any existing radio streams and the
