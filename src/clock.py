@@ -168,18 +168,19 @@ class Clock:
         # right pane numpad time label.
         if active:
             self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
-            self.settings_window.input_alarm_time_label.setText(self.current_alarm_time)
+            self.settings_window.set_alarm_input_time_label(self.current_alarm_time)
 
         # If deactivated alarm in cron, clear status message but display alarm time
         # numpad
         elif self.current_alarm_time:
             self.settings_window.alarm_time_status_label.setText("")
-            self.settings_window.input_alarm_time_label.setText(self.current_alarm_time)
+            self.settings_window.set_alarm_input_time_label(self.current_alarm_time)
 
         # Finally, if no alarm in cron, empty both labels
         else:
             self.settings_window.alarm_time_status_label.setText("")
-            self.settings_window.input_alarm_time_label.setText("")
+            self.settings_window.set_alarm_input_time_label(
+                GUIWidgets.SettingsWindow.ALARM_LABEL_EMPTY)
 
         # Clear any screen blanking timer and display the window
         self.screen_blank_timer.stop()
@@ -228,11 +229,7 @@ class Clock:
         if time_str:
             entry = self.cron.create_entry(time_str)
             self.cron.add_entry(entry)
-            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
-
-            # clear the label showing the selected time
-            self.settings_window.input_alarm_time_label.setText(
-                GUIWidgets.SettingsWindow.ALARM_LABEL_EMPTY)
+            self.settings_window.set_alarm_input_success_message_with_time(time_str)
 
             # update main window alarm display
             self.main_window.alarm_time_lcd.display(time_str)

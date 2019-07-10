@@ -309,3 +309,7 @@ class SettingsWindow(QWidget):
         """Helper function for setting the left pane alarm time info label."""
         msg = "Alarm set for {}".format(time)
         self.alarm_time_status_label.setText(msg)
+
+    def set_alarm_input_time_label(self, time):
+        """Helper function for setting the numpad label displaying selected time."""
+        self.input_alarm_time_label.setText(time)
