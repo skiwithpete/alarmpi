@@ -98,9 +98,18 @@ class ClockTestCase(TestCase):
 
     @patch("src.alarmenv.AlarmEnv.setup")
     @patch("src.clock.CronWriter.get_current_alarm")
-    def setUp(self, mock_get_current_alarm, mock_setup):
+    def setUp(self, mock_get_current_alarm, mock_env_setup):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
+        mock_env_setup.side_effect = None  # mock out env setup
         self.app = clock.Clock("dummy.config")
+        self.app.cron = unittest.mock.Mock()  # mock out CronWriter creation
+        self.app.env.is_rpi = False
+
+    @patch("PyQt5.QtWidgets.QLCDNumber.display")
+    def test_main_window_active_alarm_label_cleared_on_screen_wakeup(self, mock_display):
+        """Is the main window label for alarm time cleared on screen wakeup signal handler?"""
+        self.app.wakeup_signal_handler(None, None)
+        mock_display.assert_called_with("")
 
 
 class RadioStreamerTestCase(TestCase):
