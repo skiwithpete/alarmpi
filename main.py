@@ -27,12 +27,37 @@ def write_pidfile():
     with open(alarm_builder.PIDFILE, "w") as f:
         f.write(str(pid))
 
-
 def clear_pidfile():
     os.remove(alarm_builder.PIDFILE)
 
 
+def backlight_excepthook(type, value, tb):
+    """Custom exception handler for uncaught exceptions.
+    From the docs (https://docs.python.org/3.7/library/sys.html#sys.excepthook):
+        When an exception is raised and uncaught, the interpreter calls sys.excepthook with three arguments,
+        the exception class, exception instance, and a traceback object. In an interactive session this happens
+        just before control is returned to the prompt; in a Python program this happens just before the program
+        exits. The handling of such top-level exceptions can be customized by assigning another three-argument
+        function to sys.excepthook.
+
+    If the program crashes due to an unpredictable cause such as network error on API call while the screen is blank
+    it is difficult to turn it bakcon again (SSH and run stop.sh). By overwriting the default handler we can take
+    care of this automatically.
+    Note that screen blanking is disabled when the hsot system is not a Raspberry Pi.
+    https://stackoverflow.com/questions/20829300/is-there-a-way-to-have-a-python-program-run-an-action-when-its-about-to-crash
+    """
+    import traceback
+    from subprocess import Popen, PIPE
+    tbtext = "".join(traceback.format_exception(type, value, tb)) # TODO: write/send somewhere?
+    base = os.path.dirname(__file__)
+    path_to_stop_script = os.path.abspath("stop.sh")
+    subprocess.run(["/bin/bash", path_to_stop_script])
+
+
+
 if __name__ == "__main__":
+    sys.excepthook = backlight_excepthook
+    
     parser = argparse.ArgumentParser(description="Run alarmpi GUI")
     parser.add_argument("config", metavar="config", nargs="?",
                         default="alarm.config", help="Configuration file to use. Defaults to alarm.config")
