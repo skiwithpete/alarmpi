@@ -96,11 +96,13 @@ class ClockGUITestCase(TestCase):
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
+    @patch("src.alarmenv.AlarmEnv.get_value")
     @patch("src.alarmenv.AlarmEnv.setup")
     @patch("src.clock.CronWriter.get_current_alarm")
-    def setUp(self, mock_get_current_alarm, mock_env_setup):
+    def setUp(self, mock_get_current_alarm, mock_env_setup, mock_get_value):
         mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
         mock_env_setup.side_effect = None  # mock out env setup
+        mock_get_value.return_value = "-radio_arg radio_arg_value"
         self.app = clock.Clock("dummy.config")
         self.app.cron = unittest.mock.Mock()  # mock out CronWriter creation
         self.app.env.is_rpi = False
@@ -116,7 +118,7 @@ class RadioStreamerTestCase(TestCase):
     """Test cases for RadioStreamer: does streaming radio work correctly?"""
 
     def setUp(self):
-        self.radio = clock.RadioStreamer()
+        self.radio = clock.RadioStreamer("dummy_args")
 
     def test_radio_not_playing_on_empty_process(self):
         """Does is_playing return False when there active process flag is not set?"""
@@ -133,7 +135,7 @@ class RadioStreamerTestCase(TestCase):
     @patch("subprocess.Popen")
     def test_stop_clears_active_process(self, mock_Popen):
         """Does stop clear the list of running processes?"""
-        self.radio.play("mock_url")
+        self.radio.play()
         self.radio.stop()
 
         self.assertEqual(self.radio.process, None)
