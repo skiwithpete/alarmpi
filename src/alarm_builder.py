@@ -51,7 +51,7 @@ class Alarm:
         # If the GUI is running, send a signal to it to use its RadioStreamer.
         # Signalling also sets the GUI's radio button as pressed.
         # If GUI is not running, call mplayer directly.
-        if self.env.radio_url and self.env.config_has_match("radio", "enabled", "1"):
+        if self.env.config_has_match("radio", "enabled", "1"):
             if pid:
                 os.kill(pid, RADIO_PLAY_SIGNAL)
             else:
@@ -135,8 +135,8 @@ class Alarm:
 
     def play_radio(self):
         """Play the radio stream defined in the configuration using mplayer."""
-        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 0".format(
-            self.env.radio_url).split()
+        args = self.env.get_value("radio", "args")
+        cmd = "/usr/bin/mplayer {}".format(args).split()
         # Run the command via Popen directly to open the stream as a child process without
         # waiting for it to finish.
         subprocess.Popen(cmd)

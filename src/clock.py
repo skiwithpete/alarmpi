@@ -45,7 +45,8 @@ class Clock:
         self.env.setup()
 
         self.cron = CronWriter(config_file)
-        self.radio = RadioStreamer()
+        radio_args = self.env.get_value("radio", "args")
+        self.radio = RadioStreamer(radio_args)
         self.alarm_player = alarm_builder.Alarm(self.env)
         self.train_parser = get_next_trains.TrainParser()
 
@@ -133,9 +134,8 @@ class Clock:
         # ** main window buttons **
         self.settings_button.clicked.connect(self.open_settings_window)
 
-        # Disable the radio button if no url provided in the configuration
-        radio_stream_url = self.env.get_value("radio", "url", fallback=False)
-        if not radio_stream_url:
+        # Disable the radio button if disabled in config
+        if self.env.get_value("radio", "enabled") == "0":
             self.radio_button.setEnabled(False)
 
         # ...otherwise set the button as an on/off toggle
@@ -278,7 +278,7 @@ class Clock:
         # stop when not pressed. (The state change happends before this callback runs.)
         button_checked = button.isChecked()
         if button_checked:
-            self.radio.play(self.env.radio_url)
+            self.radio.play()
         else:
             self.radio.stop()
 
@@ -332,7 +332,7 @@ class Clock:
         self.update_trains()
         _timer = QTimer(self.main_window)
         _timer.timeout.connect(self.update_trains)
-        _timer.start(12*60*1000)
+        _timer.start(5*60*1000)
 
     def update_trains(self):
         """Fetch new train data from DigiTraffic API and display on the right sidebar."""
@@ -352,21 +352,9 @@ class Clock:
                 msg = "{} {}".format(line_id, scheduled_time)
 
             if train["cancelled"]:
-                msg = "CANCELLED"
+                msg = "{} {} CANCELLED".format(line_id, scheduled_time)
 
             label.setText(msg)
-
-        # Return a delay until the next departure: either the measured time
-        # until the next departure or and upper/lower bound of 40min/12min
-        if not trains:
-            msec_until_next = 12*60*1000  # set a delay of 12 minutes if no trains received
-        else:
-            next_departure = trains[0]["scheduledTime"]
-            msec_until_next = self.train_parser.msecs_until_datetime(next_departure)
-
-        # pair the delay with the bounds, sort and return the middle value
-        waits_with_bounds = sorted([12*60*1000, msec_until_next, 40*60*1000])
-        return waits_with_bounds[1]
 
     def toggle_display_mode(self):
         """Change main window dispaly mode between fullscreen and normal
@@ -472,18 +460,19 @@ class AlarmPlayThread(QThread):
 class RadioStreamer:
     """Helper class for playing a radio stream via mplayer."""
 
-    def __init__(self):
+    def __init__(self, args):
         self.process = None
+        self.args = args
 
     def is_playing(self):
         """Check if mplayer is currently running. Return True if it is."""
         return self.process is not None
 
-    def play(self, url):
+    def play(self):
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
         """
-        cmd = "/usr/bin/mplayer -quiet -nolirc -playlist {} -loop 3".format(url).split()
+        cmd = "/usr/bin/mplayer {}".format(self.args).split()
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
         self.process = subprocess.Popen(cmd)

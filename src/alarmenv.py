@@ -33,7 +33,6 @@ class AlarmEnv:
             raise RuntimeError("Failed reading config file: {}".format(self.config_file))
 
         self.validate_config()
-        self.radio_url = self.get_value("radio", "url")
         self.netup = self._testnet()
 
     def _testnet(self):
