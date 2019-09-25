@@ -213,9 +213,9 @@ class SettingsWindow(QWidget):
 
         # ** Left grid: misc settings **
         settings_title = QLabel("Alarm settings", self)
-        self.readaloud_checkbox = QCheckBox("Read Aloud", self)
+        self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech Alarm", self)
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
-        self.alarm_brightness_checkbox = QCheckBox("Set Brightness", self)
+        self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
 
         self.alarm_time_status_label = QLabel(self)
         self.alarm_time_error_label = QLabel(self)
