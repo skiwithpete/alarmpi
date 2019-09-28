@@ -211,7 +211,7 @@ class Clock:
 
             # Check if brightness should be set to full
             if self.env.config_has_match("alarm", "set_brightness", "1"):
-                rpi_utils.set_display_backlight_brightness(255)
+                rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
 
     def on_release_event_handler(self, event):
         """Event handler for touching the screen: update the main window's alarm
@@ -242,6 +242,10 @@ class Clock:
 
             # update main window alarm display
             self.main_window.alarm_time_lcd.display(time_str)
+
+            # Set screen brightness to low (if brightness controls enabled)
+            if self.env.config_has_match("alarm", "set_brightness", "1"):
+                rpi_utils.set_display_backlight_brightness(rpi_utils.LOW_BRIGHTNESS)
 
     def clear_alarm(self):
         """Handler for settings window's 'clear' button. Removes the cron entry

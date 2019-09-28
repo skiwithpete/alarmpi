@@ -41,16 +41,21 @@ def backlight_excepthook(type, value, tb):
         function to sys.excepthook.
 
     If the program crashes due to an unpredictable cause such as network error on API call while the screen is blank
-    it is difficult to turn it bakcon again (SSH and run stop.sh). By overwriting the default handler we can take
-    care of this automatically.
-    Note that screen blanking is disabled when the hsot system is not a Raspberry Pi.
+    it is difficult to turn it back on again (usually this means SSH'ing in and running stop.sh).
+    By overwriting the default handler we can take care of this automatically.
+
+    Note that screen blanking is disabled when the host system is not a Raspberry Pi.
     https://stackoverflow.com/questions/20829300/is-there-a-way-to-have-a-python-program-run-an-action-when-its-about-to-crash
     """
     import traceback
-    from subprocess import Popen, PIPE
-    tbtext = "".join(traceback.format_exception(type, value, tb)) # TODO: write/send somewhere?
-    base = os.path.dirname(__file__)
-    path_to_stop_script = os.path.abspath("stop.sh")
+    import subprocess
+    tbtext = "".join(traceback.format_exception(type, value, tb))
+    BASE = os.path.dirname(__file__)
+    log_file = os.path.join(BASE, "crash.log")
+    with open(log_file, "w") as f:
+        f.write(tbtext)
+
+    path_to_stop_script = os.path.join(BASE, "stop.sh")
     subprocess.run(["/bin/bash", path_to_stop_script])
 
 

@@ -8,6 +8,10 @@ import os
 import subprocess
 
 
+LOW_BRIGHTNESS = 9
+HIGH_BRIGHTNESS = 255
+
+
 def set_display_backlight_brightness(brightness):
     """Set backlight brightness to value between 0 and 255."""
     assert brightness >= 0 and brightness <= 255
@@ -28,16 +32,13 @@ def toggle_display_backlight_brightness():
     """Reads Raspberry pi touch display's current brightness values from system
     file and sets it to either high or low depending on the current value.
     """
-    LOW = 9
-    HIGH = 255
-
     brightness = get_display_backlight_brightness()
 
     # set to furthest away from current brightness
-    if abs(brightness-LOW) < abs(brightness-HIGH):
-        new_brightness = HIGH
+    if abs(brightness-LOW_BRIGHTNESS) < abs(brightness-HIGH_BRIGHTNESS):
+        new_brightness = HIGH_BRIGHTNESS
     else:
-        new_brightness = LOW
+        new_brightness = LOW_BRIGHTNESS
 
     set_display_backlight_brightness(new_brightness)
 
