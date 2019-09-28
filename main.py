@@ -50,6 +50,8 @@ def backlight_excepthook(type, value, tb):
     import traceback
     import subprocess
     tbtext = "".join(traceback.format_exception(type, value, tb))
+    logging.error(tbtext)
+
     BASE = os.path.dirname(__file__)
     log_file = os.path.join(BASE, "crash.log")
     with open(log_file, "w") as f:

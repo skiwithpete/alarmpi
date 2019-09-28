@@ -4,5 +4,9 @@ pkill mplayer
 pkill -f "play_alarm.py"  # only kill the python process running the alarm
 pkill -f "python .*(alarmpi/)?main.py"
 
-# ensure backlight is turned on
-echo 0 > /sys/class/backlight/rpi_backlight/bl_power
+# Ensure backlight is turned on (only on Raspberry Pi)
+FILE=/sys/class/backlight/rpi_backlight/bl_power
+if [[ -f "$FILE" ]]; then
+    echo 0 > /sys/class/backlight/rpi_backlight/bl_power
+fi
+
