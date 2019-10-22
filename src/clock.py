@@ -60,6 +60,7 @@ class Clock:
             self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
+            self.env.is_rpi = True  # fake Rpi environment so all buttons are enabled
             self.env.config.set("polling", "weather", "0")
             self.env.config.set("polling", "train", "0")
             self.main_window.keyPressEvent = self.debug_key_press_event
@@ -134,7 +135,7 @@ class Clock:
         # ** main window buttons **
         self.settings_button.clicked.connect(self.open_settings_window)
 
-        # Disable the radio button if disabled in config
+        # Disable the radio button if radio is disabled in config
         if self.env.get_value("radio", "enabled") == "0":
             self.radio_button.setEnabled(False)
 
@@ -251,7 +252,7 @@ class Clock:
         """Handler for settings window's 'clear' button. Removes the cron entry
         (if any) and clears both window's alarm displays.
         """
-        self.cron.delete_entry()
+        self.cron.disable_entry()
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
 
@@ -502,6 +503,11 @@ class CronWriter:
         """Return crontab as list of lines."""
         crontab = subprocess.check_output(["crontab", "-l"]).decode()
         lines = crontab.split("\n")
+
+        # Remove trailing empty lines for easier processing, conversely an empty line
+        # will be added in write_crontab
+        while lines[-1] == "":
+            lines.pop() 
         return lines
 
     def get_current_alarm(self):
@@ -536,7 +542,7 @@ class CronWriter:
         return [line for line in cron_lines if self.path_to_alarm_runner not in line]
 
     def disable_entry(self):
-        """Comment out existing alarm entry in cron."""
+        """Comment out existing alarm entry in crontab."""
         cron_lines = self.get_cron_lines()
         alarm_lines = [line for line in cron_lines if self.path_to_alarm_runner in line]
 
@@ -544,24 +550,19 @@ class CronWriter:
             line = alarm_lines[0]
             idx = cron_lines.index(line)
 
-            # overwrite the original line
+            # if the current alarm line is not commented out prepend it with
+            # a '#' symbol and overwrite the original line
             if "#" not in line:
                 disabled_line = "# " + line
                 cron_lines[idx] = disabled_line
 
-        # write as the new crontab
-        self.write_crontab(cron_lines)
+                # write as the new crontab
+                self.write_crontab(cron_lines)
 
     def delete_entry(self):
         """Remove cron line matching alarm entry."""
         crontab_lines = self.get_crontab_lines_without_alarm()
-
-        # Remove any extra empty lines from the end and keep just one
-        crontab = "\n".join(crontab_lines).rstrip("\n")
-        crontab += "\n"
-
-        # write as the new crontab
-        self.write_crontab(crontab)
+        self.write_crontab(crontab_lines)
 
     def create_entry(self, s):
         """Given a HH:MM string, format it a valid cron entry. Date part is set
@@ -585,15 +586,17 @@ class CronWriter:
 
         # Add new entry and overwrite the crontab file
         crontab_lines.append(entry)
-        crontab_lines.append("\n")  # need a newline at the end
         self.write_crontab(crontab_lines)
 
-    def write_crontab(self, crontab):
-        """Write crontab as the new crontab using subprocess. Argument may be a string
-        or list of lines.
+    def write_crontab(self, crontab_lines):
+        """Write crontab_lines as the new crontab using subprocess. Argument should be
+        a list of lines
         """
-        if isinstance(crontab, list):
-            crontab = "\n".join(crontab)
+        # Ensure crontab ends with a single empty line
+        if crontab_lines[-1] != "":
+            crontab_lines.append("")
+
+        crontab = "\n".join(crontab_lines)
 
         p = subprocess.Popen(["crontab", "-", crontab], stdin=subprocess.PIPE)
         p.communicate(input=crontab.encode("utf8"))
