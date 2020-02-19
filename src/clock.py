@@ -312,7 +312,7 @@ class Clock:
         openweathermap.org for current temperature and windspeed.
         """
         logging.info("Updating weather")
-        api_response = self.weather_parser.get_weather()
+        api_response = self.weather_parser.get_weather()  # TODO what if api_response is None?
         weather = get_open_weather.OpenWeatherMapClient.format_response(api_response)
 
         temperature = weather["temp"]
@@ -464,7 +464,6 @@ class AlarmPlayThread(QThread):
 
 class RadioStreamer:
     """Helper class for playing a radio stream via mplayer."""
-
     def __init__(self, args):
         self.process = None
         self.args = args
@@ -480,7 +479,10 @@ class RadioStreamer:
         cmd = "/usr/bin/mplayer {}".format(self.args).split()
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
-        self.process = subprocess.Popen(cmd)
+        # Output is captured to file.
+
+        with open("logs/radio.log", "w") as f:
+            self.process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
 
     def stop(self):
         """Terminate the running mplayer process."""

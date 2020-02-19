@@ -15,11 +15,19 @@ from src import clock
 from src import alarm_builder
 
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s %(levelname)s %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+# create file handler which logs even debug messages
+fh = logging.FileHandler("logs/crash.log")
+ch = logging.StreamHandler()
+
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
 
 
 def write_pidfile():
@@ -29,7 +37,6 @@ def write_pidfile():
 
 def clear_pidfile():
     os.remove(alarm_builder.PIDFILE)
-
 
 def backlight_excepthook(type, value, tb):
     """Custom exception handler for uncaught exceptions.
@@ -50,19 +57,19 @@ def backlight_excepthook(type, value, tb):
     import traceback
     import subprocess
     tbtext = "".join(traceback.format_exception(type, value, tb))
-    logging.error(tbtext)
+    logger.error(tbtext)
 
     BASE = os.path.dirname(__file__)
-    log_file = os.path.join(BASE, "crash.log")
-    with open(log_file, "w") as f:
-        f.write(tbtext)
-
     path_to_stop_script = os.path.join(BASE, "stop.sh")
-    subprocess.run(["/bin/bash", path_to_stop_script])
 
+    # Call the stop script and log output
+    process = subprocess.Popen(["/bin/bash", path_to_stop_script], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output, error = process.communicate()
+    logger.info(output)
 
 
 if __name__ == "__main__":
+    logger.info("Overriding sys.excepthook")
     sys.excepthook = backlight_excepthook
     
     parser = argparse.ArgumentParser(description="Run alarmpi GUI")
