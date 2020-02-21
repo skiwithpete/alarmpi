@@ -8,7 +8,7 @@ https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4h
 
 This module differs from the other content handlers in that it is not a subclass
 of AlarmpiContent and not called by alarm_builder. Instead this serves
-as a pure helper class to clock for fetching the next train departures.
+as a pure helper class to clock.py for fetching the next train departures.
 """
 
 import requests
@@ -18,20 +18,42 @@ from dateutil import tz
 
 class TrainParser:
 
-    def get_next_3_departures(self):
-        """Get departure times of the next 3 trains stopping at Espoo station."""
-        response = self.fetch_daily_train_data()
-        espoo = self.filter_espoo_trains(response)
+    # A list of dictionary keys as template for what the class
+    # should create.
+    RETURN_TEMPLATE_KEYS = [
+        "liveEstimateTime",
+        "scheduledTime",
+        "commuterLineID",
+        "cancelled",
+        "sortKey"
+    ]
+
+    def run(self):
+        """Run the parser: either fetch the next 3 departures or, in case of
+        requests errors, return a list of templated error dicts.
+        """
+        try:
+            api_response = self.fetch_daily_train_data()
+            return self.format_next_3_departures(api_response)
+        except requests.exceptions.RequestException:
+            d = {key: "ERR" for key in self.RETURN_TEMPLATE_KEYS}
+            return [d] * 3
+
+    def format_next_3_departures(self, api_response):
+        """Format a list of API response departures to a list of dicts
+        to pass back to clock.py.
+        """
+        espoo = self.filter_espoo_trains(api_response)
 
         departure_rows = []
         for train in espoo:
             row = self.get_espoo_departure_row(train)
 
-            # drop already departed trains
+            # Drop already departed trains
             if "actualTime" in row:
                 continue
 
-            # determine the timestamp key used for sorting:
+            # Determine the timestamp key to be used for sorting:
             # if an estimate exists, use it, otherwise use scheduled departure time
             sort_key = "scheduledTime"
             scheduled_time_dt = self.utc_timestamp_to_local_datetime(row["scheduledTime"])
@@ -48,14 +70,14 @@ class TrainParser:
 
             sort_dt = self.utc_timestamp_to_local_datetime(row[sort_key])
 
-            # format a dict for return item: departure time together with the train's line ID
-            d = {
+            d = dict.fromkeys(self.RETURN_TEMPLATE_KEYS)
+            d.update({
                 "liveEstimateTime": live_estimate_time_dt,
                 "scheduledTime": scheduled_time_dt,
                 "commuterLineID": train["commuterLineID"],
                 "cancelled": train["cancelled"],
                 "sortKey": sort_dt
-            }
+            })
             departure_rows.append(d)
 
         departure_rows.sort(key=lambda row: row["sortKey"])
@@ -63,14 +85,14 @@ class TrainParser:
 
     def fetch_daily_train_data(self):
         """API call to get the next 3 arriving at Espoo station."""
-        url = "https://rata.digitraffic.fi/api/v1/live-trains/station/EPO"
+        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/EPO"
         params = {
-            "arrived_trains": 1,  # minumum value to already arrived and departed trains is 1
+            "arrived_trains": 1,  # API minumum to already arrived and departed trains is 1
             "arriving_trains": 10,
             "departed_trains": 1
         }
 
-        r = requests.get(url, params=params)
+        r = requests.get(URL, params=params)
         return r.json()
 
     def filter_espoo_trains(self, response):

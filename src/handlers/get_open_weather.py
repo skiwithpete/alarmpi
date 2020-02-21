@@ -19,6 +19,17 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         self.city_id = section_data["city_id"]
         self.units = section_data["units"]
 
+        self.RETURN_TEMPLATE_KEYS = [
+            "temp",
+            "conditions",
+            "wind_speed_ms",
+            "wind_speed_kmh",
+            "wind_chill",
+            "sunrise",
+            "sunset",
+            "icon"
+        ]
+
         with open(api_key_file) as f:
             self.API_KEY = json.load(f)["key"]
 
@@ -35,91 +46,100 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             sunrise = weather["sunrise"]
             sunset = weather["sunset"]
 
-            weather_string = "Weather for today is {}. It is currently {} degrees ".format(
-                conditions, temperature)
+        except requests.exceptions.RequestException:
+            self.content = "Failed to connect to openweathermap.org. "
+            return
+        except (TypeError, KeyError):
+            self.content = "Failed to read openweathermap.org. "
+            return
 
-            # Wind uses the Beaufort scale
-            if wind_speed_kmh < 1:
-                gust = "and calm"
-            if wind_speed_kmh > 1:
-                gust = "with light air"
-            if wind_speed_kmh > 5:
-                gust = "with a light breeze"
-            if wind_speed_kmh > 12:
-                gust = "with a gentle breeze"
-            if wind_speed_kmh > 20:
-                gust = "with a moderate breeze"
-            if wind_speed_kmh > 29:
-                gust = "with a fresh breeze"
-            if wind_speed_kmh > 39:
-                gust = "with a strong breeze"
-            if wind_speed_kmh > 50:
-                gust = "with high winds at " + wind_speed_kmh + "kilometres per hour"
-            if wind_speed_kmh > 62:
-                gust = "with gale force winds at " + wind_speed_kmh + "kilometres per hour"
-            if wind_speed_kmh > 75:
-                gust = "with a strong gale at " + wind_speed_kmh + "kilometres per hour"
-            if wind_speed_kmh > 89:
-                gust = "with storm winds at " + wind_speed_kmh + "kilometres per hour"
-            if wind_speed_kmh > 103:
-                gust = "with violent storm winds at " + wind_speed_kmh + "kilometres per hour"
-            if wind_speed_kmh > 118:
-                gust = "with hurricane force winds at " + wind_speed_kmh + "kilometres per hour"
-            if not wind_speed_kmh:
-                gust = ""
-            weather_string += " {}. ".format(gust)
+        weather_string = "Weather for today is {}. It is currently {} degrees ".format(
+            conditions, temperature)
 
-            # Add wind chill effect for November - March period
-            month = datetime.datetime.today().month
-            if wind > 5 and (month < 4 or month > 10):
-                weather_string += " There is a wind chill of {} degrees. ".format(wind_chill)
+        # Wind uses the Beaufort scale
+        if wind_speed_kmh < 1:
+            gust = "and calm"
+        if wind_speed_kmh > 1:
+            gust = "with light air"
+        if wind_speed_kmh > 5:
+            gust = "with a light breeze"
+        if wind_speed_kmh > 12:
+            gust = "with a gentle breeze"
+        if wind_speed_kmh > 20:
+            gust = "with a moderate breeze"
+        if wind_speed_kmh > 29:
+            gust = "with a fresh breeze"
+        if wind_speed_kmh > 39:
+            gust = "with a strong breeze"
+        if wind_speed_kmh > 50:
+            gust = "with high winds at " + wind_speed_kmh + "kilometres per hour"
+        if wind_speed_kmh > 62:
+            gust = "with gale force winds at " + wind_speed_kmh + "kilometres per hour"
+        if wind_speed_kmh > 75:
+            gust = "with a strong gale at " + wind_speed_kmh + "kilometres per hour"
+        if wind_speed_kmh > 89:
+            gust = "with storm winds at " + wind_speed_kmh + "kilometres per hour"
+        if wind_speed_kmh > 103:
+            gust = "with violent storm winds at " + wind_speed_kmh + "kilometres per hour"
+        if wind_speed_kmh > 118:
+            gust = "with hurricane force winds at " + wind_speed_kmh + "kilometres per hour"
+        if not wind_speed_kmh:
+            gust = ""
+        weather_string += " {}. ".format(gust)
 
-            weather_string += " The sun rises at {} and sets at {}.".format(sunrise, sunset)
+        # Add wind chill effect for November - March period
+        month = datetime.datetime.today().month
+        if wind > 5 and (month < 4 or month > 10):
+            weather_string += " There is a wind chill of {} degrees. ".format(wind_chill)
 
-        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
-            weather_string = "Failed to connect to openweathermap.org. "
-        # API response doesn"t contain the path listed above
-        except TypeError:
-            weather_string = "Failed to read openweathermap.org. "
+        weather_string += " The sun rises at {} and sets at {}.".format(sunrise, sunset)
 
         self.content = weather_string
 
     def get_weather(self):
-        url = "http://api.openweathermap.org/data/2.5/weather"
+        """API request to fetch current weather data."""
+        URL = "http://api.openweathermap.org/data/2.5/weather"
         params = {
             "APPID": self.API_KEY,
             "id": self.city_id,
             "units": "metric"
         }
 
-        r = requests.get(url, params=params)
-        if r.status_code != 200:
-            raise ValueError("Could not connect to openweathermap.org. Maybe API key is invalid?")
-
+        r = requests.get(URL, params=params)
         return r.json()
+
+    def fetch_and_format_weather(self):
+        """Helper function for generating a formatted API response dict for clock.py
+        with error handling if API request failed.
+        """
+        try:
+            api_response = self.get_weather()
+            return OpenWeatherMapClient.format_response(api_response)
+        except requests.exceptions.RequestException:
+            return {key: "ERR" for key in self.RETURN_TEMPLATE_KEYS}
+
 
     @staticmethod
     def format_response(response):
         today_temp = response["main"]["temp"]
-        conditions = response["weather"][0]["description"]
         wind = response["wind"]["speed"]  # wind speed in m/s
 
         # Convert wind speed to km/h
         wind_speed_kmh = OpenWeatherMapClient.ms_to_kmh(wind)
-        wind_chill = OpenWeatherMapClient.compute_wind_chill(today_temp, wind_speed_kmh)
-        wind_chill = round(wind_chill)
+        wind_chill = round(OpenWeatherMapClient.compute_wind_chill(today_temp, wind_speed_kmh))
 
         sunrise = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunrise"])
         sunset = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunset"])
 
         formatted = {
             "temp": today_temp,
-            "conditions": conditions,
+            "conditions": response["weather"][0]["description"],
             "wind_speed_ms": wind,
             "wind_speed_kmh": wind_speed_kmh,
             "wind_chill": wind_chill,
             "sunrise": sunrise,
-            "sunset": sunset
+            "sunset": sunset,
+            "icon": response["weather"][0]["icon"]
         }
 
         return formatted
@@ -147,7 +167,9 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
     @staticmethod
     def timesamp_to_time_str(ts):
-        """Convert a UNIX timestamp in seconds to a time string (ie. 8:43 am)."""
+        """Convert a UNIX timestamp in seconds to a time string better suited for
+        TTS such as 8:43 am.
+        """
         dt = datetime.datetime.fromtimestamp(ts)
         return dt.strftime("%I:%M %p")
 
