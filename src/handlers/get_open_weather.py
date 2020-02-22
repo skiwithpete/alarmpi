@@ -15,7 +15,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
     def __init__(self, section_data):
         super().__init__(section_data)
-        api_key_file = section_data["key_file"]
+        self.api_key_file = section_data["key_file"]
         self.city_id = section_data["city_id"]
         self.units = section_data["units"]
 
@@ -29,9 +29,6 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             "sunset",
             "icon"
         ]
-
-        with open(api_key_file) as f:
-            self.API_KEY = json.load(f)["key"]
 
     def build(self):
         try:
@@ -99,8 +96,11 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
     def get_weather(self):
         """API request to fetch current weather data."""
         URL = "http://api.openweathermap.org/data/2.5/weather"
+        with open(self.api_key_file) as f:
+            API_KEY = json.load(f)["key"]
+
         params = {
-            "APPID": self.API_KEY,
+            "APPID": API_KEY,
             "id": self.city_id,
             "units": "metric"
         }
