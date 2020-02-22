@@ -8,7 +8,6 @@ from unittest.mock import patch
 from PyQt5.QtWidgets import QApplication
 
 from src import clock
-from src import GUIWidgets
 
 
 app = QApplication(sys.argv)

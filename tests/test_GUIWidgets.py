@@ -1,12 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sys
 import unittest
 from unittest import TestCase
-from unittest.mock import patch
 
-from src import clock
 from src import GUIWidgets
 
 
