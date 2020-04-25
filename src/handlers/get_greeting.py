@@ -18,8 +18,11 @@ class Greeting(apcontent.AlarmpiContent):
     def build(self):
         today = datetime.datetime.today()
 
-        current_weekday = calendar.day_name[today.weekday()]
-        current_month = calendar.month_name[today.month]
+        # Use the 'C' locale for generating weekday and month names
+        with calendar.different_locale("C"):
+            current_weekday = calendar.day_name[today.weekday()]
+            current_month = calendar.month_name[today.month]
+
         day_of_month = num2words.num2words(today.day, ordinal=True)
         current_time = time.strftime("%I:%M %p")  # eg. 6:36 pm
 
