@@ -20,7 +20,6 @@ def weekend(d, offset, target_time):
 
     return (friday or saturday or sunday)
 
-
 def nighttime(d, offset, target_time):
     """Check whether the time part of a datetime d is within offset hours
     from target_time.
@@ -48,13 +47,31 @@ def nighttime(d, offset, target_time):
 
     return True
 
-
 def time_str_to_minutes(s):
-    """Convert a string in %H:%M format to minutes since midnight."""
+    """Convert a time string in %H:%M format to minutes since midnight."""
     input_time = datetime.datetime.strptime(s, "%H:%M")
     return input_time.hour * 60 + input_time.minute
-
 
 def datetime_to_minutes(d):
     """Convert a datetime into minutes since midnight."""
     return d.hour * 60 + d.minute
+
+def time_str_to_msec_delta(s):
+    """Compute time in milliseconds until a time string in %H:%M. If 
+    input time has already passed, next day's time value will be used
+    as the reference point.
+    """
+    now = datetime.datetime.now()
+    dummy_input_time = datetime.datetime.strptime(s, "%H:%M")
+    input_time = now.replace(hour=dummy_input_time.hour, minute=dummy_input_time.minute)
+
+    # Ensure alarm date is in the future
+    if input_time <= now:
+        input_time = input_time + datetime.timedelta(days=1)
+
+    return int((input_time - now).total_seconds()) * 1000
+
+def msec_to_time_str(msec):
+    """Convert time in milliseconds to time string from current time."""
+    dt = datetime.datetime.now() + datetime.timedelta(milliseconds=msec)
+    return dt.strftime("%H:%M")
