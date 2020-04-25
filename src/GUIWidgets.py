@@ -120,15 +120,14 @@ class AlarmWindow(QWidget):
         """Set the main LCD display to the current time and start polling for
         with 1 second intervals.
         """
-        self.tick()
-        _timer = QTimer(self)
-        _timer.timeout.connect(self.tick)
-        _timer.start(1000)
+        def tick():
+            s = time.strftime("%H:%M:%S")
+            self.clock_lcd.display(s)
 
-    def tick(self):
-        """Write current time to the main QLCDNumber widget."""
-        s = time.strftime("%H:%M:%S")
-        self.clock_lcd.display(s)
+        tick() # Call tick once to set the initial time 
+        _timer = QTimer(self)
+        _timer.timeout.connect(tick)
+        _timer.start(1000)
 
     def center(self):
         qr = self.frameGeometry()
