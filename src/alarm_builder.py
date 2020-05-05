@@ -27,13 +27,47 @@ class Alarm:
     def __init__(self, env):
         self.env = env
 
+    def build(self):
+        """Read the configuration file and fetch content for the corresponding alarm."""
+        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
+
+        # If no network connection is detected, or the 'readaloud' option is not set,
+        # return None to signify alarm player should play beep instead.
+        if not self.env.netup or not tts_enabled:
+            return
+
+        content = self.generate_content()
+        return "\n".join(content)
+
+    def play(self, content):
+        """Play a previously generated alarm."""
+        pid = Alarm.gui_running()
+        if pid:
+            os.kill(pid, SCREEN_WAKEUP_SIGNAL)
+
+        if not content:
+            Alarm.play_beep()
+
+        else:
+            tts_client = self.get_tts_client()
+            tts_client.play(content)
+
+        # Play the radio stream if enabled:
+        #  * If the GUI is running, send a signal and use its RadioStreamer.
+        #  * If GUI is not running, call mplayer directly.
+        if self.env.config_has_match("radio", "enabled", "1"):
+            if pid:
+                os.kill(pid, RADIO_PLAY_SIGNAL)
+            else:
+                self.play_radio()
+
     def build_and_play(self):
         """Read the configuration file, create and play the corresponding alarm."""
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
         pid = Alarm.gui_running()
 
         # If no network connection is detected, or the 'readaloud' option is not set,
-        # paly a beeping sound effect isntead of making a series of API calls.
+        # play a beeping sound effect isntead of making a series of API calls.
         if not self.env.netup or not tts_enabled:
             if pid:
                 os.kill(pid, SCREEN_WAKEUP_SIGNAL)
@@ -143,7 +177,7 @@ class Alarm:
 
     @staticmethod
     def gui_running():
-        """Determine whether the GUI is running from the existance of the pidfile.
+        """Determine whether the GUI is running from the existance of a pidfile.
         Return the pid if running.
         """
         try:
