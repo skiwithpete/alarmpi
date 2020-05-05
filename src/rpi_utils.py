@@ -6,27 +6,46 @@ brightness.
 """
 import os
 import subprocess
+import tempfile
+import logging
 
 
 LOW_BRIGHTNESS = 9
 HIGH_BRIGHTNESS = 255
 
+BRIGHTNESS_FILE = "/sys/class/backlight/rpi_backlight/brightness"
+POWER_FILE = "/sys/class/backlight/rpi_backlight/bl_power"
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+
+def _open_config_file_or_tempfile(file_path, mode="r"):
+    """Returns a file object matching the two config files. Either a real
+    file object pointing to an existing file, or a tempfile if the file
+    does not exist.
+    """
+    if os.path.isfile(BRIGHTNESS_FILE):
+        return open(file_path, mode=mode)
+    
+    logging.warning("Using tempfile instead of non-existing file %s", file_path)
+    return tempfile.TemporaryFile(mode=mode)
 
 def set_display_backlight_brightness(brightness):
     """Set backlight brightness to value between 0 and 255."""
-    assert brightness >= 0 and brightness <= 255
+    assert brightness >= 0 and brightness <= 255, "Invalid brightness value {}".format(brightness)
 
-    PATH = "/sys/class/backlight/rpi_backlight/brightness"
-    with open(PATH, "w") as f:
+    with _open_config_file_or_tempfile(BRIGHTNESS_FILE, "w") as f:
         f.write(str(brightness))
-
 
 def get_display_backlight_brightness():
     """Return the current backlight brightness value."""
-    PATH = "/sys/class/backlight/rpi_backlight/brightness"
-    with open(PATH) as f:
-        return int(f.read().strip())
+    with _open_config_file_or_tempfile(BRIGHTNESS_FILE, "w") as f:
+        try:
+            value = int(f.read().strip())
+        except ValueError:
+            value = HIGH_BRIGHTNESS # default to max value if unable to read the file (ie. is a dummy tempfile)
 
+    return value
 
 def toggle_display_backlight_brightness():
     """Reads Raspberry pi touch display's current brightness values from system
@@ -42,34 +61,27 @@ def toggle_display_backlight_brightness():
 
     set_display_backlight_brightness(new_brightness)
 
-
 def toggle_screen_state(state="on"):
     """Toggle screen state between on / off."""
-    PATH = "/sys/class/backlight/rpi_backlight/bl_power"
-
     value = 1
     if state == "on":
         value = 0
 
-    with open(PATH, "w") as f:
+    with _open_config_file_or_tempfile(POWER_FILE, "w") as f:
         f.write(str(value))
-
 
 def screen_is_powered():
     """Determine whether the screen backlight is currently on."""
-    PATH = "/sys/class/backlight/rpi_backlight/bl_power"
-    with open(PATH) as f:
+    with _open_config_file_or_tempfile(POWER_FILE) as f:
         value = f.read().strip()
 
     return value == "0"
 
-
 def get_and_set_screen_state(new_state):
     """Read the current screen power state and set it to new_state. Returns the
-    previous value.
+    previous value ('on'/'off').
     """
-    PATH = "/sys/class/backlight/rpi_backlight/bl_power"
-    with open(PATH, "r+") as f:
+    with _open_config_file_or_tempfile(POWER_FILE, "r+") as f:
         previous_value = f.read().strip()
 
         f.seek(0)
@@ -83,6 +95,7 @@ def get_and_set_screen_state(new_state):
     return "off"
 
 
+### Old xset based screens state functions
 def toggle_screen_state_xset(state="on"):
     """Use xset utility to turn the screen on (the default)/off.
     Touching the screen will also activate the screen.
@@ -95,7 +108,6 @@ def toggle_screen_state_xset(state="on"):
     xauthority = os.path.join(home, ".Xauthority")
     env = {"XAUTHORITY": xauthority, "DISPLAY": ":0"}
     subprocess.run(cmd, env=env)
-
 
 def screen_is_powered_xset():
     """Use xset to get the current screen state: is it currently blank?
