@@ -71,7 +71,7 @@ def time_str_to_msec_delta(s):
 
     return int((input_time - now).total_seconds()) * 1000
 
-def msec_to_time_str(msec):
+def msec_delta_to_time_str(msec):
     """Convert time in milliseconds to time string from current time."""
     dt = datetime.datetime.now() + datetime.timedelta(milliseconds=msec)
     return dt.strftime("%H:%M")
