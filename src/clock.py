@@ -25,6 +25,17 @@ from src import rpi_utils
 from src.handlers import get_open_weather, get_next_trains
 
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
+
+
 class Clock:
     """Wrapper class for the clock itself. Defines interactions between
     UI elements and backend logic.
@@ -44,10 +55,14 @@ class Clock:
         self.env = alarmenv.AlarmEnv(config_file)
         self.env.setup()
 
-        # Setup a QTimer for the alarm
+        # Setup a QTimer...
         self.alarm_timer = QTimer(self.main_window)
         self.alarm_timer.setSingleShot(True)
         self.alarm_timer.timeout.connect(self.play_alarm)
+
+        #...and QThread for playing the alarm
+        self.alarm_play_thread = AlarmPlayThread(self.env)
+        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
 
         radio_args = self.env.get_value("radio", "args")
         self.radio = RadioStreamer(radio_args)
@@ -153,11 +168,9 @@ class Clock:
 
         # ** settings window buttons **
         brightness_button.clicked.connect(rpi_utils.toggle_display_backlight_brightness)
-        self.alarm_play_thread = AlarmPlayThread(self.env)
-        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
         self.alarm_play_button.clicked.connect(self.play_alarm)
-
         window_button.clicked.connect(self.toggle_display_mode)
+
         alarm_set_button.clicked.connect(self.set_alarm)
         alarm_clear_button.clicked.connect(self.clear_alarm)
 
@@ -228,12 +241,24 @@ class Clock:
     def set_alarm(self):
         time_str = self.settings_window.validate_alarm_input()
         if time_str:
-
             # Update displayed alarm time settings and main window
             self.main_window.alarm_time_lcd.display(time_str)
             self.settings_window.set_alarm_input_success_message_with_time(time_str)
 
+            # Set 5 minute earlier timer for building the alarm
             alarm_wait_ms = utils.time_str_to_msec_delta(time_str)
+            ALARM_BUILD_DELTA = 60 * 5 * 1000
+
+            # set build timer to 0 if < 5 minutes to alarm time
+            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA))
+
+            alarm_build_timer = QTimer(self.main_window)
+            alarm_build_timer.timeout.connect(lambda: self.alarm_play_thread.build)
+            logger.info("Setting alarm build for %s", utils.msec_delta_to_time_str(alarm_build_wait_ms))
+            alarm_build_timer.start(alarm_build_wait_ms)
+
+            # Set alarm play timer
+            logger.info("Setting alarm for %s", utils.msec_delta_to_time_str(alarm_wait_ms))
             self.alarm_timer.start(alarm_wait_ms)
 
             # Set screen brightness to low
@@ -245,6 +270,7 @@ class Clock:
         alarm timers. Also clears both window's alarm displays.
         """
         self.alarm_timer.stop()
+        logger.info("Alarm cleared")
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
 
@@ -253,7 +279,7 @@ class Clock:
         active = self.alarm_timer.isActive()
         if active:
             time_remaining = self.alarm_timer.remainingTime()
-            alarm_time = utils.msec_to_time_str(time_remaining)
+            alarm_time = utils.msec_delta_to_time_str(time_remaining)
 
             return alarm_time
 
@@ -288,6 +314,14 @@ class Clock:
         else:
             self.radio.stop()
 
+
+    def build_alarm(self):
+        """Slot function for building an alarm. Sets alarm_content attribute
+        to alarm content to be played later.
+        """
+        self.alarm_content = self.alarm_player.build()
+
+
     def play_alarm(self):
         """Callback to the 'Play now' button: starts playing the alarm in a separate
         thread.
@@ -312,7 +346,7 @@ class Clock:
         """Update the weather labels on the main window. Makes an API request to
         openweathermap.org for current temperature and windspeed.
         """
-        logging.info("Updating weather")
+        logger.info("Updating weather")
         weather = self.weather_parser.fetch_and_format_weather()
 
         temperature = weather["temp"]
@@ -346,7 +380,7 @@ class Clock:
 
     def update_trains(self):
         """Fetch new train data from DigiTraffic API and display on the right sidebar."""
-        logging.info("Updating trains")
+        logger.info("Updating trains")
         trains = self.train_parser.run()
 
         for train, label in zip(trains, self.main_window.train_labels):
@@ -454,14 +488,22 @@ class Clock:
 class AlarmPlayThread(QThread):
     signal = pyqtSignal(int)
 
-    def __init__(self, env):
+    def __init__(self, env, alarm_build_delta = 5000):
         super().__init__()
         self.env = env
+        self.alarm = alarm_builder.Alarm(self.env)
+        self.content = ""
+
+    def build(self):
+        logger.info("Building alarm")
+        self.content = self.alarm.build()
 
     # run method gets called when we start the thread
     def run(self):
-        alarm = alarm_builder.Alarm(self.env)
-        alarm.sound_alarm_without_gui_or_radio()
+        """Build an alarm and wait alarm_build_delta ms before playing it."""
+        self.alarm.play(self.content)
+
+        #alarm.sound_alarm_without_gui_or_radio()
 
         # inform the main thread that playing has finished
         self.signal.emit(1)
