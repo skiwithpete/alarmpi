@@ -8,6 +8,7 @@ import argparse
 import sys
 import os
 import logging
+import logging.config
 
 from PyQt5.QtWidgets import QApplication
 
@@ -15,19 +16,11 @@ from src import clock
 from src import alarm_builder
 
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-# create file handler which logs even debug messages
-fh = logging.FileHandler("logs/crash.log")
-ch = logging.StreamHandler()
-
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
+# Setup loggers. Outside of these mplayer output is also logged
+# via Popen argument in clock.py
+logging.config.fileConfig("logging.conf")
+error_logger = logging.getLogger("errorLogger")
+event_logger = logging.getLogger("eventLogger")
 
 
 def write_pidfile():
@@ -57,7 +50,7 @@ def backlight_excepthook(type, value, tb):
     import traceback
     import subprocess
     tbtext = "".join(traceback.format_exception(type, value, tb))
-    logger.error(tbtext)
+    error_logger.error(tbtext)
 
     BASE = os.path.dirname(__file__)
     path_to_stop_script = os.path.join(BASE, "stop.sh")
@@ -65,11 +58,11 @@ def backlight_excepthook(type, value, tb):
     # Call the stop script and log output
     process = subprocess.Popen(["/bin/bash", path_to_stop_script], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, error = process.communicate()
-    logger.info(output)
+    error_logger.info(output)
 
 
 if __name__ == "__main__":
-    logger.info("Overriding sys.excepthook")
+    event_logger.info("Overriding sys.excepthook")
     sys.excepthook = backlight_excepthook
     
     parser = argparse.ArgumentParser(description="Run alarmpi GUI")

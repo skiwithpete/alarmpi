@@ -16,7 +16,7 @@ HIGH_BRIGHTNESS = 255
 BRIGHTNESS_FILE = "/sys/class/backlight/rpi_backlight/brightness"
 POWER_FILE = "/sys/class/backlight/rpi_backlight/bl_power"
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("eventLogger")
 
 
 def _open_config_file_or_tempfile(file_path, mode="r"):
@@ -27,7 +27,7 @@ def _open_config_file_or_tempfile(file_path, mode="r"):
     if os.path.isfile(BRIGHTNESS_FILE):
         return open(file_path, mode=mode)
     
-    logging.warning("Using tempfile instead of non-existing file %s", file_path)
+    logger.warning("Using tempfile instead of non-existing file %s", file_path)
     return tempfile.TemporaryFile(mode=mode)
 
 def set_display_backlight_brightness(brightness):
