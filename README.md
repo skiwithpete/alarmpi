@@ -128,7 +128,7 @@ In either case, scheduling an alarm is done by adding a new cron entry to `play_
 
 When used from the GUI, the alarm works in a toggle basis. Once the alarm triggers, it will be deactivated and needs to be reset from the settings window in order to trigger again the next time. However, alarm time is stored and need not be re-entered unless manually cleared from the settings window. 
 
-The optional argument in both forms is a path to a configuration file for customizing the alarm, see [configs/README.md](./configs/README.md) for instructions. By default `alarm.config` will be used.
+The optional argument in both forms is a path to a configuration file for customizing the alarm, see [configs/README.md](./configs/README.md) for instructions. By default `alarm.conf` will be used.
 
 
 
@@ -138,7 +138,7 @@ The full interface to `main.py` is:
 Run alarmpi GUI
 
 positional arguments:
-  config        path to an alarm configuration file. Defaults to alarm.config
+  config        path to an alarm configuration file. Defaults to alarm.conf
 
 optional arguments:
   -h, --help    show this help message and exit
