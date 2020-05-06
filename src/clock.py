@@ -48,14 +48,17 @@ class Clock:
         self.env = alarmenv.AlarmEnv(config_file)
         self.env.setup()
 
-        # Setup a QTimer...
+        # Setup a QThread and QTimers for building and playing the alarm
+        self.alarm_play_thread = AlarmPlayThread(self.env)
+        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
+
         self.alarm_timer = QTimer(self.main_window)
         self.alarm_timer.setSingleShot(True)
         self.alarm_timer.timeout.connect(self.play_alarm)
 
-        #...and QThread for playing the alarm
-        self.alarm_play_thread = AlarmPlayThread(self.env)
-        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
+        self.alarm_build_timer = QTimer(self.main_window)
+        self.alarm_build_timer.setSingleShot(True)
+        self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
 
         radio_args = self.env.get_value("radio", "args")
         self.radio = RadioStreamer(radio_args)
@@ -243,12 +246,10 @@ class Clock:
             ALARM_BUILD_DELTA = 60 * 5 * 1000
 
             # set build timer to 0 if < 5 minutes to alarm time
-            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA))
+            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA)) # TODO: truncate to start of minute
 
-            alarm_build_timer = QTimer(self.main_window)
-            alarm_build_timer.timeout.connect(lambda: self.alarm_play_thread.build)
             logger.info("Setting alarm build for %s", utils.msec_delta_to_time_str(alarm_build_wait_ms))
-            alarm_build_timer.start(alarm_build_wait_ms)
+            self.alarm_build_timer.start(alarm_build_wait_ms)
 
             # Set alarm play timer
             logger.info("Setting alarm for %s", utils.msec_delta_to_time_str(alarm_wait_ms))
@@ -263,6 +264,7 @@ class Clock:
         alarm timers. Also clears both window's alarm displays.
         """
         self.alarm_timer.stop()
+        self.alarm_build_timer.stop()
         logger.info("Alarm cleared")
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
