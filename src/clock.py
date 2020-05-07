@@ -116,7 +116,7 @@ class Clock:
         signal.signal(signal.SIGUSR1, self.radio_signal_handler)
         signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
-        # Set main window's alarm time display to cron's time
+        # Set main window's alarm time display to currently active alarm time
         self.current_alarm_time = self.get_current_alarm()
         if self.current_alarm_time:
             self.main_window.alarm_time_lcd.display(self.current_alarm_time)
@@ -178,8 +178,7 @@ class Clock:
 
     def open_settings_window(self):
         """Callback for opening the settings window. Checks whether an alarm time should
-        be displayed (ie. is there an alarm line in cron)
-        Also clears timer for blanking the screen (if active).
+        be displayed. Also clears timer for blanking the screen (if active).
         """
         self.current_alarm_time = self.get_current_alarm()
 
@@ -241,19 +240,21 @@ class Clock:
             self.main_window.alarm_time_lcd.display(time_str)
             self.settings_window.set_alarm_input_success_message_with_time(time_str)
 
-            # Set 5 minute earlier timer for building the alarm
-            alarm_wait_ms = utils.time_str_to_msec_delta(time_str)
-            ALARM_BUILD_DELTA = 60 * 5 * 1000
-
-            # set build timer to 0 if < 5 minutes to alarm time
-            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA)) # TODO: truncate to start of minute
-
-            logger.info("Setting alarm build for %s", utils.msec_delta_to_time_str(alarm_build_wait_ms))
-            self.alarm_build_timer.start(alarm_build_wait_ms)
-
             # Set alarm play timer
-            logger.info("Setting alarm for %s", utils.msec_delta_to_time_str(alarm_wait_ms))
+            self.alarm_dt = utils.time_str_to_dt(time_str)
+            now = datetime.datetime.now()
+            alarm_wait_ms = (self.alarm_dt - now).seconds * 1000
+
+            logger.info("Setting alarm for %s", time_str)
             self.alarm_timer.start(alarm_wait_ms)
+
+            # Setup alarm build time for 5 minutes earlier (given large enough timer)
+            ALARM_BUILD_DELTA = 5 * 60 * 1000
+            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA)) # 0 if not enough time
+
+            alarm_build_dt = self.alarm_dt - datetime.timedelta(minutes=5)
+            logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
+            self.alarm_build_timer.start(alarm_build_wait_ms)
 
             # Set screen brightness to low
             if self.env.config_has_match("alarm", "set_brightness", "1"):
@@ -273,10 +274,7 @@ class Clock:
         """Check for existing running alarm timers and return alarm time in HH:MM format."""
         active = self.alarm_timer.isActive()
         if active:
-            time_remaining = self.alarm_timer.remainingTime()
-            alarm_time = utils.msec_delta_to_time_str(time_remaining)
-
-            return alarm_time
+            return self.alarm_dt.strftime("%H:%M")
 
     def set_screen_blank_timeout(self):
         """Blank the screen after a short timeout if it is currently night time

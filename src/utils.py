@@ -56,22 +56,15 @@ def datetime_to_minutes(d):
     """Convert a datetime into minutes since midnight."""
     return d.hour * 60 + d.minute
 
-def time_str_to_msec_delta(s):
-    """Compute time in milliseconds until a time string in %H:%M. If 
-    input time has already passed, next day's time value will be used
-    as the reference point.
+def time_str_to_dt(s):
+    """Convert a time string in HH:MM format to a datetime object. The date is set to
+    current date if the time has not yet occured or the next day if it has.
     """
-    now = datetime.datetime.now()
-    dummy_input_time = datetime.datetime.strptime(s, "%H:%M")
-    input_time = now.replace(hour=dummy_input_time.hour, minute=dummy_input_time.minute)
+    today = datetime.date.today()
+    dummy_dt = datetime.datetime.strptime(s, "%H:%M")
 
-    # Ensure alarm date is in the future
-    if input_time <= now:
-        input_time = input_time + datetime.timedelta(days=1)
-
-    return int((input_time - now).total_seconds()) * 1000
-
-def msec_delta_to_time_str(msec):
-    """Convert time in milliseconds to time string from current time."""
-    dt = datetime.datetime.now() + datetime.timedelta(milliseconds=msec)
-    return dt.strftime("%H:%M")
+    dt = dummy_dt.replace(year=today.year, month=today.month, day=today.day)
+    if dt <= datetime.datetime.now():
+        dt = dt + datetime.timedelta(days=1)
+    
+    return dt
