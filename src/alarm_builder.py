@@ -15,11 +15,6 @@ from src.handlers import get_festival_tts
 
 # get path to the root folder
 BASE = os.path.join(os.path.dirname(__file__), "..")
-PIDFILE = os.path.join(BASE, "pidfile")
-
-# alias USRSIGnals for clarity
-RADIO_PLAY_SIGNAL = signal.SIGUSR1
-SCREEN_WAKEUP_SIGNAL = signal.SIGUSR2
 
 
 class Alarm:
@@ -41,10 +36,6 @@ class Alarm:
 
     def play(self, content):
         """Play a previously generated alarm."""
-        pid = Alarm.gui_running()
-        if pid:
-            os.kill(pid, SCREEN_WAKEUP_SIGNAL)
-
         if not content:
             Alarm.play_beep()
 
@@ -52,33 +43,19 @@ class Alarm:
             tts_client = self.get_tts_client()
             tts_client.play(content)
 
-        # Play the radio stream if enabled:
-        #  * If the GUI is running, send a signal and use its RadioStreamer.
-        #  * If GUI is not running, call mplayer directly.
-        if self.env.config_has_match("radio", "enabled", "1"):
-            if pid:
-                os.kill(pid, RADIO_PLAY_SIGNAL)
-            else:
-                self.play_radio()
-
     def build_and_play(self):
         """Read the configuration file, create and play the corresponding alarm."""
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
-        pid = Alarm.gui_running()
 
         # If no network connection is detected, or the 'readaloud' option is not set,
         # play a beeping sound effect isntead of making a series of API calls.
         if not self.env.netup or not tts_enabled:
-            if pid:
-                os.kill(pid, SCREEN_WAKEUP_SIGNAL)
             Alarm.play_beep()
             return
 
         content = self.generate_content()
         tts_client = self.get_tts_client()
         text = "\n".join(content)
-        if pid:
-            os.kill(pid, SCREEN_WAKEUP_SIGNAL)
         tts_client.play(text)
 
         # Play the radio stream if enabled:
@@ -86,10 +63,7 @@ class Alarm:
         # Signalling also sets the GUI's radio button as pressed.
         # If GUI is not running, call mplayer directly.
         if self.env.config_has_match("radio", "enabled", "1"):
-            if pid:
-                os.kill(pid, RADIO_PLAY_SIGNAL)
-            else:
-                self.play_radio()
+            self.play_radio()
 
     def sound_alarm_without_gui_or_radio(self):
         """A stripped down version of main above. Play TTS sections of the alarm
@@ -174,17 +148,6 @@ class Alarm:
         # Run the command via Popen directly to open the stream as a child process without
         # waiting for it to finish.
         subprocess.Popen(cmd)
-
-    @staticmethod
-    def gui_running():
-        """Determine whether the GUI is running from the existance of a pidfile.
-        Return the pid if running.
-        """
-        try:
-            with open(PIDFILE) as f:
-                return int(f.read().strip())
-        except (FileNotFoundError, ValueError):
-            return False
 
     @staticmethod
     def play_beep():

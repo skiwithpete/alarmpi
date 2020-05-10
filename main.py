@@ -23,13 +23,6 @@ error_logger = logging.getLogger("errorLogger")
 event_logger = logging.getLogger("eventLogger")
 
 
-def write_pidfile():
-    pid = os.getpid()
-    with open(alarm_builder.PIDFILE, "w") as f:
-        f.write(str(pid))
-
-def clear_pidfile():
-    os.remove(alarm_builder.PIDFILE)
 
 def backlight_excepthook(type, value, tb):
     """Custom exception handler for uncaught exceptions.
@@ -76,11 +69,9 @@ if __name__ == "__main__":
     kwargs = {"fullscreen": args.fullscreen, "debug": args.debug}
 
     app = QApplication(sys.argv)
-    write_pidfile()
 
     ex = clock.Clock(args.config, **kwargs)
     ex.setup()
     res = app.exec_()
-    clear_pidfile()
 
     sys.exit(res)

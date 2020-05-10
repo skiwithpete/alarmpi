@@ -9,7 +9,6 @@ import datetime
 import os
 import sys
 import subprocess
-import signal
 import logging
 import json
 
@@ -111,10 +110,6 @@ class Clock:
 
         alarm_brightness_enabled = self.env.config_has_match("alarm", "set_brightness", "1")
         self.settings_window.alarm_brightness_checkbox.setChecked(alarm_brightness_enabled)
-
-        # Setup signal handlers for alarm_builder.py signals
-        signal.signal(signal.SIGUSR1, self.radio_signal_handler)
-        signal.signal(signal.SIGUSR2, self.wakeup_signal_handler)
 
         # Set main window's alarm time display to currently active alarm time
         self.current_alarm_time = self.get_current_alarm()
@@ -316,16 +311,26 @@ class Clock:
 
 
     def play_alarm(self):
-        """Callback to the 'Play now' button: starts playing the alarm in a separate
-        thread.
+        """Callback to playing the alarm: runs the alarm play thread. Called when
+        on alarm timeout signal and on 'Play now' button.
         """
+        # Update the screen.
+        self.main_window.alarm_time_lcd.display("")
+        self.enable_screen_and_show_control_buttons()
+        rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
+
         self.alarm_play_thread.start()
-        # Disable the button. As is, clicking the button while the alarm is already playing
-        # won't do anything anyway, since the thread playing the alarm is busy.
         self.alarm_play_button.setEnabled(False)
 
+        # Start mplayer radio process if part of the alarm.
+        # TODO: ignore radio on manual alarms?
+        if self.env.config_has_match("radio", "enabled", "1"):
+            self.play_radio()
+         
     def finish_playing_alarm(self):
-        """Finishing action to playing the alarm: re-enable the button."""
+        """Slot function for finishing playing the alarm: re-enable the play button.
+        Called when the alarm thread emits its finished signal.
+        """
         self.alarm_play_button.setEnabled(True)
 
     def setup_weather_polling(self):
@@ -481,22 +486,20 @@ class Clock:
 class AlarmPlayThread(QThread):
     signal = pyqtSignal(int)
 
-    def __init__(self, env, alarm_build_delta = 5000):
+    def __init__(self, env):
         super().__init__()
         self.env = env
-        self.alarm = alarm_builder.Alarm(self.env)
+        self.alarm_builder = alarm_builder.Alarm(self.env)
         self.content = ""
 
     def build(self):
+        """Build and alarm."""
         logger.info("Building alarm")
-        self.content = self.alarm.build()
+        self.content = self.alarm_builder.build()
 
-    # run method gets called when we start the thread
     def run(self):
-        """Build an alarm and wait alarm_build_delta ms before playing it."""
-        self.alarm.play(self.content)
-
-        #alarm.sound_alarm_without_gui_or_radio()
+        """Play pre-built alarm."""
+        self.alarm_builder.play(self.content)
 
         # inform the main thread that playing has finished
         self.signal.emit(1)
