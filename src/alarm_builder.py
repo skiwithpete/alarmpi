@@ -10,7 +10,7 @@ import signal
 import pydub
 import pydub.playback
 
-from src.handlers import get_festival_tts
+from src.handlers import get_festival_tts, get_greeting
 
 
 # get path to the root folder
@@ -23,68 +23,19 @@ class Alarm:
         self.env = env
 
     def build(self):
-        """Read the configuration file and fetch content for the corresponding alarm."""
-        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
-
-        # If no network connection is detected, or the 'readaloud' option is not set,
-        # return None to signify alarm player should play beep instead.
-        if not self.env.netup or not tts_enabled:
-            return
-
-        content = self.generate_content()
-        return "\n".join(content)
-
-    def play(self, content):
-        """Play a previously generated alarm."""
-        if not content:
-            Alarm.play_beep()
-
-        else:
-            tts_client = self.get_tts_client()
-            tts_client.play(content)
-
-    def build_and_play(self):
-        """Read the configuration file, create and play the corresponding alarm."""
-        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
-
-        # If no network connection is detected, or the 'readaloud' option is not set,
-        # play a beeping sound effect isntead of making a series of API calls.
-        if not self.env.netup or not tts_enabled:
-            Alarm.play_beep()
-            return
-
-        content = self.generate_content()
-        tts_client = self.get_tts_client()
-        text = "\n".join(content)
-        tts_client.play(text)
-
-        # Play the radio stream if enabled:
-        # If the GUI is running, send a signal to it to use its RadioStreamer.
-        # Signalling also sets the GUI's radio button as pressed.
-        # If GUI is not running, call mplayer directly.
-        if self.env.config_has_match("radio", "enabled", "1"):
-            self.play_radio()
-
-    def sound_alarm_without_gui_or_radio(self):
-        """A stripped down version of main above. Play TTS sections of the alarm
-        without sending signals to the GUI or playing the radio.
+        """Loop through the configuration file for enabled content sections
+        and generate content.
+        Return:
+            list of generated content
         """
-        if not self.env.netup:
-            Alarm.play_beep()
-            return
-
-        content = self.generate_content()
-        tts_client = self.get_tts_client()
-        text = "\n".join(content)
-        tts_client.play(text)
-
-    def generate_content(self):
-        """Loop through the configuration file and process each enabled item."""
-        content_sections = self.env.get_enabled_sections("content")
-
-        # for each section get the handler module and create the approriate
-        # instance
         contents = []
+
+        # Initialize content with greeting
+        contents.append(self.generate_greeting())
+       
+        # For each content section get the handler module and create the approriate
+        # instance
+        content_sections = self.env.get_enabled_sections("content")
         for section_name in content_sections:
             class_ = self.get_content_parser_class(section_name)
 
@@ -99,13 +50,56 @@ class Alarm:
                 print("Error: missing key {} in configuration file.".format(e))
             contents.append(parser.get())
 
-        # add ending phrase from the config file
+        # Add ending phrase from the config file
         contents.append(self.env.get_value("main", "end"))
 
         for section in contents:
             print(section)
 
         return contents
+
+    def play(self, content):
+        """Play an alarm.
+        Args:
+            content (list): list of various contents to play via TTS. Each list item
+            item should be the text to 
+        """
+        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
+
+        # If no network connection is detected, or the 'readaloud' option is not set,
+        # return None to signify alarm player should play beep instead.
+        if not self.env.netup or not tts_enabled:
+            Alarm.play_beep()
+
+        else:
+            tts_client = self.get_tts_client()
+            content_text = "\n".join(content)
+            tts_client.play(content_text)
+
+    def build_and_play(self):
+        """Build and play an alarm.
+        This is provided as a CLI method of playing the alarm. This has some differences
+        compared to the GUI based alarm behavior in alarm.py:
+          * since building and playing is chained together there may be an upto 3 delay
+            on playing the alarm.
+          * radio playback is handled directly rather than using alarm.py's custom thread.
+        """
+        content = self.build()
+        self.play(content)
+
+        # Play the radio stream if enabled
+        if self.env.config_has_match("radio", "enabled", "1"):
+            self.play_radio()
+
+    def generate_greeting(self):
+        """Generate a greeting using get_greeting.py handler.
+        Return:
+            the greeting as string.
+        """
+        section = self.env.get_section("greeting")
+        greeter = get_greeting.Greeting(section)
+        greeter.build()
+        return greeter.get()
 
     def get_tts_client(self):
         """Determine which TTS engine to use based on the enabled tts sections

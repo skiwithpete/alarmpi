@@ -192,25 +192,6 @@ class Clock:
         self.screen_blank_timer.stop()
         self.settings_window.show()
 
-    def radio_signal_handler(self, sig, frame):
-        """Signal handler for incoming radio stream requests from alarm_builder.
-        Opens the stream and sets radio button state as pressed.
-        Also clears the main window's alarm display LCD widget if there is no alarm
-        the next day.
-        """
-        self.main_window.control_buttons["Radio"].click()  # emit a click signal
-
-    def wakeup_signal_handler(self, sig, frame):
-        """Signal handler for waking up the screen: ensure the screen is enabled."""
-        self.main_window.alarm_time_lcd.display("")
-
-        if self.env.is_rpi:
-            self.enable_screen_and_show_control_buttons()
-
-            # Check if brightness should be set to full
-            if self.env.config_has_match("alarm", "set_brightness", "1"):
-                rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
-
     def on_release_event_handler(self, event):
         """Event handler for touching the screen: update the main window's alarm
         time label and, if on a Raspberry Pi and nighttime, set a timeout for blanking
@@ -296,8 +277,7 @@ class Clock:
         # The radio button is a checkable: it will stay down until pressed again.
         # Therefore the radio should start playing when the button is pressed and
         # stop when not pressed. (The state change happends before this callback runs.)
-        button_checked = button.isChecked()
-        if button_checked:
+        if button.isChecked():
             self.radio.play()
         else:
             self.radio.stop()
@@ -318,20 +298,20 @@ class Clock:
         self.main_window.alarm_time_lcd.display("")
         self.enable_screen_and_show_control_buttons()
         rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
-
         self.alarm_play_thread.start()
-        self.alarm_play_button.setEnabled(False)
 
-        # Start mplayer radio process if part of the alarm.
-        # TODO: ignore radio on manual alarms?
-        if self.env.config_has_match("radio", "enabled", "1"):
-            self.play_radio()
-         
     def finish_playing_alarm(self):
-        """Slot function for finishing playing the alarm: re-enable the play button.
+        """Slot function for finishing playing the alarm: re-enables the play button
+        and, if activated, starts a separated mplayer process for the radio stream.
         Called when the alarm thread emits its finished signal.
         """
         self.alarm_play_button.setEnabled(True)
+
+        # TODO: ignore radio on manual alarms?
+        if self.env.config_has_match("radio", "enabled", "1"):
+             # Manually emit the radio buttons click signal. This will both
+             # set the state of the button and start the playback.
+            self.main_window.control_buttons["Radio"].click()
 
     def setup_weather_polling(self):
         """Setup polling for updating the weather every 30 minutes."""
@@ -490,15 +470,22 @@ class AlarmPlayThread(QThread):
         super().__init__()
         self.env = env
         self.alarm_builder = alarm_builder.Alarm(self.env)
-        self.content = ""
+        self.content = []
 
     def build(self):
         """Build and alarm."""
         logger.info("Building alarm")
         self.content = self.alarm_builder.build()
-
+        
     def run(self):
         """Play pre-built alarm."""
+        # Re-generate greeting to get current time.
+        greeting = self.alarm_builder.generate_greeting()
+        try:
+            self.content[0] = greeting
+        except IndexError:
+            self.content = [greeting]
+
         self.alarm_builder.play(self.content)
 
         # inform the main thread that playing has finished
