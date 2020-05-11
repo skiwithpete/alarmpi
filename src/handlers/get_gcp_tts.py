@@ -21,6 +21,10 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
     https://cloud.google.com/text-to-speech/pricing
     """
 
+    def __init__(self, keyfile):
+        super().__init__(keyfile)
+        self.client = self.get_client()
+
     def get_client(self):
         """Create an API client using a path to a service account key_file."""
         try:
@@ -33,7 +37,6 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
 
     def play(self, text):
         """Create a TTS client and speak input text using pydub."""
-        client = self.get_client()
         synthesis_input = texttospeech.types.SynthesisInput(text=text)
 
         # Build the voice request and specify a WaveNet voice for more human like speech
@@ -48,7 +51,7 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
 
         # Perform the text-to-speech request on the text input with the selected
         # voice parameters and audio file type
-        response = client.synthesize_speech(synthesis_input, voice, audio_config)
+        response = self.client.synthesize_speech(synthesis_input, voice, audio_config)
 
         # create a BytesIO buffer and play via pydub
         f = io.BytesIO(response.audio_content)
@@ -57,7 +60,6 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
 
     def synthesize_and_store(self, text):
         """Synthesize speech and store as mp3 file for demonstration purposes."""
-        client = self.get_client()
         synthesis_input = texttospeech.types.SynthesisInput(text=text)
 
         # Build the voice request and specify a WaveNet voice for more human like speech
@@ -72,6 +74,6 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
 
         # Perform the text-to-speech request on the text input with the selected
         # voice parameters and audio file type
-        response = client.synthesize_speech(synthesis_input, voice, audio_config)
+        response = self.client.synthesize_speech(synthesis_input, voice, audio_config)
         with open('output.mp3', 'wb') as f:
             f.write(response.audio_content)
