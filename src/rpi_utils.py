@@ -8,6 +8,7 @@ import os
 import subprocess
 import tempfile
 import logging
+import inspect
 
 
 LOW_BRIGHTNESS = 9
@@ -27,7 +28,7 @@ def _open_config_file_or_tempfile(file_path, mode="r"):
     if os.path.isfile(BRIGHTNESS_FILE):
         return open(file_path, mode=mode)
     
-    logger.warning("Using tempfile instead of non-existing file %s", file_path)
+    logger.warning("Using tempfile instead of non-existing file %s when calling %s", file_path, inspect.stack()[1].function)
     return tempfile.TemporaryFile(mode=mode)
 
 def set_display_backlight_brightness(brightness):
