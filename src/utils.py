@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
+import os
 import datetime
+
+
+BASE = os.path.join(os.path.dirname(__file__), "..")
 
 
 def weekend(d, offset, target_time):

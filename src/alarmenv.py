@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import logging
 import os.path
 import configparser
 import dns.resolver
 import dns.exception
 
+from src import utils
+
+
+logger = logging.getLogger("eventLogger")
 
 class AlarmEnv:
     """Parses the configuration file to a readable object."""
@@ -15,7 +20,7 @@ class AlarmEnv:
         params
             config_file (str): name (not path!) of the configuration file in /configs to use.
         """
-        path_to_config = os.path.join(os.path.dirname(__file__), "..", "configs", config_file)
+        path_to_config = self.get_config_file_path(config_file)
 
         self.config_file = path_to_config
         self.config = configparser.ConfigParser()
@@ -34,6 +39,25 @@ class AlarmEnv:
 
         self.validate_config()
         self.netup = self._testnet()
+
+    def get_config_file_path(self, config_file):
+        """Given a filename, look for an alarm configuration file from either:
+          * $HOME/.alarmpi, or
+          * BASE/configs
+        Return:
+            path to first detected config file or None is none found
+        """
+        PATHS_TO_CHECK = [
+            os.path.expanduser("~/.alarmpi/" + config_file),
+            os.path.join(utils.BASE, "configs", config_file)
+        ]
+
+        for path in PATHS_TO_CHECK:
+            if os.path.isfile(path):
+                logger.info("Using config file %s", os.path.normpath(path))
+                return path
+
+        raise FileNotFoundError("No valid configuration file found for {}".format(config_file))
 
     def _testnet(self):
         # Test for connectivity using the hostname in the config file
