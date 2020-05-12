@@ -10,11 +10,8 @@ import signal
 import pydub
 import pydub.playback
 
+from src import utils
 from src.handlers import get_festival_tts, get_greeting
-
-
-# get path to the root folder
-BASE = os.path.join(os.path.dirname(__file__), "..")
 
 
 class Alarm:
@@ -146,7 +143,7 @@ class Alarm:
     @staticmethod
     def play_beep():
         """Play a beeping sound effect."""
-        path = os.path.join(BASE, "resources", "Cool-alarm-tone-notification-sound.mp3")
+        path = os.path.join(utils.BASE, "resources", "Cool-alarm-tone-notification-sound.mp3")
         beep = pydub.AudioSegment.from_mp3(path)
         pydub.playback.play(beep)
 
