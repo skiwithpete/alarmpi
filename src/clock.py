@@ -282,14 +282,6 @@ class Clock:
         else:
             self.radio.stop()
 
-
-    def build_alarm(self):
-        """Slot function for building an alarm. Sets alarm_content attribute
-        to alarm content to be played later.
-        """
-        self.alarm_content = self.alarm_player.build()
-
-
     def play_alarm(self):
         """Callback to playing the alarm: runs the alarm play thread. Called when
         on alarm timeout signal and on 'Play now' button.
@@ -312,6 +304,11 @@ class Clock:
              # Manually emit the radio buttons click signal. This will both
              # set the state of the button and start the playback.
             self.main_window.control_buttons["Radio"].click()
+
+    def build_and_play_alarm(self):
+        """Custom callback for the 'Play now' button: builds and plays an alarm."""
+        self.alarm_play_thread.build() # A new alarm is built every time the button is pressed
+        self.alarm_play_thread.start()
 
     def setup_weather_polling(self):
         """Setup polling for updating the weather every 30 minutes."""
