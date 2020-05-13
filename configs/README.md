@@ -1,6 +1,6 @@
 
 ## Alarm configuration
-Alarm content can be configured by editing `alarmpi.conf`. This configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used, if any.
+Alarm content can be configured by editing `alarmpi.conf`. This configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used, if any. Alernatively configurations can also be placed in `$HOME/.alarmpi/`.
 
 ### alarm.conf description
 
@@ -79,6 +79,8 @@ You can either modify the provided configuration file `alarm.conf` or create a n
 ```
 python main.py my_config.conf
 ```
+Custom comfigurations files can also be place in `$HOME/.alarmpi/`.
+
 
 ### Extending the alarm with custom content
 Extending the alarm with you're own content is simple:
