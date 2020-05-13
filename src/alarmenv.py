@@ -66,7 +66,7 @@ class AlarmEnv:
             dns.resolver.query(nthost)
             return True
         except (dns.resolver.NXDOMAIN, dns.exception.DNSException):
-            print("Could not resolve '{}'. Assuming the network is down.".format(nthost))
+            logger.warning("Could not resolve '%s'. Assuming the network is down.", nthost)
             return False
 
     def validate_config(self):
