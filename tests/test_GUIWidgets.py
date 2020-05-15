@@ -1,10 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os.path
 import unittest
 from unittest import TestCase
+from unittest.mock import patch
 
-from src import GUIWidgets
+from PyQt5.QtWidgets import QApplication
+
+from src import clock, GUIWidgets, alarmenv
 
 
 
@@ -12,7 +16,14 @@ from src import GUIWidgets
 class ClockGUITestCase(TestCase):
     """Test cases for logic functions in GUIWidgets"""
 
-    def setUp(self):
+    @patch("src.alarmenv.AlarmEnv.get_config_file_path")
+    def setUp(self, mock_get_config_file_path):
+        app = QApplication([]) # Setup a dummy QApplication to be able to create widgets (return value is needed to prevent garbage collection?)
+
+        mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
+        ex = clock.Clock("dummy.conf")
+        ex.setup()
+
         self.settings_window = GUIWidgets.SettingsWindow()
         self.main_window = GUIWidgets.AlarmWindow()
 
