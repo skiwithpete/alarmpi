@@ -38,7 +38,6 @@ class AlarmEnv:
             raise RuntimeError("Failed reading config file: {}".format(self.config_file))
 
         self.validate_config()
-        self.netup = self._testnet()
 
     def get_config_file_path(self, config_file):
         """Given a filename, look for an alarm configuration file from either:

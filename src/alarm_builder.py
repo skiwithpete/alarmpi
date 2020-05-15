@@ -65,7 +65,7 @@ class Alarm:
 
         # If no network connection is detected, or the 'readaloud' option is not set,
         # return None to signify alarm player should play beep instead.
-        if not self.env.netup or not tts_enabled:
+        if not self.env._testnet() or not tts_enabled:
             Alarm.play_beep()
 
         else:
