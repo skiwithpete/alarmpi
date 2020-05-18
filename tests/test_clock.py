@@ -2,36 +2,80 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os.path
 import unittest
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import (patch, Mock)
 from PyQt5.QtWidgets import QApplication
 
+import src
 from src import clock
 
-
-app = QApplication(sys.argv)
 
 
 class ClockTestCase(TestCase):
     """Test cases for logic functions for determining alarm time in Clock."""
 
-    @patch("src.alarmenv.AlarmEnv.get_value")
-    @patch("src.alarmenv.AlarmEnv.setup")
-    @patch("src.clock.CronWriter.get_current_alarm")
-    def setUp(self, mock_get_current_alarm, mock_env_setup, mock_get_value):
-        mock_get_current_alarm.return_value = "17:00"  # mock out cron read call
-        mock_env_setup.side_effect = None  # mock out env setup
-        mock_get_value.return_value = "-radio_arg radio_arg_value"
-        self.app = clock.Clock("dummy.config")
-        self.app.cron = unittest.mock.Mock()  # mock out CronWriter creation
-        self.app.env.is_rpi = False
+    @patch("src.alarmenv.AlarmEnv.get_config_file_path")
+    def setUp(self, mock_get_config_file_path):
+        app = QApplication([]) # Setup a dummy QApplication to be able to create widgets (return value is needed to prevent garbage collection?)
+
+        mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
+        self.clock = clock.Clock("dummy.conf")
+        self.clock.setup()
+
+    @patch("src.GUIWidgets.SettingsWindow.validate_alarm_input")
+    @patch("PyQt5.QtWidgets.QLCDNumber.display")
+    def test_set_alarm_updates_screen_and_sets_timers(self, mock_display, mock_validate_alarm_input):
+        """Does 'Set alarm' button start timers for alarm build and play and update
+        main window and settings window labels?
+        """
+        mock_validate_alarm_input.return_value = "00:10"  # Mock validating a not-set alarm time
+
+        self.clock.settings_window.numpad_buttons["set"].click()
+        self.assertTrue(self.clock.alarm_timer.isActive())
+        self.assertTrue(self.clock.alarm_build_timer.isActive())
+        
+        mock_display.assert_called_with("00:10")
+
+        settings_window_value = self.clock.settings_window.alarm_time_status_label.text()
+        self.assertEqual(settings_window_value, "Alarm set for 00:10")
+  
+    @patch("PyQt5.QtWidgets.QLCDNumber.display")
+    def test_clear_alarm_clears_screen_and_stops_timers(self, mock_display):
+        """Does 'Clearm alarm' button stop timers for alarm build and play and clear
+        main window and settings window labels?
+        """
+        self.clock.settings_window.numpad_buttons["clear"].click()
+        self.assertFalse(self.clock.alarm_timer.isActive())
+        self.assertFalse(self.clock.alarm_build_timer.isActive())
+        
+        mock_display.assert_called_with("")
+
+        settings_window_value = self.clock.settings_window.alarm_time_status_label.text()
+        self.assertEqual(settings_window_value, "Alarm cleared")
 
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    def test_main_window_active_alarm_label_cleared_on_screen_wakeup(self, mock_display):
-        """Is the main window label for alarm time cleared on screen wakeup signal handler?"""
-        self.app.wakeup_signal_handler(None, None)
+    @patch("src.rpi_utils.set_display_backlight_brightness")
+    def test_play_alarm_starts_alarm_play_thread(self, mock_set_display_backlight_brightness, mock_display):
+        """Does the timer slot function for playing the alarm set window brightness,
+        clearn main window label and start the alarm play thread?
+        """
+        self.clock.alarm_play_thread.start = Mock()
+        self.clock.enable_screen_and_show_control_buttons = Mock()
+
+        self.clock.play_alarm()
         mock_display.assert_called_with("")
+        mock_set_display_backlight_brightness.assert_called_with(255)
+        self.clock.alarm_play_thread.start.assert_called()
+
+    def test_finish_playing_alarm_starts_radio_if_enabled(self):
+        """Does the alarm finish callback call the radio thread when radio is enabled?"""
+        self.clock.env.config.set("radio", "enabled", "1")
+        self.clock.main_window.control_buttons["Radio"] = Mock()
+
+        self.clock.finish_playing_alarm()
+        self.clock.main_window.control_buttons["Radio"].click.assert_called()
 
 
 class RadioStreamerTestCase(TestCase):
@@ -61,87 +105,10 @@ class RadioStreamerTestCase(TestCase):
         self.assertEqual(self.radio.process, None)
 
 
-class CronWriterTestCase(TestCase):
-    """Test cases for CronWriter: do writing and reading from crontab work correctly?"""
-
-    @classmethod
-    def setUpClass(self):
-        self.cron_writer = clock.CronWriter("dummy.config")
-
-    @patch("subprocess.check_output")
-    def test_empty_string_returned_as_alarm_when_no_alarm_in_crontab(self, mock_subprocess_check_output):
-        """Does get_current_alarm return an empty response if no alarm in crontab?"""
-
-        # setup a mock crontab with no call to alarm_builder.py
-        mock_subprocess_check_output.return_value = """
-        # Mock crontable
-        # m h  dom mon dow   command
-
-        0 5 * * 1 tar - zcf / var/backups/home.tgz / home/
-
-        """.encode("utf8")  # return value should be bytes
-        res = self.cron_writer.get_current_alarm()
-        expected_res = (False, "")
-        self.assertEqual(res, expected_res)
-
-    @patch("subprocess.check_output")
-    def test_alarm_time_returned_when_alarm_in_crontab(self, mock_subprocess_check_output):
-        """Does get_current_alarm return the corresponding alarm time if alarm is set?"""
-        path = self.cron_writer.path_to_alarm_runner
-        mock_subprocess_check_output.return_value = """
-        # Mock crontable
-        # m h  dom mon dow command
-
-        16 4 * * * python {}
-
-        """.format(path).encode("utf8")
-        res = self.cron_writer.get_current_alarm()
-        expected_res = (True, "04:16")
-
-        self.assertEqual(res, expected_res)
-
-    @patch("subprocess.check_output")
-    def test_alarm_status_is_disabled_when_commented_out_in_crontab(self, mock_subprocess_check_output):
-        """Does get_current_alarm return the alarm with a disabled status when alarm is commented out?"""
-        path = self.cron_writer.path_to_alarm_runner
-        mock_subprocess_check_output.return_value = """
-        # Mock crontable
-        # m h  dom mon dow command
-
-        # 16 4 * * * python {}
-
-        """.format(path).encode("utf8")
-        res = self.cron_writer.get_current_alarm()
-        expected_res = (False, "04:16")
-
-        self.assertEqual(res, expected_res)
-
-    @patch("subprocess.check_output")
-    def test_crontab_lines_returned_without_alarm(self, mock_subprocess_check_output):
-        """Does get_crontab_lines_without_alarm return all lines except the one containing
-        the alarm?
-        """
-        alarm_line = "16 4 * * * python {}".format(self.cron_writer.path_to_alarm_runner)
-        mock_subprocess_check_output.return_value = """
-        # Mock crontable
-        # m h  dom mon dow command
-
-        1 2 * * 3 command1 arg1
-        {}
-        4 5 * * * command2 arg2
-
-        """.format(alarm_line).encode("utf8")
-        res = self.cron_writer.get_crontab_lines_without_alarm()
-
-        self.assertNotIn(alarm_line, res)
-
 
 if __name__ == "__main__":
     """Create test suites from both classes and run tests."""
     suite = unittest.TestLoader().loadTestsFromTestCase(ClockTestCase)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-    suite = unittest.TestLoader().loadTestsFromTestCase(CronWriterTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)
 
     suite = unittest.TestLoader().loadTestsFromTestCase(RadioStreamerTestCase)
