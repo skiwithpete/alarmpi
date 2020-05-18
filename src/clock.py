@@ -112,7 +112,7 @@ class Clock:
         self.settings_window.alarm_brightness_checkbox.setChecked(alarm_brightness_enabled)
 
         # Set main window's alarm time display to currently active alarm time
-        self.current_alarm_time = self.get_current_alarm()
+        self.current_alarm_time = self.get_current_active_alarm()
         if self.current_alarm_time:
             self.main_window.alarm_time_lcd.display(self.current_alarm_time)
 
@@ -175,18 +175,15 @@ class Clock:
         """Callback for opening the settings window. Checks whether an alarm time should
         be displayed. Also clears timer for blanking the screen (if active).
         """
-        self.current_alarm_time = self.get_current_alarm()
+        # Look for currently active alarm time set via the 'Set alarm' button,
+        # or (non-active) previously set alarms written to the numpad label.
+        current_active_alarm_time = self.get_current_active_alarm()
 
-        # For active alarms, write time to left pane info label as well as to the
+        # For active alarms, set the time to left pane info label as well as to the
         # right pane numpad time label.
-        if self.current_alarm_time:
-            self.settings_window.set_alarm_input_success_message_with_time(self.current_alarm_time)
-            self.settings_window.set_alarm_input_time_label(self.current_alarm_time)
-
-        else:
-            self.settings_window.alarm_time_status_label.setText("")
-            self.settings_window.set_alarm_input_time_label(
-                GUIWidgets.SettingsWindow.ALARM_LABEL_EMPTY)
+        if current_active_alarm_time:
+            self.settings_window.set_alarm_input_success_message_with_time(current_active_alarm_time)
+            self.settings_window.set_alarm_input_time_label(current_active_alarm_time)
 
         # Clear any screen blanking timer and display the window
         self.screen_blank_timer.stop()
@@ -249,7 +246,7 @@ class Clock:
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
 
-    def get_current_alarm(self):
+    def get_current_active_alarm(self):
         """Check for existing running alarm timers and return alarm time in HH:MM format."""
         active = self.alarm_timer.isActive()
         if active:
@@ -289,10 +286,14 @@ class Clock:
         """Callback to playing the alarm: runs the alarm play thread. Called when
         on alarm timeout signal and on 'Play now' button.
         """
-        # Update the screen.
+        # Update main display
         self.main_window.alarm_time_lcd.display("")
         self.enable_screen_and_show_control_buttons()
         rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
+
+         # Clear 'Alarm set for ...' label in the settings window
+        self.settings_window.alarm_time_status_label.setText("")
+
         self.alarm_play_thread.start()
 
     def finish_playing_alarm(self):
