@@ -210,6 +210,9 @@ class Clock:
             self.set_screen_blank_timeout()
 
     def set_alarm(self):
+        """Callback to 'Set alarm' button: starts timers for alarm build and play
+        and updates main and settings window labels.
+        """
         time_str = self.settings_window.validate_alarm_input()
         if time_str:
             # Update displayed alarm time settings and main window
