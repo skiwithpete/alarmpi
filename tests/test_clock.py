@@ -77,6 +77,32 @@ class ClockTestCase(TestCase):
         self.clock.finish_playing_alarm()
         self.clock.main_window.control_buttons["Radio"].click.assert_called()
 
+    def test_settings_window_keeps_previously_set_alarm(self):
+        """Does the settings window input label for set alarm time keep
+        its value when the settings window is closed?
+        """
+        # Mock the actual window display calls
+        self.clock.settings_window.show = Mock()
+        self.clock.settings_window.close = Mock()
+
+        self.clock.settings_window.set_alarm_input_time_label("07:16")
+        self.clock.settings_button.click()
+
+        # Test value when settings window is open
+        label_time = self.clock.settings_window.input_alarm_time_label.text()
+        self.assertEqual(label_time, "07:16")
+
+        # Close the window and test the value again
+        self.clock.settings_window.clear_labels_and_close()
+        label_time = self.clock.settings_window.input_alarm_time_label.text()
+        self.assertEqual(label_time, "07:16")
+
+        # Simulate alarm play finish and test the value again
+        self.clock.main_window.control_buttons["Radio"] = Mock()
+        self.clock.finish_playing_alarm()
+        label_time = self.clock.settings_window.input_alarm_time_label.text()
+        self.assertEqual(label_time, "07:16")
+
 
 class RadioStreamerTestCase(TestCase):
     """Test cases for RadioStreamer: does streaming radio work correctly?"""
