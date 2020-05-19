@@ -172,20 +172,9 @@ class Clock:
             self.enable_alarm_brightness_change)
 
     def open_settings_window(self):
-        """Callback for opening the settings window. Checks whether an alarm time should
-        be displayed. Also clears timer for blanking the screen (if active).
+        """Callback for opening the settings window: clear screen blanking timer (if active)
+        and dislpay the window.
         """
-        # Look for currently active alarm time set via the 'Set alarm' button,
-        # or (non-active) previously set alarms written to the numpad label.
-        current_active_alarm_time = self.get_current_active_alarm()
-
-        # For active alarms, set the time to left pane info label as well as to the
-        # right pane numpad time label.
-        if current_active_alarm_time:
-            self.settings_window.set_alarm_input_success_message_with_time(current_active_alarm_time)
-            self.settings_window.set_alarm_input_time_label(current_active_alarm_time)
-
-        # Clear any screen blanking timer and display the window
         self.screen_blank_timer.stop()
         self.settings_window.show()
 
