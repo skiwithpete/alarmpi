@@ -40,7 +40,7 @@ def set_display_backlight_brightness(brightness):
 
 def get_display_backlight_brightness():
     """Return the current backlight brightness value."""
-    with _open_config_file_or_tempfile(BRIGHTNESS_FILE, "w") as f:
+    with _open_config_file_or_tempfile(BRIGHTNESS_FILE, "r") as f:
         try:
             value = int(f.read().strip())
         except ValueError:
