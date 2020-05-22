@@ -40,6 +40,10 @@ class ClockTestCase(TestCase):
 
         settings_window_value = self.clock.settings_window.alarm_time_status_label.text()
         self.assertEqual(settings_window_value, "Alarm set for 00:10")
+
+        # Also check get_current_active_alarm returns a value
+        active_alarm = self.clock.get_current_active_alarm()
+        self.assertIsNotNone(active_alarm)
   
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
     def test_clear_alarm_clears_screen_and_stops_timers(self, mock_display):
