@@ -7,49 +7,37 @@ import datetime
 BASE = os.path.join(os.path.dirname(__file__), "..")
 
 
-def weekend(d, offset, target_time):
-    """Check whether a datetime d is during a weekend. A weekend
-    is defined as friday target_time to monday target_time - offset
+def nighttime(target_time, offset, compare_time=None):
+    """Check whether compare_time is within offset hours of target_time.
     Args:
-        d (datetime): the datetime to test
+        target_time (str): target time for the test in HH:MM.
         offset (int): hour offset
-        target_time (str): time in %H:%M format to compare test_time against
+        compare_time (str): the time to test in HH:MM, defaults to
+            current time
     """
-    is_nighttime = nighttime(d, offset, target_time)
-    dow = d.weekday()  # 0 == monday
+    dummy_base_date = datetime.date.today() 
 
-    friday = (dow == 4 and not is_nighttime)  # daytime during friday
-    saturday = (dow == 5)  # all of saturday
-    sunday = (dow == 6 and not is_nighttime)  # daytime during sunday
+    # convert times from strtings to datetimes with date set to today
+    target_dt = datetime.datetime.strptime(target_time, "%H:%M")
+    target_dt = target_dt.replace(
+        year=dummy_base_date.year,
+        month=dummy_base_date.month,
+        day=dummy_base_date.day
+    )  
 
-    return (friday or saturday or sunday)
+    if compare_time is not None:
+        compare_dt = datetime.datetime.strptime(compare_time, "%H:%M")
+        compare_dt = compare_dt.replace(
+            year=dummy_base_date.year,
+            month=dummy_base_date.month,
+            day=dummy_base_date.day
+        ) 
 
-def nighttime(d, offset, target_time):
-    """Check whether the time part of a datetime d is within offset hours
-    from target_time.
-    Args:
-        d (datetime): the datetime whose time value to test
-        offset (int): hour offset
-        target_time (str): time in %H:%M format to compare test_time against
-    """
-    d_minutes = datetime_to_minutes(d)
-    target_time_minutes = time_str_to_minutes(target_time)
-    offset_minutes = offset * 60
-
-    # Case 1: d is after midnight and before target_time: check if d is
-    # within offset
-    if d_minutes < target_time_minutes:
-        return abs(d_minutes - target_time_minutes) < offset_minutes
-
-    # Case 2: d is before midnight and after target_time:
-    # compute (d's distance to midnight) + target_time_minutes and
-    # compare to offset
-    if d_minutes > target_time_minutes:
-        MAX_MINUTES = 23*60 + 59
-        minutes_to_target_time = (MAX_MINUTES - d_minutes) + target_time_minutes
-        return minutes_to_target_time < offset_minutes
-
-    return True
+    else:
+        compare_dt = datetime.datetime.now()
+    
+    offset_target_dt = target_dt - datetime.timedelta(hours=offset)
+    return compare_dt >= offset_target_dt and compare_dt <= target_dt
 
 def time_str_to_minutes(s):
     """Convert a time string in %H:%M format to minutes since midnight."""

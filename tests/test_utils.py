@@ -12,41 +12,36 @@ class UtilsTestCase(TestCase):
     """Test cases for alarmenv: are properties read from the configuration file
     correctly?
     """
-
-    def test_weekend_with_friday_after_target_time(self):
-        """Does weekend return True with a date matching friday after target_time?"""
+    def test_nighttime_with_night_hour(self):
+        """Does nightime return True when called with compare_times matching
+        the targeted nighttime offset?
+        """
         offset = 8
-        d = datetime.datetime(2019, 1, 18, 13, 27)
-        target_time = "7:02"
 
-        res = utils.weekend(d, offset, target_time)
+        compare_time = "01:14"
+        target_time = "07:02"
+        res = utils.nighttime(target_time, offset, compare_time)
         self.assertTrue(res)
 
-    def test_weekend_with_sunday_after_offset(self):
-        """Does weekend with a date outside the offset retrun False?"""
-        offset = 10
-        d = datetime.datetime(2019, 1, 20, 23, 22)
-        target_time = "7:02"
-
-        res = utils.weekend(d, offset, target_time)
-        self.assertFalse(res)
-
-    def test_nighttime_with_night_hour(self):
-        """Does weekend return True with a date matching friday after target_time?"""
-        offset = 8
-        d = datetime.datetime(2019, 1, 18, 1, 14)
-        target_time = "7:02"
-
-        res = utils.nighttime(d, offset, target_time)
+        compare_time = "12:54"
+        target_time = "19:20"
+        res = utils.nighttime(target_time, offset, compare_time)
         self.assertTrue(res)
 
     def test_nighttime_with_day_hour(self):
-        """Does weekend return True with a date matching friday after target_time?"""
+        """Does nightime return False when called with compare_times outside of
+        target_time thresholds?
+        """
         offset = 8
-        d = datetime.datetime(2019, 1, 18, 14, 14)
-        target_time = "7:02"
 
-        res = utils.nighttime(d, offset, target_time)
+        compare_time = "22:14"
+        target_time = "07:02"
+        res = utils.nighttime(target_time, offset, compare_time)
+        self.assertFalse(res)
+
+        compare_time = "07:05"
+        target_time = "07:00"
+        res = utils.nighttime(target_time, offset, compare_time)
         self.assertFalse(res)
 
 
