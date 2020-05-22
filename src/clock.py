@@ -112,9 +112,9 @@ class Clock:
         self.settings_window.alarm_brightness_checkbox.setChecked(alarm_brightness_enabled)
 
         # Set main window's alarm time display to currently active alarm time
-        self.current_alarm_time = self.get_current_active_alarm()
-        if self.current_alarm_time:
-            self.main_window.alarm_time_lcd.display(self.current_alarm_time)
+        alarm_time = self.get_current_active_alarm()
+        if alarm_time:
+            self.main_window.alarm_time_lcd.display(alarm_time)
 
         self.screen_blank_timer = QTimer(self.main_window)
         self.screen_blank_timer.setSingleShot(True)
@@ -179,21 +179,24 @@ class Clock:
         self.settings_window.show()
 
     def on_release_event_handler(self, event):
-        """Event handler for touching the screen: update the main window's alarm
-        time label and, if on a Raspberry Pi and nighttime, set a timeout for blanking
-        the screen.
+        """Event handler for touching the screen: ensure screen is turned on
+        and if an active alarm is set and it is currently nighttime,
+        set a short timeout for blanking the screen.
         """
-        # If not running on Raspberry Pi exit early
-        if not self.env.is_rpi:
-            return
-
         # get screen state before the event occured and set it as enabled
         old_screen_state = rpi_utils.get_and_set_screen_state("on")
         self.show_control_buttons()
 
+        alarm_time = self.get_current_active_alarm()  # HH:MM
+        if alarm_time is None:
+            return
+
         # set screen blanking timeout if the screen was blank before the event
-        if old_screen_state == "off":
-            self.set_screen_blank_timeout()
+        # and it is currently nightime.
+        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
+        if old_screen_state == "off" and utils.nighttime(alarm_time, offset):
+            logger.info("Screen blank timer activated")
+            self.screen_blank_timer.start(3*1000)  # 3 second timer
 
     def set_alarm(self):
         """Callback to 'Set alarm' button: starts timers for alarm build and play
@@ -240,22 +243,6 @@ class Clock:
         active = self.alarm_timer.isActive()
         if active:
             return self.alarm_dt.strftime("%H:%M")
-
-    def set_screen_blank_timeout(self):
-        """Blank the screen after a short timeout if it is currently night time
-        (ie. nightmode_offset hours before alarm time).
-        """
-        alarm_time = self.current_alarm_time  # HH:MM
-        if not alarm_time:
-            return
-
-        offset = int(self.env.get_value("alarm", "nightmode_offset", fallback="0"))
-        now = datetime.datetime.now()
-        nighttime = utils.nighttime(now, offset, alarm_time)
-
-        # Set a new timeout for blanking the screen if nighttime
-        if nighttime:
-            self.screen_blank_timer.start(3*1000)  # 3 second timer
 
     def play_radio(self):
         """Callback to the 'Play radio' button: open or close the radio stream
