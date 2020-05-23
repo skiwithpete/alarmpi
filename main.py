@@ -68,8 +68,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     kwargs = {"fullscreen": args.fullscreen, "debug": args.debug}
 
-    app = QApplication(sys.argv)
+    if args.debug:
+        event_logger.info("Setting event_logger level to DEBUG")
+        event_logger.setLevel(logging.DEBUG)
+        for handler in event_logger.handlers:
+            handler.setLevel(logging.DEBUG)
 
+    app = QApplication(sys.argv)
     ex = clock.Clock(args.config, **kwargs)
     ex.setup()
     res = app.exec_()

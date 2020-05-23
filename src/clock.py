@@ -75,6 +75,7 @@ class Clock:
 
         if kwargs.get("debug"):
             self.env.is_rpi = True  # fake Rpi environment so all buttons are enabled
+            logger.debug("Debug mode detected, disabling train and weather polling")
             self.env.config.set("polling", "weather", "0")
             self.env.config.set("polling", "train", "0")
             self.main_window.keyPressEvent = self.debug_key_press_event
@@ -301,7 +302,7 @@ class Clock:
         """Update the weather labels on the main window. Makes an API request to
         openweathermap.org for current temperature and windspeed.
         """
-        logger.info("Updating weather")
+        logger.debug("Updating weather")
         weather = self.weather_parser.fetch_and_format_weather()
 
         temperature = weather["temp"]
@@ -335,7 +336,7 @@ class Clock:
 
     def update_trains(self):
         """Fetch new train data from DigiTraffic API and display on the right sidebar."""
-        logger.info("Updating trains")
+        logger.debug("Updating trains")
         trains = self.train_parser.run()
 
         for train, label in zip(trains, self.main_window.train_labels):
