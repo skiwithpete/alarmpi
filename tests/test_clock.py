@@ -107,6 +107,26 @@ class ClockTestCase(TestCase):
         label_time = self.clock.settings_window.input_alarm_time_label.text()
         self.assertEqual(label_time, "07:16")
 
+    @patch("src.rpi_utils.set_display_backlight_brightness")
+    @patch("src.rpi_utils.get_display_backlight_brightness")
+    def test_brightness_change_on_low(self, mock_get_brightness, mock_set_brightness):
+        """Does the backlight toggle change brightness change from low to high?"""
+        mock_get_brightness.return_value = 9
+
+        # Ensure the button is enabled before clicking it
+        self.clock.settings_window.control_buttons["Toggle brightness"].setEnabled(True)
+        self.clock.settings_window.control_buttons["Toggle brightness"].click()
+        mock_set_brightness.assert_called_with(255)
+
+    @patch("src.rpi_utils.set_display_backlight_brightness")
+    @patch("src.rpi_utils.get_display_backlight_brightness")
+    def test_brightness_change_on_hight(self, mock_get_brightness, mock_set_brightness):
+        """Does the backlight toggle change brightness change from hight to low?"""
+        mock_get_brightness.return_value = 255
+        self.clock.settings_window.control_buttons["Toggle brightness"].setEnabled(True)
+        self.clock.settings_window.control_buttons["Toggle brightness"].click()
+        mock_set_brightness.assert_called_with(9)
+
 
 class RadioStreamerTestCase(TestCase):
     """Test cases for RadioStreamer: does streaming radio work correctly?"""
