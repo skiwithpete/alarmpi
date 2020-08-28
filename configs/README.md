@@ -71,7 +71,7 @@ Determines command line arguments, including the url of the radio stream, to be 
 **[polling]**  
 This enables the two polling features of the main window. When enabled
   1. weather data from openweathermap.org is displayed on the right side of the window. Updated every 30 minutes. Disabled if no keyfile is present in **[openweathermap]**, see above.
-  2. the next departing trains from Espoo train station is shown on the left. Data is fetched from Finnish Transport agency's DigiTraffic API, see https://www.digitraffic.fi/en/railway-traffic/. This is largely a hardcoded feature to serve my own use case.
+  2. the next departing trains from Kerava train station is shown on the left. Data is fetched from Finnish Transport agency's DigiTraffic API, see https://www.digitraffic.fi/en/railway-traffic/. This is largely a hardcoded feature to serve my own use case.
 Both polling features are disabled by default.
 
 ## Using a custom configuration

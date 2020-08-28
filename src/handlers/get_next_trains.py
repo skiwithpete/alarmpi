@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Helper module for fetching the next 3 trains arriving at Espoo station using the
+"""Helper module for fetching the next 3 trains arriving at Kerava station using the
 Finnish Transport agency's DigiTraffic API.
 https://www.digitraffic.fi/en/railway-traffic/
 https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
@@ -43,11 +43,11 @@ class TrainParser:
         """Format a list of API response departures to a list of dicts
         to pass back to clock.py.
         """
-        espoo = self.filter_espoo_trains(api_response)
+        locals_ = self.filter_commuter_trains(api_response)
 
         departure_rows = []
-        for train in espoo:
-            row = self.get_espoo_departure_row(train)
+        for train in locals_:
+            row = self.get_local_departure_row(train)
 
             # Drop already departed trains
             if "actualTime" in row:
@@ -84,8 +84,8 @@ class TrainParser:
         return departure_rows[:3]
 
     def fetch_daily_train_data(self):
-        """API call to get the next 3 arriving at Espoo station."""
-        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/EPO"
+        """API call to get the next 3 arriving at Kerava station."""
+        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/KE"
         params = {
             "arrived_trains": 1,  # API minumum to already arrived and departed trains is 1
             "arriving_trains": 10,
@@ -95,9 +95,8 @@ class TrainParser:
         r = requests.get(URL, params=params)
         return r.json()
 
-    def filter_espoo_trains(self, response):
-        """Filter a list of API response trains to commuter trains stopping at Espoo station
-        and heading towards Helsinki.
+    def filter_commuter_trains(self, response):
+        """Filter a list of API response trains to commuter trains heading towards Helsinki.
         Args:
             trains (list): list of API response trains
         Return:
@@ -111,16 +110,16 @@ class TrainParser:
 
         return filtered
 
-    def get_espoo_departure_row(self, train):
+    def get_local_departure_row(self, train):
         """Given an API response train, return the DEPARTURE row of its timeTableRows
         Args:
             train (dict): a single train object from an API response
         Return:
-            the Espoo departure row of the train's timeTableRows
+            the Kerava departure row of the train's timeTableRows
         """
         rows = [row for row in train["timeTableRows"] if
                 row["type"] == "DEPARTURE" and
-                row["stationShortCode"] == "EPO"
+                row["stationShortCode"] == "KE"
                 ]
 
         return rows[0]
