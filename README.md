@@ -107,7 +107,11 @@ or
 ```
 python play_alarm.py [configuration_file]
 ```
-where `[configuration_file]` is a valid alarm configuration file in the `configs/` folder
+where `[configuration_file]` is a valid alarm configuration file in the `configs/` folder, ie.
+```
+python main.py alarm.conf
+```
+
 
 
 The first runs a GUI version of the script. It includes a digital clock interface for current time as well a settings window for setting the alarm. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.

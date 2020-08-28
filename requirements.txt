@@ -42,8 +42,6 @@ pydub==0.22.1
 Pygments==2.2.0
 pylint==2.4.1
 PyMsgBox==1.0.6
-PyQt5==5.11.3
-PyQt5-sip==4.19.13
 PyScreeze==0.1.18
 python-dateutil==2.8.0
 python3-xlib==0.15
@@ -52,7 +50,7 @@ pytz==2018.5
 regex==2020.2.20
 requests==2.19.1
 rsa==3.4.2
-ruamel.yaml==0.15.61
+ruamel.yaml
 simplegeneric==0.8.1
 six==1.11.0
 toml==0.10.0
