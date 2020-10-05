@@ -9,7 +9,7 @@ import handlers.get_gcp_tts
 
 
 if __name__ == "__main__":
-    alarm_env = alarmenv.AlarmEnv("alarm.config")
+    alarm_env = alarmenv.AlarmEnv("default.config")
     content = alarm_builder.generate_content(alarm_env)
     text = "\n".join(content)
 

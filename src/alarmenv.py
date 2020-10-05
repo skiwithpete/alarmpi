@@ -59,8 +59,8 @@ class AlarmEnv:
         raise FileNotFoundError("No valid configuration file found for {}".format(config_file))
 
     def _testnet(self):
-        # Test for connectivity using the hostname in the config file
-        nthost = self.config.get("main", "nthost")
+        # Test for connectivity
+        nthost = "translate.google.com"
         try:
             dns.resolver.query(nthost)
             return True

@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Play an alarm using a specified configuration file")
     parser.add_argument("config", metavar="config", nargs="?",
-                        default="alarm.conf", help="path to an alarm configuration file. Defaults to alarm.conf")
+                        default="default.conf", help="alarm configuration file in ./configs to use. Defaults to default.conf")
     args = parser.parse_args()
 
     env = alarmenv.AlarmEnv(args.config)

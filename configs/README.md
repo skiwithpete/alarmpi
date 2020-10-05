@@ -2,14 +2,12 @@
 ## Alarm configuration
 Alarm content can be configured by editing `alarmpi.conf`. This configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used, if any. Alernatively configurations can also be placed in `$HOME/.alarmpi/`.
 
-### alarm.conf description
+### default.conf description
 
 **[main]**  
 * **readaloud**
   * When set to 0 disables TTS. The contents of the enabled sections will still be printed to stdout and a beeping sound effect will play as the alarm.
   * Can also be toggled from the settings window.
-* **nthost**
-  * Determines a url to test for network connectivity. While many of the alarm components rely on API calls, an alarm should play even when the network is down. In this case a beeping sound effect will play.
 * **end**
   * An ending greeting to be used by the TTS client after all components, apart from radio stream, have been processed.
 
@@ -75,7 +73,7 @@ This enables the two polling features of the main window. When enabled
 Both polling features are disabled by default.
 
 ## Using a custom configuration
-You can either modify the provided configuration file `alarm.conf` or create a new file and pass that to `alarm_builder.py` and `main.py` via a command line argument, eg.
+You can either modify the provided configuration file `default.conf` or create a new file and pass that to `alarm_builder.py` and `main.py` via a command line argument, eg.
 ```
 python main.py my_config.conf
 ```
