@@ -11,6 +11,7 @@ import sys
 import subprocess
 import logging
 import json
+from functools import partial
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
@@ -146,14 +147,10 @@ class Clock:
         # ** main window buttons **
         self.settings_button.clicked.connect(self.open_settings_window)
 
-        # Disable the radio button if radio is disabled in config
-        if self.env.get_value("radio", "enabled") == "0":
-            self.radio_button.setEnabled(False)
-
-        # ...otherwise set the button as an on/off toggle
-        else:
-            self.radio_button.setCheckable(True)
-            self.radio_button.clicked.connect(self.play_radio)
+        # Set the radio button as an on/off toggle
+        self.radio_button.setCheckable(True)
+        radio_play_slot = partial(self.play_radio, url=None)
+        self.radio_button.clicked.connect(radio_play_slot)
 
         self.blank_button.clicked.connect(self.blank_screen_and_hide_control_buttons)
         self.close_button.clicked.connect(self.cleanup_and_exit)
@@ -245,17 +242,24 @@ class Clock:
         if active:
             return self.alarm_dt.strftime("%H:%M")
 
-    def play_radio(self):
+    def play_radio(self, url=None):
         """Callback to the 'Play radio' button: open or close the radio stream
         depending on the button state.
+        Args:
+            url (stream): the url of the stream to play. If none, currently active
+                stream from the settings window ComboBox is selected.
         """
         button = self.main_window.control_buttons["Radio"]
 
-        # The radio button is a checkable: it will stay down until pressed again.
-        # Therefore the radio should start playing when the button is pressed and
-        # stop when not pressed. (The state change happends before this callback runs.)
+        if url is None:
+            current_radio_station = self.settings_window.radio_station_combo_box.currentText()
+            url = utils.RADIO_STATIONS[current_radio_station]
+            
+        # The radio button is a checkable (ie. a toggle): radio should start playing 
+        # when the button checked and stop when not checked.
+        # (The state change occurs before this callback runs.)
         if button.isChecked():
-            self.radio.play()
+            self.radio.play(url=url)
         else:
             self.radio.stop()
 
@@ -280,10 +284,11 @@ class Clock:
         """
         self.alarm_play_button.setEnabled(True)
 
-        # TODO: ignore radio on manual alarms?
         if self.env.config_has_match("radio", "enabled", "1"):
-             # Manually emit the radio buttons click signal. This will both
-             # set the state of the button and start the playback.
+            # Manually emit the radio buttons click signal. This will both
+            # set the state of the button and start the playback.
+
+            # TODO: set url to one from conf 
             self.main_window.control_buttons["Radio"].click()
 
     def build_and_play_alarm(self):
@@ -480,14 +485,23 @@ class RadioStreamer:
         """Check if mplayer is currently running. Return True if it is."""
         return self.process is not None
 
-    def play(self):
+    def play(self, url=None):
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
+        Args:
+            url (string): url of the stream to play. If None, the stream defined
+                in the alarm configuration is used.
         """
-        cmd = "/usr/bin/mplayer {}".format(self.args).split()
+        # Replace the url from the configuration with the passed in url
+        args_list = self.args.split()
+        args_list[1] = url
+        args = " ".join(args_list)
+
+        logger.info("Opening %s...", url)
+        cmd = "/usr/bin/mplayer {}".format(args).split()
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
-        # Output is captured to file.
+        # Output is captured (truncated) to file.
 
         with open("logs/radio.log", "w") as f:
             self.process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)

@@ -17,8 +17,12 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QSizePolicy,
     QDesktopWidget,
-    QCheckBox
+    QCheckBox,
+    QComboBox
 )
+
+from src import utils
+
 
 
 # Create namedtuples for storing button and label configurations
@@ -216,6 +220,14 @@ class SettingsWindow(QWidget):
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
         self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
 
+        # ComboBox for radio station, filled from 
+        self.radio_station_combo_box = QComboBox(self)
+        self.radio_station_combo_box.addItems(utils.RADIO_STATIONS)
+        self.radio_station_combo_box.setSizePolicy(
+            QSizePolicy.Preferred,
+            QSizePolicy.Expanding  # expand in vertical direction
+        )
+
         self.alarm_time_status_label = QLabel(self)
         self.alarm_time_error_label = QLabel(self)
         self.alarm_time_error_label.setStyleSheet("color: #FF1414;")
@@ -226,6 +238,7 @@ class SettingsWindow(QWidget):
         left_grid.addWidget(self.alarm_brightness_checkbox, 3, 0)
         left_grid.addWidget(self.alarm_time_status_label, 4, 0)
         left_grid.addWidget(self.alarm_time_error_label, 5, 0)
+        left_grid.addWidget(self.radio_station_combo_box, 6, 0)
 
         # Add grids to base layout
         base_layout.addLayout(left_grid, 0, 0)
