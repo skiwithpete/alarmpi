@@ -60,8 +60,8 @@ class Clock:
         self.alarm_build_timer.setSingleShot(True)
         self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
 
-        radio_args = self.env.get_value("radio", "args")
-        self.radio = RadioStreamer(radio_args)
+        radio_conf = self.env.get_section("radio")
+        self.radio = RadioStreamer(radio_conf)
         self.alarm_player = alarm_builder.Alarm(self.env)
         self.train_parser = get_next_trains.TrainParser()
 
@@ -246,20 +246,25 @@ class Clock:
         """Callback to the 'Play radio' button: open or close the radio stream
         depending on the button state.
         Args:
-            url (stream): the url of the stream to play. If none, currently active
-                stream from the settings window ComboBox is selected.
+            url (string): the url of the stream to play. If none, currently active
+                stream from the settings window ComboBox is used.
         """
         button = self.main_window.control_buttons["Radio"]
-
+        
+        # If no stream url was passed, use currently active station from settings window
+        # dropdown list.
         if url is None:
             current_radio_station = self.settings_window.radio_station_combo_box.currentText()
-            url = utils.RADIO_STATIONS[current_radio_station]
+            self.radio.config["url"] = utils.RADIO_STATIONS[current_radio_station]
+
+        else:
+            self.radio.config["url"] = url
             
         # The radio button is a checkable (ie. a toggle): radio should start playing 
-        # when the button checked and stop when not checked.
+        # when the button gets checked and stop when state changes to not checked.
         # (The state change occurs before this callback runs.)
         if button.isChecked():
-            self.radio.play(url=url)
+            self.radio.play()
         else:
             self.radio.stop()
 
@@ -287,13 +292,18 @@ class Clock:
         if self.env.config_has_match("radio", "enabled", "1"):
             # Manually emit the radio buttons click signal. This will both
             # set the state of the button and start the playback.
+            #self.main_window.control_buttons["Radio"].click()
 
-            # TODO: set url to one from conf 
-            self.main_window.control_buttons["Radio"].click()
+            # Toggle the radio button and specify the stream to play as
+            # the url parameter from the configuration file.
+            # Note: we're assuming the button is untoggled before the call.
+            self.main_window.control_buttons["Radio"].toggle()
+            url = self.env.get_value("radio", "url")
+            self.play_radio(url=url)
 
     def build_and_play_alarm(self):
         """Custom callback for the 'Play now' button: builds and plays an alarm."""
-        self.alarm_play_thread.build() # A new alarm is built every time the button is pressed
+        self.alarm_play_thread.build() # Note: a new alarm is built every time the button is pressed
         self.alarm_play_thread.start()
 
     def setup_weather_polling(self):
@@ -477,34 +487,31 @@ class AlarmPlayThread(QThread):
 
 class RadioStreamer:
     """Helper class for playing a radio stream via mplayer."""
-    def __init__(self, args):
+    def __init__(self, config):
         self.process = None
-        self.args = args
+        self.config = config
 
     def is_playing(self):
         """Check if mplayer is currently running. Return True if it is."""
         return self.process is not None
 
-    def play(self, url=None):
+    def play(self):
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
-        Args:
-            url (string): url of the stream to play. If None, the stream defined
-                in the alarm configuration is used.
         """
-        # Replace the url from the configuration with the passed in url
-        args_list = self.args.split()
-        args_list[1] = url
-        args = " ".join(args_list)
+        # Ensure the currently active 'url' key from config is used as the stream url
+        args = self.config["args"].split()
+        args[1] = self.config["url"] # we're assuming url position in the arg list!
+        args = " ".join(args)
 
-        logger.info("Opening %s...", url)
-        cmd = "/usr/bin/mplayer {}".format(args).split()
+        cmd = "/usr/bin/mplayer {}".format(args)
+        logger.info("Running %s", cmd)
+
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
         # Output is captured (truncated) to file.
-
         with open("logs/radio.log", "w") as f:
-            self.process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
+            self.process = subprocess.Popen(cmd.split(), stdout=f, stderr=subprocess.STDOUT)
 
     def stop(self):
         """Terminate the running mplayer process."""
