@@ -10,7 +10,7 @@ from functools import partial
 from collections import namedtuple
 
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QSize
 from PyQt5.QtWidgets import (
     QWidget,
     QLabel,
@@ -86,6 +86,7 @@ class AlarmWindow(QWidget):
 
             if config.icon:
                 button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
+                button.setIconSize(QSize(28, 28))
 
             bottom_grid.addWidget(button, *config.position)
 
@@ -107,9 +108,16 @@ class AlarmWindow(QWidget):
         self.temperature_label = QLabel("", self)
         self.wind_speed_label = QLabel("", self)
         self.weather_container = QLabel(self)
+        # Label with icon: QLabel doesn't support setIcon, use html support instead
+        self.radio_play_indicator = QLabel(self)
+        
         right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
         right_grid.addWidget(self.wind_speed_label, 1, 0, Qt.AlignRight)
         right_grid.addWidget(self.weather_container, 2, 0, Qt.AlignRight | Qt.AlignTop)
+        right_grid.addWidget(self.radio_play_indicator, 3, 0, Qt.AlignRight)
+
+        # Radio play indicator should be hidden by default
+        self.radio_play_indicator.hide()
 
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(left_grid, 0, 0)
@@ -145,6 +153,16 @@ class AlarmWindow(QWidget):
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def _show_radio_play_indicator(self, station_name):
+        """Display QLabel for active radio station."""
+        html="<html><img src='resources/icons/radio64x64.png' height='28'><span style='font-size:14px'> {}</span></html>".format(station_name)
+        self.radio_play_indicator.setText(html)
+        self.radio_play_indicator.show()
+
+    def _hide_radio_play_indicator(self):
+        """Hide QLabel for active radio station."""
+        self.radio_play_indicator.hide()
 
 
 class SettingsWindow(QWidget):

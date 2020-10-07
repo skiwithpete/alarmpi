@@ -260,13 +260,16 @@ class Clock:
 
         else:
             self.radio.config["url"] = url
+            current_radio_station = ""
             
         # The radio button is a checkable (ie. a toggle): radio should start playing 
         # when the button gets checked and stop when state changes to not checked.
         # (The state change occurs before this callback runs.)
         if button.isChecked():
+            self.main_window._show_radio_play_indicator(current_radio_station)
             self.radio.play()
         else:
+            self.main_window._hide_radio_play_indicator()
             self.radio.stop()
 
     def play_alarm(self):
