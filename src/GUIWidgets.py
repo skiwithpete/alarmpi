@@ -5,9 +5,11 @@
 
 
 import time
+import os.path
 from functools import partial
 from collections import namedtuple
 
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QWidget,
@@ -26,9 +28,9 @@ from src import utils
 
 
 # Create namedtuples for storing button and label configurations
-ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
+ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "icon", "size_policy"])
 ButtonConfig.__new__.__defaults__ = (
-    None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
+    None, None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
 
 class AlarmWindow(QWidget):
@@ -67,9 +69,9 @@ class AlarmWindow(QWidget):
 
         # ** Bottom grid: main UI control buttons **
         button_configs = [
-            ButtonConfig(text="Settings", position=(0, 0)),
-            ButtonConfig(text="Blank", position=(0, 1)),
-            ButtonConfig(text="Radio", position=(0, 2)),
+            ButtonConfig(text="Settings", position=(0, 0), icon="settings.png"),
+            ButtonConfig(text="Blank", position=(0, 1), icon="moon64x64.png"),
+            ButtonConfig(text="Radio", position=(0, 2), icon="play64x64.png"),
             ButtonConfig(text="Close", position=(0, 3))
         ]
 
@@ -81,8 +83,13 @@ class AlarmWindow(QWidget):
 
             if config.slot:
                 button.clicked.connect(config.slot)
+
+            if config.icon:
+                button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
+
             bottom_grid.addWidget(button, *config.position)
 
+       
         # ** Left grid: next 3 departing trains **
         self.train_labels = []
         for i in range(3):
@@ -147,7 +154,7 @@ class SettingsWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.control_buttons = {}
+        self.control_buttons = []
         self.numpad_buttons = {}
         self.initUI()
 
@@ -200,15 +207,15 @@ class SettingsWindow(QWidget):
         # ** Bottom level main buttons **
         control_button_config = [
             ButtonConfig(text="Play now", position=(0, 0)),
-            ButtonConfig(text="Toggle window", position=(0, 1)),
-            ButtonConfig(text="Toggle brightness", position=(0, 2)),
+            ButtonConfig(text="Toggle\nWindow", position=(0, 1)),
+            ButtonConfig(text="Toggle\nBrightness", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
         ]
 
         for config in control_button_config:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
-            self.control_buttons[config.text] = button
+            self.control_buttons.append(button)
 
             if config.slot:
                 button.clicked.connect(config.slot)

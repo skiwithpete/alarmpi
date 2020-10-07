@@ -132,9 +132,10 @@ class Clock:
         self.blank_button = self.main_window.control_buttons["Blank"]
         self.close_button = self.main_window.control_buttons["Close"]
 
-        brightness_button = self.settings_window.control_buttons["Toggle brightness"]
-        self.alarm_play_button = self.settings_window.control_buttons["Play now"]
-        window_button = self.settings_window.control_buttons["Toggle window"]
+        self.alarm_play_button = self.settings_window.control_buttons[0]
+        window_button = self.settings_window.control_buttons[1]
+        brightness_button = self.settings_window.control_buttons[2]
+
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
 
