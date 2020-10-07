@@ -260,7 +260,14 @@ class Clock:
 
         else:
             self.radio.config["url"] = url
+            # Look for station name from listed streams in stream config file
             current_radio_station = ""
+            
+            for k,v in utils.RADIO_STATIONS.items():
+                if v == url:
+                    current_radio_station = k
+                    break
+ 
             
         # The radio button is a checkable (ie. a toggle): radio should start playing 
         # when the button gets checked and stop when state changes to not checked.
