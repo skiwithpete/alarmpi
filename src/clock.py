@@ -88,12 +88,11 @@ class Clock:
         self.setup_button_handlers()
 
         weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
-        weather_api_key_exists = self.env.get_value("openweathermap", "key_file", fallback=False)
         weather_polling_enabled = self.env.get_value("polling", "weather", fallback=False) == "1"
 
         train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
 
-        if weather_enabled and weather_api_key_exists and weather_polling_enabled:
+        if weather_enabled and weather_polling_enabled:
             self.setup_weather_polling()
 
         if train_polling_enabled:

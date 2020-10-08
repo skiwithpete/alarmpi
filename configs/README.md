@@ -26,13 +26,8 @@ Alarm content can be configured by editing `alarmpi.conf`. This configuration fi
   * `handler` points to a module in the `/handlers` directory responsible for creating the content.
 
   * **[openweathermap]** needs some additional configuration including an API key to openweathermap.org and a cityid for the city whose weather to forecast. See https://openweathermap.org/appid for registering for an API key and http://bulk.openweathermap.org/sample/ for cityid codes.
-    * API key should be placed in a simple json file of
-      ```
-      {
-        "key": API_KEY
-      }
-      ```
-      The file should then be pointed to by the `key_file` option in the configuration.
+    * API key should be placed as the credentials argument.
+
 
 **Note:** content sections are parsed in the order they appear in the configuration. Therefore the greeting should come first.
 
@@ -43,7 +38,7 @@ Three TTS engines are supported:
 **[google_gcp_tts]**  
   * Google Cloud Text-to-Speech engine. This provides the most human-like speech, but requires some additional setup. As this is a Google Cloud platform API, it requires a Google Cloud project with billing enabled.
 
-  * Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, specify the path to your key as the `key_file` option
+  * Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, specify the path to your key as `credentials`
 
   * While this is a paid API, there is a free tier of 1 million characters per month. This should easily cover the alarm's needs: a single run of the script generates about 1100 characters worth of text; running the script once per day therefore only generates a total of some 33 000 characters. See https://cloud.google.com/text-to-speech/pricing and https://cloud.google.com/text-to-speech/quotas for more information.
   * Disabled by default
@@ -105,4 +100,5 @@ Adding a new TTS engine can be done similarly:
 
  2. Create a configuration section with `type=tts`
 
-  * You can use the `key_file` option to set reference an API access token file to the constructor if required. This will be passed to the initializer.
+  * You can use the `credentials` option to set reference an API access token file to the constructor if required. This will be passed to the initializer.
+  

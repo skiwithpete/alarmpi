@@ -16,8 +16,6 @@ from src import clock
 from src import alarm_builder
 
 
-# Setup loggers. Outside of these mplayer output is also logged
-# via Popen argument in clock.py
 logging.config.fileConfig("logging.conf")
 error_logger = logging.getLogger("errorLogger")
 event_logger = logging.getLogger("eventLogger")

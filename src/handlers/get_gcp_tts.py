@@ -21,18 +21,19 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
     https://cloud.google.com/text-to-speech/pricing
     """
 
-    def __init__(self, keyfile):
-        super().__init__(keyfile)
+    def __init__(self, credentials):
+        super().__init__()
+        self.credentials = credentials
         self.client = self.get_client()
 
     def get_client(self):
         """Create an API client using a path to a service account key_file."""
         try:
-            credentials = service_account.Credentials.from_service_account_file(self.keyfile)
+            credentials = service_account.Credentials.from_service_account_file(self.credentials)
             client = texttospeech.TextToSpeechClient(credentials=credentials)
         except FileNotFoundError:
             raise RuntimeError(
-                "Error using Google Speech: couldn't read keyfile {}".format(self.keyfile))
+                "Error using Google Speech: couldn't read keyfile {}".format(self.credentials))
         return client
 
     def play(self, text):
