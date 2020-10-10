@@ -1,165 +1,160 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-import sys
+import pytest
 import os.path
-import unittest
-from unittest import TestCase
-from unittest.mock import (patch, Mock)
+import subprocess
+from unittest.mock import patch, Mock
 from PyQt5.QtWidgets import QApplication
 
-import src
 from src import clock
 
 
+# Create a gobal QApplication instance to handle windgets
+app = QApplication([])
 
-class ClockTestCase(TestCase):
+
+@pytest.fixture
+@patch("src.alarmenv.AlarmEnv.get_config_file_path")
+def dummy_clock(mock_get_config_file_path):
+    mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
+
+    # Create an AlarmEnv from the configuration above with empty string as dummy name
+    dummy_clock = clock.Clock("")
+    dummy_clock.setup()
+    return dummy_clock
+
+
+class TestClockCase():
     """Test cases for logic functions for determining alarm time in Clock."""
-
-    @patch("src.alarmenv.AlarmEnv.get_config_file_path")
-    def setUp(self, mock_get_config_file_path):
-        app = QApplication([]) # Setup a dummy QApplication to be able to create widgets (return value is needed to prevent garbage collection?)
-
-        mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
-        self.clock = clock.Clock("dummy.conf")
-        self.clock.setup()
 
     @patch("src.GUIWidgets.SettingsWindow.validate_alarm_input")
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    def test_set_alarm_updates_screen_and_sets_timers(self, mock_display, mock_validate_alarm_input):
+    def test_set_alarm_updates_screen_and_sets_timers(self, mock_display, mock_validate_alarm_input, dummy_clock):
         """Does 'Set alarm' button start timers for alarm build and play and update
         main window and settings window labels?
         """
         mock_validate_alarm_input.return_value = "00:10"  # Mock validating a not-set alarm time
-
-        self.clock.settings_window.numpad_buttons["set"].click()
-        self.assertTrue(self.clock.alarm_timer.isActive())
-        self.assertTrue(self.clock.alarm_build_timer.isActive())
+        dummy_clock.settings_window.numpad_buttons["set"].click()
         
+        assert dummy_clock.alarm_timer.isActive()
+        assert dummy_clock.alarm_build_timer.isActive()
+
         mock_display.assert_called_with("00:10")
 
-        settings_window_value = self.clock.settings_window.alarm_time_status_label.text()
-        self.assertEqual(settings_window_value, "Alarm set for 00:10")
+        settings_window_value = dummy_clock.settings_window.alarm_time_status_label.text()
+        assert settings_window_value == "Alarm set for 00:10"
 
         # Also check get_current_active_alarm returns a value
-        active_alarm = self.clock.get_current_active_alarm()
-        self.assertIsNotNone(active_alarm)
-  
+        active_alarm = dummy_clock.get_current_active_alarm()
+        assert active_alarm is not None
+
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
-    def test_clear_alarm_clears_screen_and_stops_timers(self, mock_display):
+    def test_clear_alarm_clears_screen_and_stops_timers(self, mock_display, dummy_clock):
         """Does 'Clearm alarm' button stop timers for alarm build and play and clear
         main window and settings window labels?
         """
-        self.clock.settings_window.numpad_buttons["clear"].click()
-        self.assertFalse(self.clock.alarm_timer.isActive())
-        self.assertFalse(self.clock.alarm_build_timer.isActive())
-        
+        dummy_clock.settings_window.numpad_buttons["clear"].click()
+        assert not dummy_clock.alarm_timer.isActive()
+        assert not dummy_clock.alarm_build_timer.isActive()
+
         mock_display.assert_called_with("")
 
-        settings_window_value = self.clock.settings_window.alarm_time_status_label.text()
-        self.assertEqual(settings_window_value, "Alarm cleared")
+        settings_window_value = dummy_clock.settings_window.alarm_time_status_label.text()
+        assert settings_window_value == "Alarm cleared"
 
     @patch("PyQt5.QtWidgets.QLCDNumber.display")
     @patch("src.rpi_utils.set_display_backlight_brightness")
-    def test_play_alarm_starts_alarm_play_thread(self, mock_set_display_backlight_brightness, mock_display):
+    def test_play_alarm_starts_alarm_play_thread(self, mock_set_display_backlight_brightness, mock_display, dummy_clock):
         """Does the timer slot function for playing the alarm set window brightness,
         clearn main window label and start the alarm play thread?
         """
-        self.clock.alarm_play_thread.start = Mock()
-        self.clock.enable_screen_and_show_control_buttons = Mock()
+        dummy_clock.alarm_play_thread.start = Mock()
+        dummy_clock.enable_screen_and_show_control_buttons = Mock()
 
-        self.clock.play_alarm()
+        dummy_clock.play_alarm()
         mock_display.assert_called_with("")
         mock_set_display_backlight_brightness.assert_called_with(255)
-        self.clock.alarm_play_thread.start.assert_called()
+        dummy_clock.alarm_play_thread.start.assert_called()
 
-    def test_finish_playing_alarm_starts_radio_if_enabled(self):
+    @patch("src.clock.Clock.play_radio")
+    def test_finish_playing_alarm_starts_radio_if_enabled(self, mock_play_radio, dummy_clock):
         """Does the alarm finish callback call the radio thread when radio is enabled?"""
-        self.clock.env.config.set("radio", "enabled", "1")
-        self.clock.main_window.control_buttons["Radio"] = Mock()
+        dummy_clock.env.config.set("radio", "enabled", "1")
+        dummy_clock.main_window.control_buttons["Radio"] = Mock()
 
-        self.clock.finish_playing_alarm()
-        self.clock.main_window.control_buttons["Radio"].click.assert_called()
+        dummy_clock.finish_playing_alarm()
+        #dummy_clock.main_window.control_buttons["Radio"].click.assert_called()
+        mock_play_radio.assert_called_with(url="www.example.com")
 
-    def test_settings_window_keeps_previously_set_alarm(self):
+    def test_settings_window_keeps_previously_set_alarm(self, dummy_clock):
         """Does the settings window input label for set alarm time keep
         its value when the settings window is closed?
         """
         # Mock the actual window display calls
-        self.clock.settings_window.show = Mock()
-        self.clock.settings_window.close = Mock()
+        dummy_clock.settings_window.show = Mock()
+        dummy_clock.settings_window.close = Mock()
+        dummy_clock.play_radio = Mock()
 
-        self.clock.settings_window.set_alarm_input_time_label("07:16")
-        self.clock.settings_button.click()
+        dummy_clock.settings_window.set_alarm_input_time_label("07:16")
+        dummy_clock.settings_button.click()
 
         # Test value when settings window is open
-        label_time = self.clock.settings_window.input_alarm_time_label.text()
-        self.assertEqual(label_time, "07:16")
+        label_time = dummy_clock.settings_window.input_alarm_time_label.text()
+        assert label_time == "07:16"
 
         # Close the window and test the value again
-        self.clock.settings_window.clear_labels_and_close()
-        label_time = self.clock.settings_window.input_alarm_time_label.text()
-        self.assertEqual(label_time, "07:16")
+        dummy_clock.settings_window.clear_labels_and_close()
+        label_time = dummy_clock.settings_window.input_alarm_time_label.text()
+        assert label_time == "07:16"
 
         # Simulate alarm play finish and test the value again
-        self.clock.main_window.control_buttons["Radio"] = Mock()
-        self.clock.finish_playing_alarm()
-        label_time = self.clock.settings_window.input_alarm_time_label.text()
-        self.assertEqual(label_time, "07:16")
+        dummy_clock.main_window.control_buttons["Radio"] = Mock()
+        dummy_clock.finish_playing_alarm()
+        label_time = dummy_clock.settings_window.input_alarm_time_label.text()
+        assert label_time == "07:16"
 
     @patch("src.rpi_utils.set_display_backlight_brightness")
     @patch("src.rpi_utils.get_display_backlight_brightness")
-    def test_brightness_change_on_low(self, mock_get_brightness, mock_set_brightness):
+    def test_brightness_change_on_low(self, mock_get_brightness, mock_set_brightness, dummy_clock):
         """Does the backlight toggle change brightness change from low to high?"""
         mock_get_brightness.return_value = 9
 
         # Ensure the button is enabled before clicking it
-        self.clock.settings_window.control_buttons["Toggle brightness"].setEnabled(True)
-        self.clock.settings_window.control_buttons["Toggle brightness"].click()
+        dummy_clock.settings_window.control_buttons[2].setEnabled(True)
+        dummy_clock.settings_window.control_buttons[2].click()
         mock_set_brightness.assert_called_with(255)
 
     @patch("src.rpi_utils.set_display_backlight_brightness")
     @patch("src.rpi_utils.get_display_backlight_brightness")
-    def test_brightness_change_on_hight(self, mock_get_brightness, mock_set_brightness):
+    def test_brightness_change_on_hight(self, mock_get_brightness, mock_set_brightness, dummy_clock):
         """Does the backlight toggle change brightness change from hight to low?"""
         mock_get_brightness.return_value = 255
-        self.clock.settings_window.control_buttons["Toggle brightness"].setEnabled(True)
-        self.clock.settings_window.control_buttons["Toggle brightness"].click()
+        dummy_clock.settings_window.control_buttons[2].setEnabled(True)
+        dummy_clock.settings_window.control_buttons[2].click()
         mock_set_brightness.assert_called_with(9)
 
 
-class RadioStreamerTestCase(TestCase):
+
+@pytest.fixture
+def dummy_radio():
+    radio_args = {"args": "-playlist url", "url": ""}
+    return clock.RadioStreamer(radio_args)
+
+class TestRadioStreamerCase():
     """Test cases for RadioStreamer: does streaming radio work correctly?"""
 
-    def setUp(self):
-        self.radio = clock.RadioStreamer("dummy_args")
+    def test_radio_not_playing_on_empty_process(self, dummy_radio):
+        """Does is_playing return False when the active process flag is not set?"""
+        dummy_radio.process = None
+        assert not dummy_radio.is_playing()
 
-    def test_radio_not_playing_on_empty_process(self):
-        """Does is_playing return False when there active process flag is not set?"""
-        self.radio.process = None
-        res = self.radio.is_playing()
-        self.assertFalse(res)
-
-    def test_radio_is_playing_on_non_empty_process(self):
+    def test_radio_is_playing_on_non_empty_process(self, dummy_radio):
         """Does is_playing return True when an active process flag is set?"""
-        self.radio.process = True
-        res = self.radio.is_playing()
-        self.assertTrue(res)
+        dummy_radio.process = True
+        assert dummy_radio.is_playing()
 
-    @patch("subprocess.Popen")
-    def test_stop_clears_active_process(self, mock_Popen):
+    def test_stop_clears_active_process(self, dummy_radio):
         """Does stop clear the list of running processes?"""
-        self.radio.play()
-        self.radio.stop()
+        subprocess.Popen = Mock()
+        dummy_radio.play()
+        dummy_radio.stop()
 
-        self.assertEqual(self.radio.process, None)
-
-
-
-if __name__ == "__main__":
-    """Create test suites from both classes and run tests."""
-    suite = unittest.TestLoader().loadTestsFromTestCase(ClockTestCase)
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-    suite = unittest.TestLoader().loadTestsFromTestCase(RadioStreamerTestCase)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+        assert dummy_radio.process is None
