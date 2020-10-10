@@ -8,9 +8,8 @@ class AlarmpiTTS:
     tts engine specific clients to implement.
     """
 
-    def __init__(self, keyfile=None):
-        """Set a path to the keyfile needed to access the tts API, if any."""
-        self.keyfile = keyfile
+    def __init__(self, credentials=None):
+        self.credentials = credentials
 
     def play(self, text):
         """This function should translate the input text to speech and play it.

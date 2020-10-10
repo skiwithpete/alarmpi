@@ -5,10 +5,12 @@
 
 
 import time
+import os.path
 from functools import partial
 from collections import namedtuple
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QTimer, QSize
 from PyQt5.QtWidgets import (
     QWidget,
     QLabel,
@@ -17,14 +19,18 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QSizePolicy,
     QDesktopWidget,
-    QCheckBox
+    QCheckBox,
+    QComboBox
 )
+
+from src import utils
+
 
 
 # Create namedtuples for storing button and label configurations
-ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "size_policy"])
+ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "icon", "size_policy"])
 ButtonConfig.__new__.__defaults__ = (
-    None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
+    None, None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
 
 class AlarmWindow(QWidget):
@@ -63,9 +69,9 @@ class AlarmWindow(QWidget):
 
         # ** Bottom grid: main UI control buttons **
         button_configs = [
-            ButtonConfig(text="Settings", position=(0, 0)),
-            ButtonConfig(text="Blank", position=(0, 1)),
-            ButtonConfig(text="Radio", position=(0, 2)),
+            ButtonConfig(text="Settings", position=(0, 0), icon="settings.png"),
+            ButtonConfig(text="Blank", position=(0, 1), icon="moon64x64.png"),
+            ButtonConfig(text="Radio", position=(0, 2), icon="play64x64.png"),
             ButtonConfig(text="Close", position=(0, 3))
         ]
 
@@ -77,8 +83,14 @@ class AlarmWindow(QWidget):
 
             if config.slot:
                 button.clicked.connect(config.slot)
+
+            if config.icon:
+                button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
+                button.setIconSize(QSize(28, 28))
+
             bottom_grid.addWidget(button, *config.position)
 
+       
         # ** Left grid: next 3 departing trains **
         self.train_labels = []
         for i in range(3):
@@ -96,9 +108,16 @@ class AlarmWindow(QWidget):
         self.temperature_label = QLabel("", self)
         self.wind_speed_label = QLabel("", self)
         self.weather_container = QLabel(self)
+        # Label with icon: QLabel doesn't support setIcon, use html support instead
+        self.radio_play_indicator = QLabel(self)
+        
         right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
         right_grid.addWidget(self.wind_speed_label, 1, 0, Qt.AlignRight)
         right_grid.addWidget(self.weather_container, 2, 0, Qt.AlignRight | Qt.AlignTop)
+        right_grid.addWidget(self.radio_play_indicator, 3, 0, Qt.AlignRight)
+
+        # Radio play indicator should be hidden by default
+        self.radio_play_indicator.hide()
 
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(left_grid, 0, 0)
@@ -135,6 +154,16 @@ class AlarmWindow(QWidget):
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def _show_radio_play_indicator(self, station_name):
+        """Display QLabel for active radio station."""
+        html="<html><img src='resources/icons/radio64x64.png' height='28'><span style='font-size:14px'> {}</span></html>".format(station_name)
+        self.radio_play_indicator.setText(html)
+        self.radio_play_indicator.show()
+
+    def _hide_radio_play_indicator(self):
+        """Hide QLabel for active radio station."""
+        self.radio_play_indicator.hide()
+
 
 class SettingsWindow(QWidget):
     ALARM_INPUT_ERROR = "ERROR: Invalid time"
@@ -143,7 +172,7 @@ class SettingsWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.control_buttons = {}
+        self.control_buttons = []
         self.numpad_buttons = {}
         self.initUI()
 
@@ -196,15 +225,15 @@ class SettingsWindow(QWidget):
         # ** Bottom level main buttons **
         control_button_config = [
             ButtonConfig(text="Play now", position=(0, 0)),
-            ButtonConfig(text="Toggle window", position=(0, 1)),
-            ButtonConfig(text="Toggle brightness", position=(0, 2)),
+            ButtonConfig(text="Toggle\nWindow", position=(0, 1)),
+            ButtonConfig(text="Toggle\nBrightness", position=(0, 2)),
             ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
         ]
 
         for config in control_button_config:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
-            self.control_buttons[config.text] = button
+            self.control_buttons.append(button)
 
             if config.slot:
                 button.clicked.connect(config.slot)
@@ -216,6 +245,14 @@ class SettingsWindow(QWidget):
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
         self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
 
+        # ComboBox for radio station, filled from 
+        self.radio_station_combo_box = QComboBox(self)
+        self.radio_station_combo_box.addItems(utils.RADIO_STATIONS)
+        self.radio_station_combo_box.setSizePolicy(
+            QSizePolicy.Preferred,
+            QSizePolicy.Expanding  # expand in vertical direction
+        )
+
         self.alarm_time_status_label = QLabel(self)
         self.alarm_time_error_label = QLabel(self)
         self.alarm_time_error_label.setStyleSheet("color: #FF1414;")
@@ -226,6 +263,7 @@ class SettingsWindow(QWidget):
         left_grid.addWidget(self.alarm_brightness_checkbox, 3, 0)
         left_grid.addWidget(self.alarm_time_status_label, 4, 0)
         left_grid.addWidget(self.alarm_time_error_label, 5, 0)
+        left_grid.addWidget(self.radio_station_combo_box, 6, 0)
 
         # Add grids to base layout
         base_layout.addLayout(left_grid, 0, 0)

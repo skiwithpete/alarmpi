@@ -2,14 +2,12 @@
 ## Alarm configuration
 Alarm content can be configured by editing `alarmpi.conf`. This configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used, if any. Alernatively configurations can also be placed in `$HOME/.alarmpi/`.
 
-### alarm.conf description
+### default.conf description
 
 **[main]**  
 * **readaloud**
   * When set to 0 disables TTS. The contents of the enabled sections will still be printed to stdout and a beeping sound effect will play as the alarm.
   * Can also be toggled from the settings window.
-* **nthost**
-  * Determines a url to test for network connectivity. While many of the alarm components rely on API calls, an alarm should play even when the network is down. In this case a beeping sound effect will play.
 * **end**
   * An ending greeting to be used by the TTS client after all components, apart from radio stream, have been processed.
 
@@ -28,13 +26,8 @@ Alarm content can be configured by editing `alarmpi.conf`. This configuration fi
   * `handler` points to a module in the `/handlers` directory responsible for creating the content.
 
   * **[openweathermap]** needs some additional configuration including an API key to openweathermap.org and a cityid for the city whose weather to forecast. See https://openweathermap.org/appid for registering for an API key and http://bulk.openweathermap.org/sample/ for cityid codes.
-    * API key should be placed in a simple json file of
-      ```
-      {
-        "key": API_KEY
-      }
-      ```
-      The file should then be pointed to by the `key_file` option in the configuration.
+    * API key should be placed as the credentials argument.
+
 
 **Note:** content sections are parsed in the order they appear in the configuration. Therefore the greeting should come first.
 
@@ -45,7 +38,7 @@ Three TTS engines are supported:
 **[google_gcp_tts]**  
   * Google Cloud Text-to-Speech engine. This provides the most human-like speech, but requires some additional setup. As this is a Google Cloud platform API, it requires a Google Cloud project with billing enabled.
 
-  * Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, specify the path to your key as the `key_file` option
+  * Follow the quick start guide in https://cloud.google.com/text-to-speech/docs/quickstart-protocol to setup a project. After creating and downloading a service account key, specify the path to your key as `credentials`
 
   * While this is a paid API, there is a free tier of 1 million characters per month. This should easily cover the alarm's needs: a single run of the script generates about 1100 characters worth of text; running the script once per day therefore only generates a total of some 33 000 characters. See https://cloud.google.com/text-to-speech/pricing and https://cloud.google.com/text-to-speech/quotas for more information.
   * Disabled by default
@@ -75,7 +68,7 @@ This enables the two polling features of the main window. When enabled
 Both polling features are disabled by default.
 
 ## Using a custom configuration
-You can either modify the provided configuration file `alarm.conf` or create a new file and pass that to `alarm_builder.py` and `main.py` via a command line argument, eg.
+You can either modify the provided configuration file `default.conf` or create a new file and pass that to `alarm_builder.py` and `main.py` via a command line argument, eg.
 ```
 python main.py my_config.conf
 ```
@@ -107,4 +100,5 @@ Adding a new TTS engine can be done similarly:
 
  2. Create a configuration section with `type=tts`
 
-  * You can use the `key_file` option to set reference an API access token file to the constructor if required. This will be passed to the initializer.
+  * You can use the `credentials` option to set reference an API access token file to the constructor if required. This will be passed to the initializer.
+  

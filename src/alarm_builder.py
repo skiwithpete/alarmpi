@@ -75,11 +75,9 @@ class Alarm:
 
     def build_and_play(self):
         """Build and play an alarm.
-        This is provided as a CLI method of playing the alarm. This has some differences
-        compared to the GUI based alarm behavior in alarm.py:
-          * since building and playing is chained together there may be an upto 3 delay
-            on playing the alarm.
-          * radio playback is handled directly rather than using alarm.py's custom thread.
+        This is provided as a CLI interface for playing the alarm. This has some differences
+        compared to how scheduled alarms are handled in the main GUI by clock.py.
+        Since the alarm is built on the go, there may be a few seconds delay on play.
         """
         content = self.build()
         self.play(content)
@@ -109,8 +107,8 @@ class Alarm:
             tts_section = tts[0]
             class_ = self.get_content_parser_class(tts_section)
             # read the path to the keyfile if provided/applicable
-            key_file = self.env.get_value(tts_section, "key_file", fallback=False)
-            client = class_(keyfile=key_file)
+            credentials = self.env.get_value(tts_section, "credentials", fallback=False)
+            client = class_(credentials=credentials)
 
         # by default, use Festival tts client
         else:

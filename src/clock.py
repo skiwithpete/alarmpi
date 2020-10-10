@@ -11,6 +11,7 @@ import sys
 import subprocess
 import logging
 import json
+from functools import partial
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
@@ -59,8 +60,8 @@ class Clock:
         self.alarm_build_timer.setSingleShot(True)
         self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
 
-        radio_args = self.env.get_value("radio", "args")
-        self.radio = RadioStreamer(radio_args)
+        radio_conf = self.env.get_section("radio")
+        self.radio = RadioStreamer(radio_conf)
         self.alarm_player = alarm_builder.Alarm(self.env)
         self.train_parser = get_next_trains.TrainParser()
 
@@ -87,12 +88,11 @@ class Clock:
         self.setup_button_handlers()
 
         weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
-        weather_api_key_exists = self.env.get_value("openweathermap", "key_file", fallback=False)
         weather_polling_enabled = self.env.get_value("polling", "weather", fallback=False) == "1"
 
         train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
 
-        if weather_enabled and weather_api_key_exists and weather_polling_enabled:
+        if weather_enabled and weather_polling_enabled:
             self.setup_weather_polling()
 
         if train_polling_enabled:
@@ -131,9 +131,10 @@ class Clock:
         self.blank_button = self.main_window.control_buttons["Blank"]
         self.close_button = self.main_window.control_buttons["Close"]
 
-        brightness_button = self.settings_window.control_buttons["Toggle brightness"]
-        self.alarm_play_button = self.settings_window.control_buttons["Play now"]
-        window_button = self.settings_window.control_buttons["Toggle window"]
+        self.alarm_play_button = self.settings_window.control_buttons[0]
+        window_button = self.settings_window.control_buttons[1]
+        brightness_button = self.settings_window.control_buttons[2]
+
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
 
@@ -146,14 +147,10 @@ class Clock:
         # ** main window buttons **
         self.settings_button.clicked.connect(self.open_settings_window)
 
-        # Disable the radio button if radio is disabled in config
-        if self.env.get_value("radio", "enabled") == "0":
-            self.radio_button.setEnabled(False)
-
-        # ...otherwise set the button as an on/off toggle
-        else:
-            self.radio_button.setCheckable(True)
-            self.radio_button.clicked.connect(self.play_radio)
+        # Set the radio button as an on/off toggle
+        self.radio_button.setCheckable(True)
+        radio_play_slot = partial(self.play_radio, url=None)
+        self.radio_button.clicked.connect(radio_play_slot)
 
         self.blank_button.clicked.connect(self.blank_screen_and_hide_control_buttons)
         self.close_button.clicked.connect(self.cleanup_and_exit)
@@ -245,18 +242,40 @@ class Clock:
         if active:
             return self.alarm_dt.strftime("%H:%M")
 
-    def play_radio(self):
+    def play_radio(self, url=None):
         """Callback to the 'Play radio' button: open or close the radio stream
         depending on the button state.
+        Args:
+            url (string): the url of the stream to play. If none, currently active
+                stream from the settings window ComboBox is used.
         """
         button = self.main_window.control_buttons["Radio"]
+        
+        # If no stream url was passed, use currently active station from settings window
+        # dropdown list.
+        if url is None:
+            current_radio_station = self.settings_window.radio_station_combo_box.currentText()
+            self.radio.config["url"] = utils.RADIO_STATIONS[current_radio_station]
 
-        # The radio button is a checkable: it will stay down until pressed again.
-        # Therefore the radio should start playing when the button is pressed and
-        # stop when not pressed. (The state change happends before this callback runs.)
+        else:
+            self.radio.config["url"] = url
+            # Look for station name from listed streams in stream config file
+            current_radio_station = ""
+            
+            for k,v in utils.RADIO_STATIONS.items():
+                if v == url:
+                    current_radio_station = k
+                    break
+ 
+            
+        # The radio button is a checkable (ie. a toggle): radio should start playing 
+        # when the button gets checked and stop when state changes to not checked.
+        # (The state change occurs before this callback runs.)
         if button.isChecked():
+            self.main_window._show_radio_play_indicator(current_radio_station)
             self.radio.play()
         else:
+            self.main_window._hide_radio_play_indicator()
             self.radio.stop()
 
     def play_alarm(self):
@@ -280,15 +299,21 @@ class Clock:
         """
         self.alarm_play_button.setEnabled(True)
 
-        # TODO: ignore radio on manual alarms?
         if self.env.config_has_match("radio", "enabled", "1"):
-             # Manually emit the radio buttons click signal. This will both
-             # set the state of the button and start the playback.
-            self.main_window.control_buttons["Radio"].click()
+            # Manually emit the radio buttons click signal. This will both
+            # set the state of the button and start the playback.
+            #self.main_window.control_buttons["Radio"].click()
+
+            # Toggle the radio button and specify the stream to play as
+            # the url parameter from the configuration file.
+            # Note: we're assuming the button is untoggled before the call.
+            self.main_window.control_buttons["Radio"].toggle()
+            url = self.env.get_value("radio", "url")
+            self.play_radio(url=url)
 
     def build_and_play_alarm(self):
         """Custom callback for the 'Play now' button: builds and plays an alarm."""
-        self.alarm_play_thread.build() # A new alarm is built every time the button is pressed
+        self.alarm_play_thread.build() # Note: a new alarm is built every time the button is pressed
         self.alarm_play_thread.start()
 
     def setup_weather_polling(self):
@@ -472,9 +497,9 @@ class AlarmPlayThread(QThread):
 
 class RadioStreamer:
     """Helper class for playing a radio stream via mplayer."""
-    def __init__(self, args):
+    def __init__(self, config):
         self.process = None
-        self.args = args
+        self.config = config
 
     def is_playing(self):
         """Check if mplayer is currently running. Return True if it is."""
@@ -484,13 +509,19 @@ class RadioStreamer:
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
         """
-        cmd = "/usr/bin/mplayer {}".format(self.args).split()
+        # Ensure the currently active 'url' key from config is used as the stream url
+        args = self.config["args"].split()
+        args[1] = self.config["url"] # we're assuming url position in the arg list!
+        args = " ".join(args)
+
+        cmd = "/usr/bin/mplayer {}".format(args)
+        logger.info("Running %s", cmd)
+
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
-        # Output is captured to file.
-
+        # Output is captured (truncated) to file.
         with open("logs/radio.log", "w") as f:
-            self.process = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
+            self.process = subprocess.Popen(cmd.split(), stdout=f, stderr=subprocess.STDOUT)
 
     def stop(self):
         """Terminate the running mplayer process."""

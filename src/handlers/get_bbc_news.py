@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
 import feedparser
+import logging
+
 from src import apcontent
 
+
+error_logger = logging.getLogger("errorLogger")
 
 class NewsParser(apcontent.AlarmpiContent):
 
@@ -12,6 +16,7 @@ class NewsParser(apcontent.AlarmpiContent):
     def build(self):
         url = "https://feeds.bbci.co.uk/news/world/rss.xml"
         rss = feedparser.parse(url)
+        error_logger.error(rss)
 
         if rss.bozo:
             newsfeed = 'Failed to reach BBC News'
