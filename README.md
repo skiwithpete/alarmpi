@@ -40,7 +40,7 @@ This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/
 
 ![Main window](resources/clock_main.png)
 
-![schedule window](resources/clock_schedule.png)
+![Settings window](resources/clock_settings.png)
 
 
 ### Hardware setup
@@ -161,5 +161,5 @@ pip install -r requirements.txt
 ### Unit tests
 Unit tests can be run from the root folder with
 ```
-python -m unittest tests/test*.py
+python -m pytest tests
 ```
