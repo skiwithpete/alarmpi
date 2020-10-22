@@ -8,5 +8,6 @@ pkill -f "python .*(alarmpi/)?main.py"
 FILE=/sys/class/backlight/rpi_backlight/bl_power
 if [[ -f "$FILE" ]]; then
     echo 0 > /sys/class/backlight/rpi_backlight/bl_power
+    echo 255 > /sys/class/backlight/rpi_backlight/brightness
 fi
 
