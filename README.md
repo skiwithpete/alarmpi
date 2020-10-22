@@ -62,6 +62,14 @@ Next, install Python packages with
 ```pip install -r requirements.txt```  
 Using a virtual environment is recommended
 
+The GUI has Raspberry Pi specific buttons for manipulating the display's backlight brightness. In order to enable these two system files need to be made accessable by the session user (by default `pi`):
+```
+chown pi /sys/devices/platform/rpi_backlight/backlight/rpi_backlight/brightness
+chown pi /sys/devices/platform/rpi_backlight/backlight/rpi_backlight/bl_power
+```
+This step can be ignored on other systems.
+
+
 
 ## Usage
 Run the script either with

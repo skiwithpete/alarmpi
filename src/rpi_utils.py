@@ -11,7 +11,7 @@ import logging
 import inspect
 
 
-LOW_BRIGHTNESS = 9
+LOW_BRIGHTNESS = 12
 HIGH_BRIGHTNESS = 255
 
 BRIGHTNESS_FILE = "/sys/class/backlight/rpi_backlight/brightness"
@@ -31,8 +31,7 @@ def _open_config_file_or_tempfile(file_path, mode="r"):
         logger.warning("Using tempfile instead of non-existing file %s when calling %s", file_path, inspect.stack()[1].function)
         return tempfile.TemporaryFile(mode=mode)
     except PermissionError as e:
-        logging.warning("Couldn't open file %s, using tempfile", file_path)
-        logging.warning(str(e))
+        logging.warning("Couldn't open file %s, using tempfile. Original error was\n%s", file_path, str(e))
         return tempfile.TemporaryFile(mode=mode)
 
 def set_display_backlight_brightness(brightness):
