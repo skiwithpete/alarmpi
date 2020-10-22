@@ -71,7 +71,7 @@ class AlarmWindow(QWidget):
         button_configs = [
             ButtonConfig(text="Settings", position=(0, 0), icon="settings.png"),
             ButtonConfig(text="Blank", position=(0, 1), icon="moon64x64.png"),
-            ButtonConfig(text="Radio", position=(0, 2), icon="play64x64.png"),
+            ButtonConfig(text="Radio", position=(0, 2), icon="radio_bw64x64.png"),
             ButtonConfig(text="Close", position=(0, 3))
         ]
 
@@ -224,9 +224,9 @@ class SettingsWindow(QWidget):
 
         # ** Bottom level main buttons **
         control_button_config = [
-            ButtonConfig(text="Play now", position=(0, 0)),
-            ButtonConfig(text="Toggle\nWindow", position=(0, 1)),
-            ButtonConfig(text="Toggle\nBrightness", position=(0, 2)),
+            ButtonConfig(text="Play now", position=(0, 0), icon="play64x64.png"),
+            ButtonConfig(text="Toggle\nWindow", position=(0, 1), icon="window64x64.png"),
+            ButtonConfig(text="Toggle\nBrightness", position=(0, 2), icon="brightness64x64.png"),
             ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
         ]
 
@@ -237,6 +237,11 @@ class SettingsWindow(QWidget):
 
             if config.slot:
                 button.clicked.connect(config.slot)
+
+            if config.icon:
+                button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
+                button.setIconSize(QSize(28, 28))
+
             bottom_grid.addWidget(button, *config.position)
 
         # ** Left grid: misc settings **
