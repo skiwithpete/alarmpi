@@ -29,21 +29,20 @@ Thats all for now. Have a nice day.
 This is a fork of skiwithpete's alarmpi project: https://github.com/skiwithpete/alarmpi. After seeing it on [YouTube](https://youtu.be/julETnOLkaU), I thought it was neat and knew I wanted to use it to replace my old night table clock radio.
 
 
-### Main Features
+## Main Features
+ * Alarm scheduling
  * A spoken greeting based on time of day
  * Reads the day's weather from openweathermap.org
  * Reads latest news from BBC World RSS feed
  * Plays internet radio streams
- * Alarm scheduling via cron
- * A PyQt5 based GUI
-
+ 
 
 ![Main window](resources/clock_main.png)
 
 ![Settings window](resources/clock_settings.png)
 
 
-### Hardware setup
+## Hardware setup
 This project is built around the following hardware.
  * Raspberry Pi
  * Official Raspberry Pi Display
@@ -54,51 +53,17 @@ Apart from the speaker these aren't requirements per se. The project is mostly a
 It's also possible to run the alarm without the GUI on a headless setup, see Usage below.
 
 
-### Setup
- 1. First, install required system packages with
+## Setup
+First, install required system packages with  
+```apt install python-all-dev qt5-default ffmpeg festival mplayer portaudio19-dev```  
+These include the Qt 5 development package, Festival text-to-speech engine, the command line media player mplayer and audio libraries enabling playback of mp3 files directly in Python.
 
-  ```apt install ffmpeg festival mplayer portaudio19-dev python-all-dev```  
-  These include the Festival text-to-speech engine, the command line movie player mplayer and audio libraries enabling playback of mp3 files directly in Python.
+Next, install Python packages with  
+```pip install -r requirements.txt```  
+Using a virtual environment is recommended
 
- 2. Next, install required Python packages. The recommended, but most arduous, way is to use a virtualenv. The caveat with this approach is that PyQt5, the GUI framework used, needs to be compiled from source, since (at the time of writing, June 28th, 2019) there are no ARM pre built binaries on PyPI. Alternative installation methods exist, see blow.
 
- Setup and activate a virtualenv with
- ```
- python3 -m virtualenv venv
- source venv/bin/activate
- ```
-  1. Download SIP  
-  https://www.riverbankcomputing.com/software/sip/download  
-  According to the documentation, SIP is a
-  > tool that makes it very easy to create Python bindings for C and C++ libraries. It was originally developed to create PyQt, the Python bindings for the Qt toolkit, but can be used to create bindings for any C or C++ library.
-
-  2. Extract the archive and build the module
-     ```
-     tar -xvf sip-4.19.14.tar.gz
-     python sip-4.19.14/configure.py --sip-module PyQt5.sip --no-tools
-     make
-     sudo make install
-     sudo make clean
-     ```
-  3. Download PyQt5  
-  https://riverbankcomputing.com/software/pyqt/download5  
-
-  4. Extract and build
-     ```
-     tar -xvf PyQt5_gpl-5.12.tar.gz
-     python PyQt5_gpl-5.12/configure.py
-     make
-     sudo make install
-     sudo make clean
-     ```
-     This will take a long time!
-
-  5. Finally, install the rest of the required Python packages via `pip`:
-  ```
-  pip install -r requirements.txt
-  ```
-
-### Usage
+## Usage
 Run the script either with
 ```
 python main.py [configuration_file]
@@ -107,10 +72,11 @@ or
 ```
 python play_alarm.py [configuration_file]
 ```
-where `[configuration_file]` is a valid alarm configuration file in the `configs/` folder, ie.
+where `[configuration_file]` is an optional alarm configuration file either in `./configs/` or `$HOME/.alarmpi/`, ie.
 ```
 python main.py default.conf
 ```
+If no argument is used, `./configs/default.conf` will be used.
 
 
 
@@ -139,26 +105,7 @@ optional arguments:
   --debug       launch in debug mode
 ```
 
-
-
-### Alternative installation notes
-Instead of compiling PyQt5 from source, it can be installed as a system package with `apt`:
-```
-apt update
-apt install python3-pyqt5
-pip3 install -r requirements.txt
-```
-However, this also means you cannot use a virtualenv.
-
-If the target machine is not an ARM device (ie. not a Raspberry Pi), using pip is no problem
-and everything can be installed in a virtualenv
-```
-pip install pyqt5
-pip install -r requirements.txt
-```
-
-
-### Unit tests
+## Unit tests
 Unit tests can be run from the root folder with
 ```
 python -m pytest tests
