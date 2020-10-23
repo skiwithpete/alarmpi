@@ -364,6 +364,11 @@ class Clock:
         logger.debug("Updating trains")
         trains = self.train_parser.run()
 
+        if trains is None:
+            for label in self.main_window.train_labels:
+                label.setText("ERR")
+            return
+
         for train, label in zip(trains, self.main_window.train_labels):
             line_id = train["commuterLineID"]
             scheduled_time = train["scheduledTime"].strftime("%H:%M")
