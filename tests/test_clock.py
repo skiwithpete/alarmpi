@@ -115,7 +115,7 @@ class TestClockCase():
     @patch("src.rpi_utils.get_display_backlight_brightness")
     def test_brightness_change_on_low(self, mock_get_brightness, mock_set_brightness, dummy_clock):
         """Does the backlight toggle change brightness change from low to high?"""
-        mock_get_brightness.return_value = 9
+        mock_get_brightness.return_value = 12
 
         # Ensure the button is enabled before clicking it
         dummy_clock.settings_window.control_buttons[2].setEnabled(True)
@@ -129,7 +129,7 @@ class TestClockCase():
         mock_get_brightness.return_value = 255
         dummy_clock.settings_window.control_buttons[2].setEnabled(True)
         dummy_clock.settings_window.control_buttons[2].click()
-        mock_set_brightness.assert_called_with(9)
+        mock_set_brightness.assert_called_with(12)
 
 
 
