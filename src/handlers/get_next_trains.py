@@ -10,6 +10,7 @@
 
 import requests
 import datetime
+import logging
 from dateutil import tz
 
 
@@ -25,6 +26,7 @@ RETURN_TEMPLATE_KEYS = [
     "sortKey"
 ]
 
+event_logger = logging.getLogger("eventLogger")
 
 class TrainParser:
 
@@ -35,7 +37,8 @@ class TrainParser:
         try:
             api_response = self.fetch_daily_train_data()
             return self.format_next_departures(api_response)
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            event_logger.error(str(e))
             return None
 
     def format_next_departures(self, api_response):

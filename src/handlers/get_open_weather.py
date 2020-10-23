@@ -1,10 +1,11 @@
 import requests
 import datetime
-import json
-import os
+import logging
 
 from src import apcontent
 
+
+event_logger = logging.getLogger("eventLogger")
 
 class OpenWeatherMapClient(apcontent.AlarmpiContent):
     """Fetch waether predictions from openweathermap.org
@@ -30,8 +31,9 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             sunrise = weather["sunrise"]
             sunset = weather["sunset"]
 
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
             self.content = "Failed to connect to openweathermap.org. "
+            event_logger.error(str(e))
             return
         except (TypeError, KeyError):
             self.content = "Failed to read openweathermap.org. "
@@ -99,7 +101,8 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         try:
             api_response = self.get_weather()
             return OpenWeatherMapClient.format_response(api_response)
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            event_logger.error(str(e))
             return None
 
 
