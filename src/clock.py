@@ -330,27 +330,26 @@ class Clock:
         logger.debug("Updating weather")
         weather = self.weather_parser.fetch_and_format_weather()
 
+        if weather is None:
+            self.main_window.temperature_label.setText("ERR")
+            self.main_window.wind_speed_label.setText("ERR")
+            return
+
         temperature = weather["temp"]
         wind = weather["wind_speed_ms"]
 
-        try:
-            msg = "{}°C".format(round(temperature))
-            self.main_window.temperature_label.setText(msg)
+        msg = "{}°C".format(round(temperature))
+        self.main_window.temperature_label.setText(msg)
 
-            msg = "{}m/s".format(round(wind))
-            self.main_window.wind_speed_label.setText(msg)
+        msg = "{}m/s".format(round(wind))
+        self.main_window.wind_speed_label.setText(msg)
 
-            icon_id = weather["icon"]
-            icon_binary = get_open_weather.OpenWeatherMapClient.get_weather_icon(icon_id)
+        icon_id = weather["icon"]
+        icon_binary = get_open_weather.OpenWeatherMapClient.get_weather_icon(icon_id)
 
-            pixmap = QPixmap()
-            pixmap.loadFromData(icon_binary)
-            self.main_window.weather_container.setPixmap(pixmap)
-
-        except TypeError: # raised if weather is an an error template
-            self.main_window.temperature_label.setText("ERR")
-            self.main_window.wind_speed_label.setText("ERR")
-
+        pixmap = QPixmap()
+        pixmap.loadFromData(icon_binary)
+        self.main_window.weather_container.setPixmap(pixmap)
 
     def setup_train_polling(self):
         """Setup polling for next train departure times every 12 minutes."""

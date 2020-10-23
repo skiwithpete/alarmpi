@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import requests
 import datetime
 import json
@@ -19,17 +16,6 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         self.credentials = section_data["credentials"]
         self.city_id = section_data["city_id"]
         self.units = section_data["units"]
-
-        self.RETURN_TEMPLATE_KEYS = [
-            "temp",
-            "conditions",
-            "wind_speed_ms",
-            "wind_speed_kmh",
-            "wind_chill",
-            "sunrise",
-            "sunset",
-            "icon"
-        ]
 
     def build(self):
         try:
@@ -114,7 +100,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             api_response = self.get_weather()
             return OpenWeatherMapClient.format_response(api_response)
         except requests.exceptions.RequestException:
-            return {key: "ERR" for key in self.RETURN_TEMPLATE_KEYS}
+            return None
 
 
     @staticmethod
