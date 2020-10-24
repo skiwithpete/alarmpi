@@ -1,45 +1,47 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# Helper module for fetching the next 3 trains arriving at Kerava station using the
+# Finnish Transport agency's DigiTraffic API.
+# https://www.digitraffic.fi/en/railway-traffic/
+# https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
 
-"""Helper module for fetching the next 3 trains arriving at Kerava station using the
-Finnish Transport agency's DigiTraffic API.
-https://www.digitraffic.fi/en/railway-traffic/
-https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
+# This module differs from the other content handlers in that it is not a subclass
+# of AlarmpiContent and not called by alarm_builder. Instead this serves
+# as a pure helper class to clock.py for fetching the next train departures.
 
-This module differs from the other content handlers in that it is not a subclass
-of AlarmpiContent and not called by alarm_builder. Instead this serves
-as a pure helper class to clock.py for fetching the next train departures.
-"""
 
 import requests
 import datetime
+import logging
 from dateutil import tz
 
 
+# Define common top level parameters: number of arriving trains
+# and API response values to parse,
+NUMBER_OF_TRAINS = 3
+ARRIVING_STATION_CODE = "KE"
+RETURN_TEMPLATE_KEYS = [
+    "liveEstimateTime",
+    "scheduledTime",
+    "commuterLineID",
+    "cancelled",
+    "sortKey"
+]
+
+event_logger = logging.getLogger("eventLogger")
+
 class TrainParser:
 
-    # A list of dictionary keys as template for what the class
-    # should create.
-    RETURN_TEMPLATE_KEYS = [
-        "liveEstimateTime",
-        "scheduledTime",
-        "commuterLineID",
-        "cancelled",
-        "sortKey"
-    ]
-
     def run(self):
-        """Run the parser: either fetch the next 3 departures or, in case of
+        """Run the parser: either fetch the next departures or, in case of
         requests errors, return a list of templated error dicts.
         """
         try:
             api_response = self.fetch_daily_train_data()
-            return self.format_next_3_departures(api_response)
-        except requests.exceptions.RequestException:
-            d = {key: "ERR" for key in self.RETURN_TEMPLATE_KEYS}
-            return [d] * 3
+            return self.format_next_departures(api_response)
+        except requests.exceptions.RequestException as e:
+            event_logger.error(str(e))
+            return None
 
-    def format_next_3_departures(self, api_response):
+    def format_next_departures(self, api_response):
         """Format a list of API response departures to a list of dicts
         to pass back to clock.py.
         """
@@ -70,7 +72,7 @@ class TrainParser:
 
             sort_dt = self.utc_timestamp_to_local_datetime(row[sort_key])
 
-            d = dict.fromkeys(self.RETURN_TEMPLATE_KEYS)
+            d = dict.fromkeys(RETURN_TEMPLATE_KEYS)
             d.update({
                 "liveEstimateTime": live_estimate_time_dt,
                 "scheduledTime": scheduled_time_dt,
@@ -81,11 +83,11 @@ class TrainParser:
             departure_rows.append(d)
 
         departure_rows.sort(key=lambda row: row["sortKey"])
-        return departure_rows[:3]
+        return departure_rows[:NUMBER_OF_TRAINS]
 
     def fetch_daily_train_data(self):
-        """API call to get the next 3 arriving at Kerava station."""
-        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/KE"
+        """API call to get the next local arrivivals."""
+        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/{}".format(ARRIVING_STATION_CODE)
         params = {
             "arrived_trains": 1,  # API minumum to already arrived and departed trains is 1
             "arriving_trains": 10,
@@ -115,11 +117,11 @@ class TrainParser:
         Args:
             train (dict): a single train object from an API response
         Return:
-            the Kerava departure row of the train's timeTableRows
+            the local departure row of the train's timeTableRows
         """
         rows = [row for row in train["timeTableRows"] if
                 row["type"] == "DEPARTURE" and
-                row["stationShortCode"] == "KE"
+                row["stationShortCode"] == ARRIVING_STATION_CODE
                 ]
 
         return rows[0]
