@@ -64,8 +64,8 @@ Using a virtual environment is recommended
 
 The GUI has Raspberry Pi specific buttons for manipulating the display's backlight brightness. In order to enable these two system files need to be made accessable by the session user (by default `pi`):
 ```
-chown pi /sys/devices/platform/rpi_backlight/backlight/rpi_backlight/brightness
-chown pi /sys/devices/platform/rpi_backlight/backlight/rpi_backlight/bl_power
+chown pi /sys/class/backlight/rpi_backlight/brightness
+chown pi /sys/class/backlight/rpi_backlight/bl_power
 ```
 This step can be ignored on other systems.
 
@@ -88,7 +88,7 @@ If no argument is used, `./configs/default.conf` will be used.
 
 
 
-The first runs a GUI version of the script. It includes a digital clock interface for current time as well a settings window for setting the alarm. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system file `/sys/class/backlight/rpi_backlight/brightness` does not exist.
+The first runs a GUI version of the script. It includes a digital clock interface for current time as well a settings window for setting the alarm. On a Raspberry Pi the GUI can also be used to toggle screen brightness between high and low as well as turning it to sleep entirely. These buttons will be disabled if the system files `/sys/class/backlight/rpi_backlight/brightness` and `/sys/class/backlight/rpi_backlight/bl_power` ether do not exist or are not writable.
 
 The second form generates an alarm based on the configuration file and plays it. This can be used as a purely CLI interface for the alarm. Use cron to manually schedule an alarm.
 

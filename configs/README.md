@@ -5,6 +5,8 @@ Alarm content can be configured by editing `alarmpi.conf`. This configuration fi
 ### default.conf description
 
 **[main]**  
+* **low_brightness**
+  * Minimum value to set display brightness to when toggling between max and low brightness. Should be between 9 and 255. 
 * **readaloud**
   * When set to 0 disables TTS. The contents of the enabled sections will still be printed to stdout and a beeping sound effect will play as the alarm.
   * Can also be toggled from the settings window.
