@@ -75,10 +75,10 @@ class Clock:
             self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
-            self.env.is_rpi = True  # fake Rpi environment so all buttons are enabled
             logger.debug("Debug mode detected, disabling train and weather polling")
             self.env.config.set("polling", "weather", "0")
             self.env.config.set("polling", "train", "0")
+            self.env.rpi_brightness_write_access = True  # Enables brightness buttons
             self.main_window.keyPressEvent = self.debug_key_press_event
 
     def setup(self):
@@ -138,8 +138,15 @@ class Clock:
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
 
-        # Disable blank and brightness buttons if host system is not a Raspberry Pi
-        if not self.env.is_rpi:
+        # Disable backlight manipulation buttons if the underlying system
+        # files dont't exists (ie. not a Raspberry Pi) or no write access to them.
+        if not self.env.rpi_brightness_write_access:
+            msg = ["No write access to system backlight brightness files:",
+                "\t" + rpi_utils.BRIGHTNESS_FILE,
+                "\t" + rpi_utils.POWER_FILE,
+                "Disabling brightness buttons"
+            ]
+            logger.info("\n".join(msg))
             self.blank_button.setEnabled(False)
             brightness_button.setEnabled(False)
 
@@ -156,7 +163,11 @@ class Clock:
         self.close_button.clicked.connect(self.cleanup_and_exit)
 
         # ** settings window buttons **
-        brightness_button.clicked.connect(rpi_utils.toggle_display_backlight_brightness)
+        # Set brightness toggle button with a low brightness value read from the config file
+        low_brightness = int(self.env.get_value("main", "low_brightness", "12"))
+        brightness_toggle_slot = partial(rpi_utils.toggle_display_backlight_brightness, low_brightness=low_brightness)
+        brightness_button.clicked.connect(brightness_toggle_slot)
+
         self.alarm_play_button.clicked.connect(self.play_alarm)
         window_button.clicked.connect(self.toggle_display_mode)
 
@@ -224,7 +235,8 @@ class Clock:
 
             # Set screen brightness to low
             if self.env.config_has_match("alarm", "set_brightness", "1"):
-                rpi_utils.set_display_backlight_brightness(rpi_utils.LOW_BRIGHTNESS)
+                low_brightness = int(self.env.get_value("main", "low_brightness", "12"))
+                rpi_utils.set_display_backlight_brightness(low_brightness)
 
     def clear_alarm(self):
         """Handler for settings window's 'clear' button. Stops any running

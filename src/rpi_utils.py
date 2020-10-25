@@ -1,9 +1,6 @@
-#!/usr/bin/env python
+# Collectin of Raspberry Pi related helper functions for interacting with screen
+# brightness.
 
-"""
-Collectin of Raspberry Pi related helper functions for interacting with screen
-brightness.
-"""
 import os
 import subprocess
 import tempfile
@@ -11,9 +8,7 @@ import logging
 import inspect
 
 
-LOW_BRIGHTNESS = 12
 HIGH_BRIGHTNESS = 255
-
 BRIGHTNESS_FILE = "/sys/class/backlight/rpi_backlight/brightness"
 POWER_FILE = "/sys/class/backlight/rpi_backlight/bl_power"
 
@@ -35,13 +30,11 @@ def _open_config_file_or_tempfile(file_path, mode="r"):
         return tempfile.TemporaryFile(mode=mode)
 
 def set_display_backlight_brightness(brightness):
-    """Set backlight brightness to value between 0 and 255."""
-    assert brightness >= 0 and brightness <= 255, "Invalid brightness value {}".format(brightness)
-
+    """Write a new brightness value to file."""
     with _open_config_file_or_tempfile(BRIGHTNESS_FILE, "w") as f:
         f.write(str(brightness))
 
-def get_display_backlight_brightness():
+def get_current_display_backlight_brightness():
     """Return the current backlight brightness value."""
     with _open_config_file_or_tempfile(BRIGHTNESS_FILE, "r") as f:
         try:
@@ -51,19 +44,20 @@ def get_display_backlight_brightness():
 
     return value
 
-def toggle_display_backlight_brightness():
+def toggle_display_backlight_brightness(low_brightness=12):
     """Reads Raspberry pi touch display's current brightness values from system
-    file and sets it to either high or low depending on the current value.
+    file and toggles it between low and max (255) values depending on the
+    current value.
     """
-    brightness = get_display_backlight_brightness()
+    old = get_current_display_backlight_brightness()
 
     # set to furthest away from current brightness
-    if abs(brightness-LOW_BRIGHTNESS) < abs(brightness-HIGH_BRIGHTNESS):
-        new_brightness = HIGH_BRIGHTNESS
+    if abs(old-low_brightness) < abs(old-HIGH_BRIGHTNESS):
+        new = HIGH_BRIGHTNESS
     else:
-        new_brightness = LOW_BRIGHTNESS
+        new = low_brightness
 
-    set_display_backlight_brightness(new_brightness)
+    set_display_backlight_brightness(new)
 
 def toggle_screen_state(state="on"):
     """Toggle screen state between on / off."""

@@ -82,8 +82,8 @@ class AlarmEnv:
             raise RuntimeError("Invalid configuration: ", e)
 
         brightness = int(self.get_value("main", "low_brightness", "12"))
-        if not 0 <= brightness <= 255:
-            raise RuntimeError("Invalid configuration: Brightness should be between 0 and 255")
+        if not 9 <= brightness <= 255:
+            raise RuntimeError("Invalid configuration: Brightness should be between 9 and 255")
 
         return True
 
