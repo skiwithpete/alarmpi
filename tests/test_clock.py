@@ -112,7 +112,7 @@ class TestClockCase():
         assert label_time == "07:16"
 
     @patch("src.rpi_utils.set_display_backlight_brightness")
-    @patch("src.rpi_utils.get_display_backlight_brightness")
+    @patch("src.rpi_utils.get_current_display_backlight_brightness")
     def test_brightness_change_on_low(self, mock_get_brightness, mock_set_brightness, dummy_clock):
         """Does the backlight toggle change brightness change from low to high?"""
         mock_get_brightness.return_value = 12
@@ -123,7 +123,7 @@ class TestClockCase():
         mock_set_brightness.assert_called_with(255)
 
     @patch("src.rpi_utils.set_display_backlight_brightness")
-    @patch("src.rpi_utils.get_display_backlight_brightness")
+    @patch("src.rpi_utils.get_current_display_backlight_brightness")
     def test_brightness_change_on_hight(self, mock_get_brightness, mock_set_brightness, dummy_clock):
         """Does the backlight toggle change brightness change from hight to low?"""
         mock_get_brightness.return_value = 255
