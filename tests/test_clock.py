@@ -81,7 +81,6 @@ class TestClockCase():
         dummy_clock.main_window.control_buttons["Radio"] = Mock()
 
         dummy_clock.finish_playing_alarm()
-        #dummy_clock.main_window.control_buttons["Radio"].click.assert_called()
         mock_play_radio.assert_called_with(url="www.example.com")
 
     def test_settings_window_keeps_previously_set_alarm(self, dummy_clock):
@@ -113,7 +112,7 @@ class TestClockCase():
 
     @patch("src.rpi_utils.set_display_backlight_brightness")
     @patch("src.rpi_utils.get_current_display_backlight_brightness")
-    def test_brightness_change_on_low(self, mock_get_brightness, mock_set_brightness, dummy_clock):
+    def test_brightness_toggle(self, mock_get_brightness, mock_set_brightness, dummy_clock):
         """Does the backlight toggle change brightness change from low to high?"""
         mock_get_brightness.return_value = 12
 
@@ -122,15 +121,26 @@ class TestClockCase():
         dummy_clock.settings_window.control_buttons[2].click()
         mock_set_brightness.assert_called_with(255)
 
-    @patch("src.rpi_utils.set_display_backlight_brightness")
-    @patch("src.rpi_utils.get_current_display_backlight_brightness")
-    def test_brightness_change_on_hight(self, mock_get_brightness, mock_set_brightness, dummy_clock):
-        """Does the backlight toggle change brightness change from hight to low?"""
+        # Click again and check value is set back to low
         mock_get_brightness.return_value = 255
-        dummy_clock.settings_window.control_buttons[2].setEnabled(True)
         dummy_clock.settings_window.control_buttons[2].click()
-        mock_set_brightness.assert_called_with(12)
+        mock_set_brightness.assert_called_with(12)  # Default low brightness value is 12
 
+    @patch("src.alarmenv.AlarmEnv.get_config_file_path")
+    def test_brightness_buttons_disabled_on_non_writable_configs(self, mock_get_config_file_path):
+        """Are the brightness buttons disabled when the undelying system configurations files
+        are not writable?
+        """
+        # Since we want ti intercept the AlarmEnv property rpi_brightness_write_access, create a 
+        # distinct Clock object separate from the fixture and force the value to False
+        # before the button status is checked in setup()
+        mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
+        dummy_clock = clock.Clock("")
+        dummy_clock.env.rpi_brightness_write_access = False
+        dummy_clock.setup()
+        
+        assert not dummy_clock.settings_window.control_buttons[2].isEnabled()
+        assert not dummy_clock.main_window.control_buttons["Blank"].isEnabled()
 
 
 @pytest.fixture
