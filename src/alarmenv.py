@@ -1,13 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import logging
-import os.path
+import os
 import configparser
 import dns.resolver
 import dns.exception
 
-from src import utils
+from src import utils, rpi_utils
 
 
 logger = logging.getLogger("eventLogger")
@@ -18,16 +15,16 @@ class AlarmEnv:
     def __init__(self, config_file):
         """Setup an absolute path to the configuration file and a parser.
         params
-            config_file (str): name (not path!) of the configuration file in /configs to use.
+            config_file (str): name (not path!) of the configuration file to use.
         """
         path_to_config = self.get_config_file_path(config_file)
 
         self.config_file = path_to_config
         self.config = configparser.ConfigParser()
-        # Determine whether the host system is a Raspberry Pi by checking
-        # the existance of a system brightness file.
-        self.is_rpi = os.path.isfile("/sys/class/backlight/rpi_backlight/brightness")
 
+        # Check for write access to Raspberry Pi system backlight brightness files
+        self.rpi_brightness_write_access = all([os.access(p, os.W_OK) for p in [rpi_utils.BRIGHTNESS_FILE, rpi_utils.POWER_FILE]])
+        
     def setup(self):
         """Setup the environment: parse and validate the configuration file and test
         for network connectivity.
@@ -83,6 +80,10 @@ class AlarmEnv:
 
         except (configparser.NoSectionError, configparser.NoOptionError) as e:
             raise RuntimeError("Invalid configuration: ", e)
+
+        brightness = int(self.get_value("main", "low_brightness", "12"))
+        if not 0 <= brightness <= 255:
+            raise RuntimeError("Invalid configuration: Brightness should be between 0 and 255")
 
         return True
 
