@@ -16,7 +16,7 @@ from dateutil import tz
 
 # Define common top level parameters: number of arriving trains
 # and API response values to parse,
-NUMBER_OF_TRAINS = 3
+NUMBER_OF_TRAINS = 5
 ARRIVING_STATION_CODE = "KE"
 RETURN_TEMPLATE_KEYS = [
     "liveEstimateTime",

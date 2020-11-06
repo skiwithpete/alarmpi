@@ -93,15 +93,14 @@ class AlarmWindow(QWidget):
        
         # ** Left grid: next 3 departing trains **
         self.train_labels = []
-        for i in range(3):
+        for i in range(5):
             train_label = QLabel("", self)
-            left_grid.addWidget(train_label, i, 0, Qt.AlignTop)
+            left_grid.addWidget(train_label, i, 0)
             self.train_labels.append(train_label)
 
-        # Set a non zero strectfactor to the bottom rows of both side bars, so
-        # the last item takes all the remaining space and all QLabels appear
-        # on top of each other
-        left_grid.setRowStretch(2, 1)
+        # Set larger strecth factor to the last, unused, row indices
+        # so items are grouped closed together.
+        left_grid.setRowStretch(5, 1)
         right_grid.setRowStretch(2, 1)
 
         # ** Right grid: weather forecast **
