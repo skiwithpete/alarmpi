@@ -33,7 +33,7 @@ class TestClockCase():
         """
         mock_validate_alarm_input.return_value = "00:10"  # Mock validating a not-set alarm time
         dummy_clock.settings_window.numpad_buttons["set"].click()
-        
+
         assert dummy_clock.alarm_timer.isActive()
         assert dummy_clock.alarm_build_timer.isActive()
 

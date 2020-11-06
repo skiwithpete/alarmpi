@@ -39,7 +39,7 @@ def nighttime(target_time, offset, compare_time=None):
 
     else:
         compare_dt = datetime.datetime.now()
-    
+
     offset_target_dt = target_dt - datetime.timedelta(hours=offset)
     return compare_dt >= offset_target_dt and compare_dt <= target_dt
 
@@ -62,5 +62,5 @@ def time_str_to_dt(s):
     dt = dummy_dt.replace(year=today.year, month=today.month, day=today.day)
     if dt <= datetime.datetime.now():
         dt = dt + datetime.timedelta(days=1)
-    
+
     return dt

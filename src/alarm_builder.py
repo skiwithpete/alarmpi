@@ -5,7 +5,6 @@ import subprocess
 import importlib
 import os
 import inspect
-import signal
 
 import pydub
 import pydub.playback

@@ -3,11 +3,7 @@
 
 """A PyQt5 clock radio application."""
 
-
-import time
 import datetime
-import os
-import sys
 import subprocess
 import logging
 import json
@@ -262,7 +258,7 @@ class Clock:
                 stream from the settings window ComboBox is used.
         """
         button = self.main_window.control_buttons["Radio"]
-        
+
         # If no stream url was passed, use currently active station from settings window
         # dropdown list.
         if url is None:
@@ -278,8 +274,8 @@ class Clock:
                 if v == url:
                     current_radio_station = k
                     break
- 
-            
+
+
         # The radio button is a checkable (ie. a toggle): radio should start playing 
         # when the button gets checked and stop when state changes to not checked.
         # (The state change occurs before this callback runs.)
@@ -495,7 +491,7 @@ class AlarmPlayThread(QThread):
         """Build and alarm."""
         logger.info("Building alarm")
         self.content = self.alarm_builder.build()
-        
+
     def run(self):
         """Play pre-built alarm."""
         # Re-generate greeting to get current time.

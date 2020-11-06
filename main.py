@@ -13,7 +13,6 @@ import logging.config
 from PyQt5.QtWidgets import QApplication
 
 from src import clock
-from src import alarm_builder
 
 
 logging.config.fileConfig("logging.conf")
@@ -55,7 +54,7 @@ def backlight_excepthook(type, value, tb):
 if __name__ == "__main__":
     event_logger.info("Overriding sys.excepthook")
     sys.excepthook = backlight_excepthook
-    
+
     parser = argparse.ArgumentParser(description="Run alarmpi GUI")
     parser.add_argument("config", metavar="config", nargs="?",
                         default="default.conf", help="Configuration file to use. Defaults to default.conf")
