@@ -16,7 +16,6 @@ class NewsParser(apcontent.AlarmpiContent):
     def build(self):
         url = "https://feeds.bbci.co.uk/news/world/rss.xml"
         rss = feedparser.parse(url)
-        event_logger.error(rss)
 
         if rss.bozo:
             newsfeed = 'Failed to reach BBC News'
