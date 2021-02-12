@@ -6,6 +6,7 @@
 
 import time
 import os.path
+import logging
 from functools import partial
 from collections import namedtuple
 
@@ -32,6 +33,7 @@ ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "icon", "
 ButtonConfig.__new__.__defaults__ = (
     None, None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
+logger = logging.getLogger("eventLogger")
 
 class AlarmWindow(QWidget):
     """QWidget subclass for main window."""
@@ -295,6 +297,7 @@ class SettingsWindow(QWidget):
         if self.alarm_time_status_label.text() == SettingsWindow.ALARM_INPUT_CLEAR:
             self.alarm_time_status_label.setText("")
 
+        logger.debug("Closing settings window")
         self.close()
 
     def center(self):

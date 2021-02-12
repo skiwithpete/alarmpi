@@ -182,6 +182,7 @@ class Clock:
         """
         self.screen_blank_timer.stop()
         self.settings_window.show()
+        logger.debug("Settings window opened")
 
     def on_release_event_handler(self, event):
         """Event handler for touching the screen: ensure screen is turned on
@@ -189,6 +190,7 @@ class Clock:
         set a short timeout for blanking the screen.
         """
         # get screen state before the event occured and set it as enabled
+        logger.debug("Activating display")
         old_screen_state = rpi_utils.get_and_set_screen_state("on")
         self.show_control_buttons()
 
@@ -410,6 +412,7 @@ class Clock:
         hide the main window's control buttons to prevent accidentally hitting
         them when the screen in blank.
         """
+        logger.debug("Blanking display")
         rpi_utils.toggle_screen_state("off")
         self.hide_control_buttons()
 
@@ -417,6 +420,7 @@ class Clock:
         """Callback to turning the screen on: re-enable backlight power and show
         the main window's control buttons.
         """
+        logger.debug("Activating display")
         rpi_utils.toggle_screen_state("on")
         self.show_control_buttons()
 
@@ -470,7 +474,7 @@ class Clock:
 
     def debug_key_press_event(self, event):
         """Custom keyPressEvent handler for debuggin purposes: prints the current
-        contents configuration.
+        alarm configuration.
         """
         if event.key() == Qt.Key_S:
             config = {section: dict(self.env.config[section])
