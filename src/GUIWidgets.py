@@ -298,7 +298,7 @@ class SettingsWindow(QWidget):
             self.alarm_time_status_label.setText("")
 
         logger.debug("Closing settings window")
-        self.close()
+        self.hide()
 
     def center(self):
         qr = self.frameGeometry()
