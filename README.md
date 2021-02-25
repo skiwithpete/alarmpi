@@ -1,5 +1,7 @@
 # Alarmpi
 
+[![Build Status](https://img.shields.io/github/workflow/status/lajanki/alarmpi/Run%20pytest)](https://github.com/lajanki/alarmpi/actions/workflows/python-publish.yml)
+
 A Raspberry Pi clock radio with customizable Text To Speech alarm.
 ```
 Good afternoon, it's Wednesday September twelfth. The time is 07:29 PM.
