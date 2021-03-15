@@ -476,10 +476,15 @@ class Clock:
         """Custom keyPressEvent handler for debuggin purposes: prints the current
         alarm configuration.
         """
-        if event.key() == Qt.Key_S:
+        if event.key() == Qt.Key_F2:
             config = {section: dict(self.env.config[section])
                       for section in self.env.config.sections()}
+            print("config:")
             print(json.dumps(config, indent=4))
+
+            print(f"{'window':70} {'isVisible':9} {'isFullScreen':12}")
+            for window in (self.main_window, self.settings_window):
+                print(f"{str(window):70} {str(window.isVisible()):9} {str(window.isFullScreen()):12}")
 
 
 class AlarmPlayThread(QThread):
