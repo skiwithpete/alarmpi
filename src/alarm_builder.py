@@ -74,8 +74,7 @@ class Alarm:
 
     def build_and_play(self):
         """Build and play an alarm.
-        This is provided as a CLI interface for playing the alarm. This has some differences
-        compared to how scheduled alarms are handled in the main GUI by clock.py.
+        This is provided as a CLI interface for playing the alarm.
         Since the alarm is built on the go, there may be a few seconds delay on play.
         """
         content = self.build()
@@ -130,9 +129,10 @@ class Alarm:
         return class_
 
     def play_radio(self):
-        """Play the radio stream defined in the configuration using mplayer."""
+        """Play the first radio stream defined in the configuration using mplayer."""
+        url = self.env.get_radio_stations().values()[0]
         args = self.env.get_value("radio", "args")
-        cmd = "/usr/bin/mplayer {}".format(args).split()
+        cmd = "/usr/bin/mplayer -playlist {} {}".format(url, args).split()
         # Run the command via Popen directly to open the stream as a child process without
         # waiting for it to finish.
         subprocess.Popen(cmd)

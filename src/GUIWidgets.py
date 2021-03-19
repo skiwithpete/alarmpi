@@ -251,9 +251,8 @@ class SettingsWindow(QWidget):
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
         self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
 
-        # ComboBox for radio station, filled from 
+        # ComboBox for radio station, filled from config file
         self.radio_station_combo_box = QComboBox(self)
-        self.radio_station_combo_box.addItems(utils.RADIO_STATIONS)
         self.radio_station_combo_box.setSizePolicy(
             QSizePolicy.Preferred,
             QSizePolicy.Expanding  # expand in vertical direction

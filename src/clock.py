@@ -13,11 +13,13 @@ from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPixmap
 
-from src import alarmenv
-from src import utils
-from src import alarm_builder
-from src import GUIWidgets
-from src import rpi_utils
+from src import (
+    alarmenv,
+    utils,
+    alarm_builder,
+    GUIWidgets,
+    rpi_utils
+)
 from src.handlers import get_open_weather, get_next_trains
 
 
@@ -76,6 +78,7 @@ class Clock:
             self.env.config.set("polling", "train", "0")
             self.env.rpi_brightness_write_access = True  # Enables brightness buttons
             self.main_window.keyPressEvent = self.debug_key_press_event
+            self.settings_window.keyPressEvent = self.debug_key_press_event
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
@@ -118,6 +121,10 @@ class Clock:
         self.screen_blank_timer.timeout.connect(self.blank_screen_and_hide_control_buttons)
 
         self.main_window.mouseReleaseEvent = self.on_release_event_handler
+
+        # Set radio stations from config to the settings window options
+        self.radio_streams = self.env.get_radio_stations()
+        self.settings_window.radio_station_combo_box.addItems(self.radio_streams.keys())
 
     def setup_button_handlers(self):
         """Setup button handlers for the main window and settings window."""
@@ -257,33 +264,31 @@ class Clock:
         depending on the button state.
         Args:
             url (string): the url of the stream to play. If none, currently active
-                stream from the settings window ComboBox is used.
+                stream from the settings window QComboBox is used.
         """
         button = self.main_window.control_buttons["Radio"]
 
         # If no stream url was passed, use currently active station from settings window
-        # dropdown list.
+        # QComboBox
         if url is None:
             current_radio_station = self.settings_window.radio_station_combo_box.currentText()
-            self.radio.config["url"] = utils.RADIO_STATIONS[current_radio_station]
+            url = self.radio_streams[current_radio_station]
 
         else:
-            self.radio.config["url"] = url
             # Look for station name from listed streams in stream config file
             current_radio_station = ""
             
-            for k,v in utils.RADIO_STATIONS.items():
-                if v == url:
-                    current_radio_station = k
+            for name, stream_url in self.radio_streams.items():
+                if stream_url == url:
+                    current_radio_station = name
                     break
-
 
         # The radio button is a checkable (ie. a toggle): radio should start playing 
         # when the button gets checked and stop when state changes to not checked.
         # (The state change occurs before this callback runs.)
         if button.isChecked():
             self.main_window._show_radio_play_indicator(current_radio_station)
-            self.radio.play()
+            self.radio.play(url)
         else:
             self.main_window._hide_radio_play_indicator()
             self.radio.stop()
@@ -310,15 +315,12 @@ class Clock:
         self.alarm_play_button.setEnabled(True)
 
         if self.env.config_has_match("radio", "enabled", "1"):
-            # Manually emit the radio buttons click signal. This will both
-            # set the state of the button and start the playback.
-            #self.main_window.control_buttons["Radio"].click()
-
-            # Toggle the radio button and specify the stream to play as
-            # the url parameter from the configuration file.
-            # Note: we're assuming the button is untoggled before the call.
+            # Toggle the radio button and pass the first url listed in the
+            # config to the radio player
+            # Note: we're assuming the streams are ordered and that
+            #   the button is untoggled before the call.
             self.main_window.control_buttons["Radio"].toggle()
-            url = self.env.get_value("radio", "url")
+            url = list(self.radio_streams.values())[0]
             self.play_radio(url=url)
 
     def build_and_play_alarm(self):
@@ -479,12 +481,12 @@ class Clock:
         if event.key() == Qt.Key_F2:
             config = {section: dict(self.env.config[section])
                       for section in self.env.config.sections()}
-            print("config:")
-            print(json.dumps(config, indent=4))
+            print(f"config: {self.env.config_file}")
+            print(json.dumps(config, indent=4)) 
 
-            print(f"{'window':70} {'isVisible':9} {'isFullScreen':12}")
+            print(f"{'window':70} {'isVisible':9} {'isFullScreen':12} {'isActiveWindow':12}")
             for window in (self.main_window, self.settings_window):
-                print(f"{str(window):70} {str(window.isVisible()):9} {str(window.isFullScreen()):12}")
+                print(f"{str(window):70} {str(window.isVisible()):9} {str(window.isFullScreen()):12} {str(window.isActiveWindow())}")
 
 
 class AlarmPlayThread(QThread):
@@ -523,19 +525,15 @@ class RadioStreamer:
         self.config = config
 
     def is_playing(self):
-        """Check if mplayer is currently running. Return True if it is."""
+        """Check if mplayer is currently running."""
         return self.process is not None
 
-    def play(self):
+    def play(self, url):
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
         """
-        # Ensure the currently active 'url' key from config is used as the stream url
-        args = self.config["args"].split()
-        args[1] = self.config["url"] # we're assuming url position in the arg list!
-        args = " ".join(args)
-
-        cmd = "/usr/bin/mplayer {}".format(args)
+        args = self.config["args"]
+        cmd = "/usr/bin/mplayer -playlist {} {}".format(url, args)
         logger.info("Running %s", cmd)
 
         # Run the command via Popen directly to open the stream as an independent child

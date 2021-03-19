@@ -7,8 +7,6 @@ import json
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
 
-with open(os.path.join(BASE, "configs", "radiostreams.json")) as f:
-    RADIO_STATIONS = json.load(f)
 
 
 def nighttime(target_time, offset, compare_time=None):

@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 import configparser
 import dns.resolver
 import dns.exception
@@ -50,8 +51,9 @@ class AlarmEnv:
 
         for path in PATHS_TO_CHECK:
             if os.path.isfile(path):
-                logger.info("Using config file %s", os.path.normpath(path))
-                return path
+                normalized_path = os.path.normpath(path)
+                logger.info("Using config file %s", normalized_path)
+                return normalized_path
 
         raise FileNotFoundError("No valid configuration file found for {}".format(config_file))
 
@@ -129,3 +131,7 @@ class AlarmEnv:
             return self.config.get(section, option)
 
         return self.config.get(section, option, fallback=fallback)
+
+    def get_radio_stations(self):
+        """Utility function for parsing radio stream urls as a dict."""
+        return json.loads(self.get_value("radio", "urls"))
