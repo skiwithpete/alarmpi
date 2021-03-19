@@ -164,7 +164,7 @@ class TestRadioStreamerCase():
     def test_stop_clears_active_process(self, dummy_radio):
         """Does stop clear the list of running processes?"""
         subprocess.Popen = Mock()
-        dummy_radio.play()
+        dummy_radio.play("https://foo.bar")
         dummy_radio.stop()
 
         assert dummy_radio.process is None
