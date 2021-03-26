@@ -20,8 +20,8 @@ from src import (
     GUIWidgets,
     rpi_utils
 )
-from src.handlers import get_open_weather, get_next_trains
-
+from src.handlers import get_next_trains
+from src.plugins import weather
 
 
 logger = logging.getLogger("eventLogger")
@@ -63,10 +63,6 @@ class Clock:
         self.alarm_player = alarm_builder.Alarm(self.env)
         self.train_parser = get_next_trains.TrainParser()
 
-        if self.env.get_value("openweathermap", "enabled", fallback="0") == "1":
-            section = self.env.get_section("openweathermap")
-            self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
-
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
             self.main_window.setCursor(Qt.BlankCursor)
@@ -88,12 +84,14 @@ class Clock:
 
         weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
         weather_polling_enabled = self.env.get_value("polling", "weather", fallback=False) == "1"
+        if weather_enabled and weather_polling_enabled:
+            self.weather_plugin = weather.WeatherPlugin(self)
+            self.weather_plugin.create_widgets()
+            self.weather_plugin.setup_weather_polling()
+
+
 
         train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
-
-        if weather_enabled and weather_polling_enabled:
-            self.setup_weather_polling()
-
         if train_polling_enabled:
             self.setup_train_polling()
 
@@ -327,41 +325,6 @@ class Clock:
         """Custom callback for the 'Play now' button: builds and plays an alarm."""
         self.alarm_play_thread.build() # Note: a new alarm is built every time the button is pressed
         self.alarm_play_thread.start()
-
-    def setup_weather_polling(self):
-        """Setup polling for updating the weather every 30 minutes."""
-        self.update_weather()
-        _timer = QTimer(self.main_window)
-        _timer.timeout.connect(self.update_weather)
-        _timer.start(30*60*1000)  # 30 minute interval
-
-    def update_weather(self):
-        """Update the weather labels on the main window. Makes an API request to
-        openweathermap.org for current temperature and windspeed.
-        """
-        logger.debug("Updating weather")
-        weather = self.weather_parser.fetch_and_format_weather()
-
-        if weather is None:
-            self.main_window.temperature_label.setText("ERR")
-            self.main_window.wind_speed_label.setText("ERR")
-            return
-
-        temperature = weather["temp"]
-        wind = weather["wind_speed_ms"]
-
-        msg = "{}°C".format(round(temperature))
-        self.main_window.temperature_label.setText(msg)
-
-        msg = "{}m/s".format(round(wind))
-        self.main_window.wind_speed_label.setText(msg)
-
-        icon_id = weather["icon"]
-        icon_binary = get_open_weather.OpenWeatherMapClient.get_weather_icon(icon_id)
-
-        pixmap = QPixmap()
-        pixmap.loadFromData(icon_binary)
-        self.main_window.weather_container.setPixmap(pixmap)
 
     def setup_train_polling(self):
         """Setup polling for next train departure times every 12 minutes."""

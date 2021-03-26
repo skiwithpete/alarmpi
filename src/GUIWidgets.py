@@ -48,7 +48,7 @@ class AlarmWindow(QWidget):
         base_layout = QGridLayout(self)
         alarm_grid = QGridLayout()
         left_grid = QGridLayout()
-        right_grid = QGridLayout()
+        self.right_grid = QGridLayout()
         bottom_grid = QGridLayout()
 
         with open("src/style.qss") as f:
@@ -103,26 +103,20 @@ class AlarmWindow(QWidget):
         # Set larger strecth factor to the last, unused, row indices
         # so items are grouped closed together.
         left_grid.setRowStretch(5, 1)
-        right_grid.setRowStretch(2, 1)
-
-        # ** Right grid: weather forecast **
-        self.temperature_label = QLabel("", self)
-        self.wind_speed_label = QLabel("", self)
-        self.weather_container = QLabel(self)
-        # Label with icon: QLabel doesn't support setIcon, use html support instead
-        self.radio_play_indicator = QLabel(self)
         
-        right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
-        right_grid.addWidget(self.wind_speed_label, 1, 0, Qt.AlignRight)
-        right_grid.addWidget(self.weather_container, 2, 0, Qt.AlignRight | Qt.AlignTop)
-        right_grid.addWidget(self.radio_play_indicator, 3, 0, Qt.AlignRight)
+        LAST_AVAILABLE_RIGHT_ROW = self.right_grid.count()
+        LAST_AVAILABLE_RIGHT_ROW = 3
+        self.right_grid.setRowStretch(LAST_AVAILABLE_RIGHT_ROW-1, 1)
 
-        # Radio play indicator should be hidden by default
+
+        # Add Label for currently playing radio station to the last available row
+        self.radio_play_indicator = QLabel(self)
+        self.right_grid.addWidget(self.radio_play_indicator, LAST_AVAILABLE_RIGHT_ROW, 0, Qt.AlignRight)
         self.radio_play_indicator.hide()
 
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(left_grid, 0, 0)
-        base_layout.addLayout(right_grid, 0, 2)
+        base_layout.addLayout(self.right_grid, 0, 2)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 3)
 
         # Set row strech so the bottom bar doesn't take too much vertical space
