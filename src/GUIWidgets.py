@@ -47,7 +47,7 @@ class AlarmWindow(QWidget):
         # Setup base and subgrids for layouting
         base_layout = QGridLayout(self)
         alarm_grid = QGridLayout()
-        left_grid = QGridLayout()
+        self.left_grid = QGridLayout()
         self.right_grid = QGridLayout()
         bottom_grid = QGridLayout()
 
@@ -93,16 +93,12 @@ class AlarmWindow(QWidget):
             bottom_grid.addWidget(button, *config.position)
 
        
-        # ** Left grid: next 3 departing trains **
-        self.train_labels = []
-        for i in range(5):
-            train_label = QLabel("", self)
-            left_grid.addWidget(train_label, i, 0)
-            self.train_labels.append(train_label)
-
         # Set larger strecth factor to the last, unused, row indices
         # so items are grouped closed together.
-        left_grid.setRowStretch(5, 1)
+        # TODO: find item count dynamically after they've been set.
+        LAST_AVAILABLE_LEFT_ROW = self.left_grid.count()
+        LAST_AVAILABLE_LEFT_ROW = 5 
+        self.left_grid.setRowStretch(LAST_AVAILABLE_LEFT_ROW, 1)
         
         LAST_AVAILABLE_RIGHT_ROW = self.right_grid.count()
         LAST_AVAILABLE_RIGHT_ROW = 3
@@ -115,7 +111,7 @@ class AlarmWindow(QWidget):
         self.radio_play_indicator.hide()
 
         base_layout.addLayout(alarm_grid, 0, 1)
-        base_layout.addLayout(left_grid, 0, 0)
+        base_layout.addLayout(self.left_grid, 0, 0)
         base_layout.addLayout(self.right_grid, 0, 2)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 3)
 

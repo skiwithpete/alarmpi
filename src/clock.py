@@ -11,7 +11,6 @@ from functools import partial
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QPixmap
 
 from src import (
     alarmenv,
@@ -20,8 +19,7 @@ from src import (
     GUIWidgets,
     rpi_utils
 )
-from src.handlers import get_next_trains
-from src.plugins import weather
+from src.plugins import weather, trains
 
 
 logger = logging.getLogger("eventLogger")
@@ -61,7 +59,6 @@ class Clock:
         radio_conf = self.env.get_section("radio")
         self.radio = RadioStreamer(radio_conf)
         self.alarm_player = alarm_builder.Alarm(self.env)
-        self.train_parser = get_next_trains.TrainParser()
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
@@ -89,11 +86,11 @@ class Clock:
             self.weather_plugin.create_widgets()
             self.weather_plugin.setup_weather_polling()
 
-
-
         train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
         if train_polling_enabled:
-            self.setup_train_polling()
+            self.train_plugin = trains.TrainPlugin(self)
+            self.train_plugin.create_widgets()
+            self.train_plugin.setup_train_polling()
 
         # Setup settings window's checkbox initial values:
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
@@ -325,40 +322,6 @@ class Clock:
         """Custom callback for the 'Play now' button: builds and plays an alarm."""
         self.alarm_play_thread.build() # Note: a new alarm is built every time the button is pressed
         self.alarm_play_thread.start()
-
-    def setup_train_polling(self):
-        """Setup polling for next train departure times every 12 minutes."""
-        self.update_trains()
-        _timer = QTimer(self.main_window)
-        _timer.timeout.connect(self.update_trains)
-        _timer.start(5*60*1000)
-
-    def update_trains(self):
-        """Fetch new train data from DigiTraffic API and display on the right sidebar."""
-        logger.debug("Updating trains")
-        trains = self.train_parser.run()
-
-        if trains is None:
-            for label in self.main_window.train_labels:
-                label.setText("ERR")
-            return
-
-        for train, label in zip(trains, self.main_window.train_labels):
-            line_id = train["commuterLineID"]
-            scheduled_time = train["scheduledTime"].strftime("%H:%M")
-
-            # If an estimate exists, display both values
-            if train["liveEstimateTime"]:
-                estimate_time = train["liveEstimateTime"].strftime("%H:%M")
-                msg = "{} {} => {}".format(line_id, scheduled_time, estimate_time)
-
-            else:
-                msg = "{} {}".format(line_id, scheduled_time)
-
-            if train["cancelled"]:
-                msg = "{} {} CANCELLED".format(line_id, scheduled_time)
-
-            label.setText(msg)
 
     def toggle_display_mode(self):
         """Change main window dispaly mode between fullscreen and normal
