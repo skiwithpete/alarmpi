@@ -19,6 +19,8 @@ class TrainPlugin:
             self.parent.main_window.left_grid.addWidget(label, i, 0)
             self.train_labels.append(label)
 
+        self.parent.main_window.left_grid.setRowStretch(get_next_trains.NUMBER_OF_TRAINS, 1)
+
     def setup_train_polling(self):
         """Setup polling for next train departure."""
         self.update_trains()

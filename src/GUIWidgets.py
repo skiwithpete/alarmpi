@@ -92,27 +92,22 @@ class AlarmWindow(QWidget):
 
             bottom_grid.addWidget(button, *config.position)
 
-       
-        # Set larger strecth factor to the last, unused, row indices
-        # so items are grouped closed together.
-        # TODO: find item count dynamically after they've been set.
-        LAST_AVAILABLE_LEFT_ROW = self.left_grid.count()
-        LAST_AVAILABLE_LEFT_ROW = 5 
-        self.left_grid.setRowStretch(LAST_AVAILABLE_LEFT_ROW, 1)
-        
-        LAST_AVAILABLE_RIGHT_ROW = self.right_grid.count()
-        LAST_AVAILABLE_RIGHT_ROW = 3
-        self.right_grid.setRowStretch(LAST_AVAILABLE_RIGHT_ROW-1, 1)
+        # Right hand sidebat: separate grids for plugin (top) and radio play
+        # indicator (bottom) 
+        right_grid_container = QGridLayout()
+        right_grid_container.addLayout(self.right_grid, 0, 2)
 
-
-        # Add Label for currently playing radio station to the last available row
+        radio_station_grid = QGridLayout()
         self.radio_play_indicator = QLabel(self)
-        self.right_grid.addWidget(self.radio_play_indicator, LAST_AVAILABLE_RIGHT_ROW, 0, Qt.AlignRight)
         self.radio_play_indicator.hide()
+        radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight)
 
+        right_grid_container.addLayout(self.right_grid, 0, 2)
+        right_grid_container.addLayout(radio_station_grid, 1, 2)
+        
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(self.left_grid, 0, 0)
-        base_layout.addLayout(self.right_grid, 0, 2)
+        base_layout.addLayout(right_grid_container, 0, 2)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 3)
 
         # Set row strech so the bottom bar doesn't take too much vertical space
