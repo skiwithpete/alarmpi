@@ -66,9 +66,12 @@ class Clock:
             self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
-            logger.debug("Debug mode detected, disabling train and weather polling")
-            self.env.config.set("polling", "weather", "0")
-            self.env.config.set("polling", "train", "0")
+            logger.debug("Disabling weather plugin")
+            self.env.config.set("openweathermap", "enabled", "0")
+            for key in self.env.get_section("plugins"):
+                logger.debug("Disabling %s", key)
+                self.env.config.set("plugins", key, "0")
+
             self.env.rpi_brightness_write_access = True  # Enables brightness buttons
             self.main_window.keyPressEvent = self.debug_key_press_event
             self.settings_window.keyPressEvent = self.debug_key_press_event
@@ -79,14 +82,14 @@ class Clock:
         """
         self.setup_button_handlers()
 
+        # Enable weather polling if enabled as part of the alarm
         weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
-        weather_polling_enabled = self.env.get_value("polling", "weather", fallback=False) == "1"
-        if weather_enabled and weather_polling_enabled:
+        if weather_enabled:
             self.weather_plugin = weather.WeatherPlugin(self)
             self.weather_plugin.create_widgets()
             self.weather_plugin.setup_weather_polling()
 
-        train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
+        train_polling_enabled = self.env.get_value("plugins", "trains", fallback=False) == "1"
         if train_polling_enabled:
             self.train_plugin = trains.TrainPlugin(self)
             self.train_plugin.create_widgets()

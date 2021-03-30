@@ -73,7 +73,7 @@ class AlarmEnv:
          2 sections other than [main] have a 'type' key
         """
         try:
-            for section in self.get_sections(excludes=["main", "alarm", "polling", "greeting"]):
+            for section in self.get_sections(excludes=["main", "alarm", "plugins", "greeting"]):
                 section_type = self.get_value(section, "type")
 
                 if section_type in ("content", "tts"):
@@ -120,7 +120,6 @@ class AlarmEnv:
         return sections
 
     def get_section(self, section):
-        """Return a configuration section by name."""
         return self.config[section]
 
     def get_value(self, section, option, fallback=None):
