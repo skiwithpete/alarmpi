@@ -410,12 +410,12 @@ class Clock:
         if event.key() == Qt.Key_F2:
             config = {section: dict(self.env.config[section])
                       for section in self.env.config.sections()}
-            print(f"config: {self.env.config_file}")
+            print("config {}".format(self.env.config_file))
             print(json.dumps(config, indent=4)) 
 
-            print(f"{'window':70} {'isVisible':9} {'isFullScreen':12} {'isActiveWindow':12}")
+            print("{:70} {:9} {:12} {:12}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
             for window in (self.main_window, self.settings_window):
-                print(f"{str(window):70} {str(window.isVisible()):9} {str(window.isFullScreen()):12} {str(window.isActiveWindow())}")
+                print("{:70} {:9} {:12} {:12}".format(str(window), window.isVisible(), window.isFullScreen(), window.isActiveWindow()))
 
 
 class AlarmPlayThread(QThread):
