@@ -94,14 +94,12 @@ class AlarmWindow(QWidget):
 
         # Right hand sidebat: separate grids for plugin (top) and radio play
         # indicator (bottom) 
-        right_grid_container = QGridLayout()
-        right_grid_container.addLayout(self.right_grid, 0, 2)
-
         radio_station_grid = QGridLayout()
         self.radio_play_indicator = QLabel(self)
         self.radio_play_indicator.hide()
-        radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight)
+        radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
+        right_grid_container = QGridLayout()
         right_grid_container.addLayout(self.right_grid, 0, 2)
         right_grid_container.addLayout(radio_station_grid, 1, 2)
         
