@@ -318,7 +318,7 @@ class Clock:
             # Note: we're assuming the streams are ordered and that
             #   the button is untoggled before the call.
             self.main_window.control_buttons["Radio"].toggle()
-            url = list(self.radio_streams.values())[0]
+            url = self.env.get_value("radio", "default")
             self.play_radio(url=url)
 
     def build_and_play_alarm(self):

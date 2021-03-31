@@ -130,7 +130,7 @@ class Alarm:
 
     def play_radio(self):
         """Play the first radio stream defined in the configuration using mplayer."""
-        url = self.env.get_radio_stations().values()[0]
+        url = self.env.get_value("radio", "default")
         args = self.env.get_value("radio", "args")
         cmd = "/usr/bin/mplayer -playlist {} {}".format(url, args).split()
         # Run the command via Popen directly to open the stream as a child process without
