@@ -60,6 +60,9 @@ class Clock:
         self.radio = RadioStreamer(radio_conf)
         self.alarm_player = alarm_builder.Alarm(self.env)
 
+        self.main_window.keyPressEvent = self.debug_key_press_event
+        self.settings_window.keyPressEvent = self.debug_key_press_event
+
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
             self.main_window.setCursor(Qt.BlankCursor)
@@ -73,8 +76,6 @@ class Clock:
                 self.env.config.set("plugins", key, "0")
 
             self.env.rpi_brightness_write_access = True  # Enables brightness buttons
-            self.main_window.keyPressEvent = self.debug_key_press_event
-            self.settings_window.keyPressEvent = self.debug_key_press_event
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
