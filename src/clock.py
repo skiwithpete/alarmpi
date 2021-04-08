@@ -405,18 +405,23 @@ class Clock:
         QApplication.instance().quit()
 
     def debug_key_press_event(self, event):
-        """Custom keyPressEvent handler for debuggin purposes: prints the current
-        alarm configuration.
-        """
+        """Custom keyPressEvent handler for debuggin purposes: writes the current
+        alarm and window configuration to file.
+        """ 
         if event.key() == Qt.Key_F2:
             config = {section: dict(self.env.config[section])
                       for section in self.env.config.sections()}
-            print("config {}".format(self.env.config_file))
-            print(json.dumps(config, indent=4)) 
 
-            print("{:70} {:9} {:12} {:12}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
-            for window in (self.main_window, self.settings_window):
-                print("{:70} {:9} {:12} {:12}".format(str(window), window.isVisible(), window.isFullScreen(), window.isActiveWindow()))
+            OUTPUT_FILE = "debug_info.log"
+            with open(OUTPUT_FILE, "w") as f:
+                f.write("config file: {}\n".format(self.env.config_file))
+                json.dump(config, f, indent=4)
+
+                f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
+                for window in (self.main_window, self.settings_window):
+                    f.write("\n{:60} {:9} {:12} {:14}".format(str(window), window.isVisible(), window.isFullScreen(), window.isActiveWindow()))
+
+            logger.info("Debug status written to %s", OUTPUT_FILE)
 
 
 class AlarmPlayThread(QThread):
