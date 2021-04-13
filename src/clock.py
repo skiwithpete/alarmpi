@@ -308,7 +308,7 @@ class Clock:
 
     def finish_playing_alarm(self):
         """Slot function for finishing playing the alarm: re-enables the play button
-        and, if activated, starts a separated mplayer process for the radio stream.
+        and, if activated, starts a separated cvlc process for the radio stream.
         Called when the alarm thread emits its finished signal.
         """
         self.alarm_play_button.setEnabled(True)
@@ -454,13 +454,13 @@ class AlarmPlayThread(QThread):
 
 
 class RadioStreamer:
-    """Helper class for playing a radio stream via mplayer."""
+    """Helper class for playing a radio stream via cvlc."""
     def __init__(self, config):
         self.process = None
         self.config = config
 
     def is_playing(self):
-        """Check if mplayer is currently running."""
+        """Check if cvlc is currently running."""
         return self.process is not None
 
     def play(self, url):
@@ -468,7 +468,7 @@ class RadioStreamer:
         in the background.
         """
         args = self.config["args"]
-        cmd = "/usr/bin/mplayer -playlist {} {}".format(url, args)
+        cmd = "/usr/bin/cvlc {} {}".format(url, args)
         logger.info("Running %s", cmd)
 
         # Run the command via Popen directly to open the stream as an independent child
@@ -478,7 +478,7 @@ class RadioStreamer:
             self.process = subprocess.Popen(cmd.split(), stdout=f, stderr=subprocess.STDOUT)
 
     def stop(self):
-        """Terminate the running mplayer process."""
+        """Terminate the running cvlc process."""
         try:
             self.process.terminate()
             self.process = None
