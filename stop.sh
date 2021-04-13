@@ -1,6 +1,6 @@
 #!/bin/bash
 # kill the alarm (if running). Useful for killing radio stream started by cron
-pkill mplayer
+pkill cvlc
 pkill -f "play_alarm.py"  # only kill the python process running the alarm
 pkill -f "python .*(alarmpi/)?main.py"
 

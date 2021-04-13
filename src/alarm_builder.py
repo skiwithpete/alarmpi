@@ -129,10 +129,10 @@ class Alarm:
         return class_
 
     def play_radio(self):
-        """Play the first radio stream defined in the configuration using mplayer."""
+        """Play the first radio stream defined in the configuration using cvlc."""
         url = self.env.get_value("radio", "default")
         args = self.env.get_value("radio", "args")
-        cmd = "/usr/bin/mplayer -playlist {} {}".format(url, args).split()
+        cmd = "/usr/bin/cvlc {} {}".format(url, args).split()
         # Run the command via Popen directly to open the stream as a child process without
         # waiting for it to finish.
         subprocess.Popen(cmd)
