@@ -87,6 +87,10 @@ class AlarmEnv:
         if not 9 <= brightness <= 255:
             raise RuntimeError("Invalid configuration: Brightness should be between 9 and 255")
 
+        default = self.get_value("radio", "default")
+        if default not in self.get_radio_stations():
+            raise RuntimeError("No stream url for defult radio station %s", default)
+
         return True
 
     def config_has_match(self, section, option, value):

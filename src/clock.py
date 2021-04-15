@@ -125,6 +125,10 @@ class Clock:
         self.radio_streams = self.env.get_radio_stations()
         self.settings_window.radio_station_combo_box.addItems(self.radio_streams.keys())
 
+        # Ensure station set as default is set as current item 
+        default_station = self.env.get_value("radio", "default")
+        self.settings_window.radio_station_combo_box.setCurrentText(default_station)
+
     def setup_button_handlers(self):
         """Setup button handlers for the main window and settings window."""
         # Setup references to main control buttons in both windows
