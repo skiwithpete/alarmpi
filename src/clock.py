@@ -314,12 +314,11 @@ class Clock:
         self.alarm_play_button.setEnabled(True)
 
         if self.env.config_has_match("radio", "enabled", "1"):
-            # Toggle the radio button and pass the first url listed in the
-            # config to the radio player
-            # Note: we're assuming the streams are ordered and that
-            #   the button is untoggled before the call.
+            # Toggle the radio button and pass the default stream
+            # the radio player.
             self.main_window.control_buttons["Radio"].toggle()
-            url = self.env.get_value("radio", "default")
+            default_station = self.env.get_value("radio", "default")
+            url = self.radio_streams[default_station]
             self.play_radio(url=url)
 
     def build_and_play_alarm(self):
