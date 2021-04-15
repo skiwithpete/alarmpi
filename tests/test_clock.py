@@ -11,7 +11,7 @@ from src import clock
 app = QApplication([])
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 @patch("src.alarmenv.AlarmEnv.get_config_file_path")
 def dummy_clock(mock_get_config_file_path):
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
