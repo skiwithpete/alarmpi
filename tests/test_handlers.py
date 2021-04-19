@@ -16,7 +16,7 @@ def test_failed_train_api_request_returns_error_template(mock_fetch_daily_train_
 
 @patch("src.handlers.get_open_weather.OpenWeatherMapClient.get_weather")
 def test_failed_weather_api_request_returns_error_template(mock_get_weather):
-    """Does get_next_trains.run return None if API call fails"""
+    """Does fetch_and_format_weather return None if API call fails"""
     mock_get_weather.side_effect = requests.exceptions.RequestException()
 
     section_data = {"credentials": None, "city_id": None, "units": None}

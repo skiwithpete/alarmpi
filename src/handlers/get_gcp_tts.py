@@ -4,7 +4,6 @@
 import io
 
 import pydub
-import pydub.playback
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
@@ -58,23 +57,3 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
         f = io.BytesIO(response.audio_content)
         audio = pydub.AudioSegment.from_file(f, format="mp3")
         pydub.playback.play(audio)
-
-    def synthesize_and_store(self, text):
-        """Synthesize speech and store as mp3 file for demonstration purposes."""
-        synthesis_input = texttospeech.types.SynthesisInput(text=text)
-
-        # Build the voice request and specify a WaveNet voice for more human like speech
-        voice = texttospeech.types.VoiceSelectionParams(
-            language_code="en-US",
-            name="en-US-Wavenet-C"
-        )
-
-        # Select the type of audio file you want returned
-        audio_config = texttospeech.types.AudioConfig(
-            audio_encoding=texttospeech.enums.AudioEncoding.MP3)
-
-        # Perform the text-to-speech request on the text input with the selected
-        # voice parameters and audio file type
-        response = self.client.synthesize_speech(synthesis_input, voice, audio_config)
-        with open('output.mp3', 'wb') as f:
-            f.write(response.audio_content)

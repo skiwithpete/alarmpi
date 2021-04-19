@@ -11,15 +11,15 @@ from functools import partial
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QPixmap
 
-from src import alarmenv
-from src import utils
-from src import alarm_builder
-from src import GUIWidgets
-from src import rpi_utils
-from src.handlers import get_open_weather, get_next_trains
-
+from src import (
+    alarmenv,
+    utils,
+    alarm_builder,
+    GUIWidgets,
+    rpi_utils
+)
+from src.plugins import weather, trains
 
 
 logger = logging.getLogger("eventLogger")
@@ -59,11 +59,9 @@ class Clock:
         radio_conf = self.env.get_section("radio")
         self.radio = RadioStreamer(radio_conf)
         self.alarm_player = alarm_builder.Alarm(self.env)
-        self.train_parser = get_next_trains.TrainParser()
 
-        if self.env.get_value("openweathermap", "enabled", fallback="0") == "1":
-            section = self.env.get_section("openweathermap")
-            self.weather_parser = get_open_weather.OpenWeatherMapClient(section)
+        self.main_window.keyPressEvent = self.debug_key_press_event
+        self.settings_window.keyPressEvent = self.debug_key_press_event
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
@@ -71,11 +69,13 @@ class Clock:
             self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
-            logger.debug("Debug mode detected, disabling train and weather polling")
-            self.env.config.set("polling", "weather", "0")
-            self.env.config.set("polling", "train", "0")
+            logger.debug("Disabling weather plugin")
+            self.env.config.set("openweathermap", "enabled", "0")
+            for key in self.env.get_section("plugins"):
+                logger.debug("Disabling %s", key)
+                self.env.config.set("plugins", key, "0")
+
             self.env.rpi_brightness_write_access = True  # Enables brightness buttons
-            self.main_window.keyPressEvent = self.debug_key_press_event
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
@@ -83,16 +83,18 @@ class Clock:
         """
         self.setup_button_handlers()
 
+        # Enable weather polling if enabled as part of the alarm
         weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
-        weather_polling_enabled = self.env.get_value("polling", "weather", fallback=False) == "1"
+        if weather_enabled:
+            self.weather_plugin = weather.WeatherPlugin(self)
+            self.weather_plugin.create_widgets()
+            self.weather_plugin.setup_weather_polling()
 
-        train_polling_enabled = self.env.get_value("polling", "train", fallback=False) == "1"
-
-        if weather_enabled and weather_polling_enabled:
-            self.setup_weather_polling()
-
+        train_polling_enabled = self.env.get_value("plugins", "trains", fallback=False) == "1"
         if train_polling_enabled:
-            self.setup_train_polling()
+            self.train_plugin = trains.TrainPlugin(self)
+            self.train_plugin.create_widgets()
+            self.train_plugin.setup_train_polling()
 
         # Setup settings window's checkbox initial values:
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
@@ -118,6 +120,14 @@ class Clock:
         self.screen_blank_timer.timeout.connect(self.blank_screen_and_hide_control_buttons)
 
         self.main_window.mouseReleaseEvent = self.on_release_event_handler
+
+        # Set radio stations from config to the settings window options
+        self.radio_streams = self.env.get_radio_stations()
+        self.settings_window.radio_station_combo_box.addItems(self.radio_streams.keys())
+
+        # Ensure station set as default is set as current item 
+        default_station = self.env.get_value("radio", "default")
+        self.settings_window.radio_station_combo_box.setCurrentText(default_station)
 
     def setup_button_handlers(self):
         """Setup button handlers for the main window and settings window."""
@@ -182,6 +192,7 @@ class Clock:
         """
         self.screen_blank_timer.stop()
         self.settings_window.show()
+        logger.debug("Settings window opened")
 
     def on_release_event_handler(self, event):
         """Event handler for touching the screen: ensure screen is turned on
@@ -189,6 +200,7 @@ class Clock:
         set a short timeout for blanking the screen.
         """
         # get screen state before the event occured and set it as enabled
+        logger.debug("Activating display")
         old_screen_state = rpi_utils.get_and_set_screen_state("on")
         self.show_control_buttons()
 
@@ -255,33 +267,31 @@ class Clock:
         depending on the button state.
         Args:
             url (string): the url of the stream to play. If none, currently active
-                stream from the settings window ComboBox is used.
+                stream from the settings window QComboBox is used.
         """
         button = self.main_window.control_buttons["Radio"]
 
         # If no stream url was passed, use currently active station from settings window
-        # dropdown list.
+        # QComboBox
         if url is None:
             current_radio_station = self.settings_window.radio_station_combo_box.currentText()
-            self.radio.config["url"] = utils.RADIO_STATIONS[current_radio_station]
+            url = self.radio_streams[current_radio_station]
 
         else:
-            self.radio.config["url"] = url
             # Look for station name from listed streams in stream config file
             current_radio_station = ""
             
-            for k,v in utils.RADIO_STATIONS.items():
-                if v == url:
-                    current_radio_station = k
+            for name, stream_url in self.radio_streams.items():
+                if stream_url == url:
+                    current_radio_station = name
                     break
-
 
         # The radio button is a checkable (ie. a toggle): radio should start playing 
         # when the button gets checked and stop when state changes to not checked.
         # (The state change occurs before this callback runs.)
         if button.isChecked():
             self.main_window._show_radio_play_indicator(current_radio_station)
-            self.radio.play()
+            self.radio.play(url)
         else:
             self.main_window._hide_radio_play_indicator()
             self.radio.stop()
@@ -302,96 +312,23 @@ class Clock:
 
     def finish_playing_alarm(self):
         """Slot function for finishing playing the alarm: re-enables the play button
-        and, if activated, starts a separated mplayer process for the radio stream.
+        and, if activated, starts a separated cvlc process for the radio stream.
         Called when the alarm thread emits its finished signal.
         """
         self.alarm_play_button.setEnabled(True)
 
         if self.env.config_has_match("radio", "enabled", "1"):
-            # Manually emit the radio buttons click signal. This will both
-            # set the state of the button and start the playback.
-            #self.main_window.control_buttons["Radio"].click()
-
-            # Toggle the radio button and specify the stream to play as
-            # the url parameter from the configuration file.
-            # Note: we're assuming the button is untoggled before the call.
+            # Toggle the radio button and pass the default stream
+            # the radio player.
             self.main_window.control_buttons["Radio"].toggle()
-            url = self.env.get_value("radio", "url")
+            default_station = self.env.get_value("radio", "default")
+            url = self.radio_streams[default_station]
             self.play_radio(url=url)
 
     def build_and_play_alarm(self):
         """Custom callback for the 'Play now' button: builds and plays an alarm."""
         self.alarm_play_thread.build() # Note: a new alarm is built every time the button is pressed
         self.alarm_play_thread.start()
-
-    def setup_weather_polling(self):
-        """Setup polling for updating the weather every 30 minutes."""
-        self.update_weather()
-        _timer = QTimer(self.main_window)
-        _timer.timeout.connect(self.update_weather)
-        _timer.start(30*60*1000)  # 30 minute interval
-
-    def update_weather(self):
-        """Update the weather labels on the main window. Makes an API request to
-        openweathermap.org for current temperature and windspeed.
-        """
-        logger.debug("Updating weather")
-        weather = self.weather_parser.fetch_and_format_weather()
-
-        if weather is None:
-            self.main_window.temperature_label.setText("ERR")
-            self.main_window.wind_speed_label.setText("ERR")
-            return
-
-        temperature = weather["temp"]
-        wind = weather["wind_speed_ms"]
-
-        msg = "{}°C".format(round(temperature))
-        self.main_window.temperature_label.setText(msg)
-
-        msg = "{}m/s".format(round(wind))
-        self.main_window.wind_speed_label.setText(msg)
-
-        icon_id = weather["icon"]
-        icon_binary = get_open_weather.OpenWeatherMapClient.get_weather_icon(icon_id)
-
-        pixmap = QPixmap()
-        pixmap.loadFromData(icon_binary)
-        self.main_window.weather_container.setPixmap(pixmap)
-
-    def setup_train_polling(self):
-        """Setup polling for next train departure times every 12 minutes."""
-        self.update_trains()
-        _timer = QTimer(self.main_window)
-        _timer.timeout.connect(self.update_trains)
-        _timer.start(5*60*1000)
-
-    def update_trains(self):
-        """Fetch new train data from DigiTraffic API and display on the right sidebar."""
-        logger.debug("Updating trains")
-        trains = self.train_parser.run()
-
-        if trains is None:
-            for label in self.main_window.train_labels:
-                label.setText("ERR")
-            return
-
-        for train, label in zip(trains, self.main_window.train_labels):
-            line_id = train["commuterLineID"]
-            scheduled_time = train["scheduledTime"].strftime("%H:%M")
-
-            # If an estimate exists, display both values
-            if train["liveEstimateTime"]:
-                estimate_time = train["liveEstimateTime"].strftime("%H:%M")
-                msg = "{} {} => {}".format(line_id, scheduled_time, estimate_time)
-
-            else:
-                msg = "{} {}".format(line_id, scheduled_time)
-
-            if train["cancelled"]:
-                msg = "{} {} CANCELLED".format(line_id, scheduled_time)
-
-            label.setText(msg)
 
     def toggle_display_mode(self):
         """Change main window dispaly mode between fullscreen and normal
@@ -410,6 +347,7 @@ class Clock:
         hide the main window's control buttons to prevent accidentally hitting
         them when the screen in blank.
         """
+        logger.debug("Blanking display")
         rpi_utils.toggle_screen_state("off")
         self.hide_control_buttons()
 
@@ -417,6 +355,7 @@ class Clock:
         """Callback to turning the screen on: re-enable backlight power and show
         the main window's control buttons.
         """
+        logger.debug("Activating display")
         rpi_utils.toggle_screen_state("on")
         self.show_control_buttons()
 
@@ -469,13 +408,23 @@ class Clock:
         QApplication.instance().quit()
 
     def debug_key_press_event(self, event):
-        """Custom keyPressEvent handler for debuggin purposes: prints the current
-        contents configuration.
-        """
-        if event.key() == Qt.Key_S:
+        """Custom keyPressEvent handler for debuggin purposes: writes the current
+        alarm and window configuration to file.
+        """ 
+        if event.key() == Qt.Key_F2:
             config = {section: dict(self.env.config[section])
                       for section in self.env.config.sections()}
-            print(json.dumps(config, indent=4))
+
+            OUTPUT_FILE = "debug_info.log"
+            with open(OUTPUT_FILE, "w") as f:
+                f.write("config file: {}\n".format(self.env.config_file))
+                json.dump(config, f, indent=4)
+
+                f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
+                for window in (self.main_window, self.settings_window):
+                    f.write("\n{:60} {:9} {:12} {:14}".format(str(window), window.isVisible(), window.isFullScreen(), window.isActiveWindow()))
+
+            logger.info("Debug status written to %s", OUTPUT_FILE)
 
 
 class AlarmPlayThread(QThread):
@@ -508,25 +457,21 @@ class AlarmPlayThread(QThread):
 
 
 class RadioStreamer:
-    """Helper class for playing a radio stream via mplayer."""
+    """Helper class for playing a radio stream via cvlc."""
     def __init__(self, config):
         self.process = None
         self.config = config
 
     def is_playing(self):
-        """Check if mplayer is currently running. Return True if it is."""
+        """Check if cvlc is currently running."""
         return self.process is not None
 
-    def play(self):
+    def play(self, url):
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
         """
-        # Ensure the currently active 'url' key from config is used as the stream url
-        args = self.config["args"].split()
-        args[1] = self.config["url"] # we're assuming url position in the arg list!
-        args = " ".join(args)
-
-        cmd = "/usr/bin/mplayer {}".format(args)
+        args = self.config["args"]
+        cmd = "/usr/bin/cvlc {} {}".format(url, args)
         logger.info("Running %s", cmd)
 
         # Run the command via Popen directly to open the stream as an independent child
@@ -536,7 +481,7 @@ class RadioStreamer:
             self.process = subprocess.Popen(cmd.split(), stdout=f, stderr=subprocess.STDOUT)
 
     def stop(self):
-        """Terminate the running mplayer process."""
+        """Terminate the running cvlc process."""
         try:
             self.process.terminate()
             self.process = None

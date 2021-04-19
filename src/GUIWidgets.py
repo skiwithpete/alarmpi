@@ -6,6 +6,7 @@
 
 import time
 import os.path
+import logging
 from functools import partial
 from collections import namedtuple
 
@@ -32,6 +33,7 @@ ButtonConfig = namedtuple("ButtonConfig", ["text", "position", "slot", "icon", "
 ButtonConfig.__new__.__defaults__ = (
     None, None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
+logger = logging.getLogger("eventLogger")
 
 class AlarmWindow(QWidget):
     """QWidget subclass for main window."""
@@ -45,8 +47,8 @@ class AlarmWindow(QWidget):
         # Setup base and subgrids for layouting
         base_layout = QGridLayout(self)
         alarm_grid = QGridLayout()
-        left_grid = QGridLayout()
-        right_grid = QGridLayout()
+        self.left_grid = QGridLayout()
+        self.right_grid = QGridLayout()
         bottom_grid = QGridLayout()
 
         with open("src/style.qss") as f:
@@ -90,37 +92,20 @@ class AlarmWindow(QWidget):
 
             bottom_grid.addWidget(button, *config.position)
 
-       
-        # ** Left grid: next 3 departing trains **
-        self.train_labels = []
-        for i in range(5):
-            train_label = QLabel("", self)
-            left_grid.addWidget(train_label, i, 0)
-            self.train_labels.append(train_label)
-
-        # Set larger strecth factor to the last, unused, row indices
-        # so items are grouped closed together.
-        left_grid.setRowStretch(5, 1)
-        right_grid.setRowStretch(2, 1)
-
-        # ** Right grid: weather forecast **
-        self.temperature_label = QLabel("", self)
-        self.wind_speed_label = QLabel("", self)
-        self.weather_container = QLabel(self)
-        # Label with icon: QLabel doesn't support setIcon, use html support instead
+        # Right hand sidebat: separate grids for plugin (top) and radio play
+        # indicator (bottom) 
+        radio_station_grid = QGridLayout()
         self.radio_play_indicator = QLabel(self)
-        
-        right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
-        right_grid.addWidget(self.wind_speed_label, 1, 0, Qt.AlignRight)
-        right_grid.addWidget(self.weather_container, 2, 0, Qt.AlignRight | Qt.AlignTop)
-        right_grid.addWidget(self.radio_play_indicator, 3, 0, Qt.AlignRight)
-
-        # Radio play indicator should be hidden by default
         self.radio_play_indicator.hide()
+        radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
+        right_grid_container = QGridLayout()
+        right_grid_container.addLayout(self.right_grid, 0, 2)
+        right_grid_container.addLayout(radio_station_grid, 1, 2)
+        
         base_layout.addLayout(alarm_grid, 0, 1)
-        base_layout.addLayout(left_grid, 0, 0)
-        base_layout.addLayout(right_grid, 0, 2)
+        base_layout.addLayout(self.left_grid, 0, 0)
+        base_layout.addLayout(right_grid_container, 0, 2)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 3)
 
         # Set row strech so the bottom bar doesn't take too much vertical space
@@ -249,9 +234,8 @@ class SettingsWindow(QWidget):
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
         self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
 
-        # ComboBox for radio station, filled from 
+        # ComboBox for radio station, filled from config file
         self.radio_station_combo_box = QComboBox(self)
-        self.radio_station_combo_box.addItems(utils.RADIO_STATIONS)
         self.radio_station_combo_box.setSizePolicy(
             QSizePolicy.Preferred,
             QSizePolicy.Expanding  # expand in vertical direction
@@ -295,7 +279,8 @@ class SettingsWindow(QWidget):
         if self.alarm_time_status_label.text() == SettingsWindow.ALARM_INPUT_CLEAR:
             self.alarm_time_status_label.setText("")
 
-        self.close()
+        logger.debug("Closing settings window")
+        self.hide()
 
     def center(self):
         qr = self.frameGeometry()

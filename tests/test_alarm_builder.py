@@ -89,4 +89,3 @@ def test_beep_played_when_no_readaloud(mock_play_beep, mock_config_has_match, du
 
     dummy_alarm.play("dummy_content")
     mock_play_beep.assert_called()
-

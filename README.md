@@ -57,8 +57,8 @@ It's also possible to run the alarm without the GUI on a headless setup, see Usa
 
 ## Setup
 First, install required system packages with  
-```apt install python-all-dev qt5-default ffmpeg festival mplayer portaudio19-dev```  
-These include the Qt 5 development package, Festival text-to-speech engine, the command line media player mplayer and audio libraries enabling playback of mp3 files directly in Python.
+```apt install python-all-dev qt5-default ffmpeg festival cvlc portaudio19-dev```  
+These include the Qt 5 development package, Festival text-to-speech engine, the command line media player cvlc and audio libraries enabling playback of mp3 files directly in Python.
 
 Next, install Python packages with  
 ```pip install -r requirements.txt```  
@@ -94,7 +94,7 @@ The first runs a GUI version of the script. It includes a digital clock interfac
 
 The second form generates an alarm based on the configuration file and plays it. This can be used as a purely CLI interface for the alarm. Use cron to manually schedule an alarm.
 
-If the radio stream is enabled as part of the alarm it will be played in a separate process using `mplayer` command line media player. When used as CLI alarm, the included `stop.sh` shell script can be used to terminate the stream.
+If the radio stream is enabled as part of the alarm it will be played in a separate process using `cvlc` command line media player. When used as CLI alarm, the included `stop.sh` shell script can be used to terminate the stream.
 
 When used from the GUI, the alarm works as a toggle. Once the alarm triggers, it will be deactivated and needs to be re-enabled in order to trigger again the next morning. Previous alarm time, however, is saved and need not be reset every time. 
 

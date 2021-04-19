@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 import configparser
 import dns.resolver
 import dns.exception
@@ -50,8 +51,9 @@ class AlarmEnv:
 
         for path in PATHS_TO_CHECK:
             if os.path.isfile(path):
-                logger.info("Using config file %s", os.path.normpath(path))
-                return path
+                normalized_path = os.path.normpath(path)
+                logger.info("Using config file %s", normalized_path)
+                return normalized_path
 
         raise FileNotFoundError("No valid configuration file found for {}".format(config_file))
 
@@ -71,7 +73,7 @@ class AlarmEnv:
          2 sections other than [main] have a 'type' key
         """
         try:
-            for section in self.get_sections(excludes=["main", "alarm", "polling", "greeting"]):
+            for section in self.get_sections(excludes=["main", "alarm", "plugins", "greeting"]):
                 section_type = self.get_value(section, "type")
 
                 if section_type in ("content", "tts"):
@@ -84,6 +86,10 @@ class AlarmEnv:
         brightness = int(self.get_value("main", "low_brightness", "12"))
         if not 9 <= brightness <= 255:
             raise RuntimeError("Invalid configuration: Brightness should be between 9 and 255")
+
+        default = self.get_value("radio", "default")
+        if default not in self.get_radio_stations():
+            raise RuntimeError("No stream url for defult radio station %s", default)
 
         return True
 
@@ -118,7 +124,6 @@ class AlarmEnv:
         return sections
 
     def get_section(self, section):
-        """Return a configuration section by name."""
         return self.config[section]
 
     def get_value(self, section, option, fallback=None):
@@ -129,3 +134,7 @@ class AlarmEnv:
             return self.config.get(section, option)
 
         return self.config.get(section, option, fallback=fallback)
+
+    def get_radio_stations(self):
+        """Utility function for parsing radio stream urls as a dict."""
+        return json.loads(self.get_value("radio", "urls"))

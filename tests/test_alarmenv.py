@@ -55,7 +55,7 @@ def test_get_sections_with_exclusions(dummy_env):
     read_sections = dummy_env.get_sections(excludes=["main", "greeting"])
     filtered_sections = [
         "alarm",
-        "polling",
+        "plugins",
         "openweathermap",
         "BBC_news",
         "google_gcp_tts",

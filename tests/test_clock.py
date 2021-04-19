@@ -11,7 +11,7 @@ from src import clock
 app = QApplication([])
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 @patch("src.alarmenv.AlarmEnv.get_config_file_path")
 def dummy_clock(mock_get_config_file_path):
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")
@@ -164,7 +164,7 @@ class TestRadioStreamerCase():
     def test_stop_clears_active_process(self, dummy_radio):
         """Does stop clear the list of running processes?"""
         subprocess.Popen = Mock()
-        dummy_radio.play()
+        dummy_radio.play("https://foo.bar")
         dummy_radio.stop()
 
         assert dummy_radio.process is None
