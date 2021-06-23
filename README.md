@@ -57,7 +57,7 @@ It's also possible to run the alarm without the GUI on a headless setup, see Usa
 
 ## Setup
 First, install required system packages with  
-```apt install python-all-dev qt5-default ffmpeg festival cvlc portaudio19-dev```  
+```apt install python-all-dev qt5-default ffmpeg festival vlc portaudio19-dev```  
 These include the Qt 5 development package, Festival text-to-speech engine, the command line media player cvlc and audio libraries enabling playback of mp3 files directly in Python.
 
 Next, install Python packages with  

@@ -470,7 +470,7 @@ class RadioStreamer:
         """Open a radio stream as a child process. The stream will continue to run
         in the background.
         """
-        args = self.config["args"]
+        args = self.config.get("args", "")
         cmd = "/usr/bin/cvlc {} {}".format(url, args)
         logger.info("Running %s", cmd)
 
