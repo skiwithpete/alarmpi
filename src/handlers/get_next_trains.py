@@ -16,7 +16,7 @@ from dateutil import tz
 
 # Define common top level parameters: number of arriving trains
 # and API response values to parse,
-NUMBER_OF_TRAINS = 5
+MAX_NUMBER_OF_TRAINS = 5
 ARRIVING_STATION_CODE = "KE"
 RETURN_TEMPLATE_KEYS = [
     "liveEstimateTime",
@@ -83,14 +83,14 @@ class TrainParser:
             departure_rows.append(d)
 
         departure_rows.sort(key=lambda row: row["sortKey"])
-        return departure_rows[:NUMBER_OF_TRAINS]
+        return departure_rows[:MAX_NUMBER_OF_TRAINS]
 
     def fetch_daily_train_data(self):
         """API call to get the next local arrivivals."""
         URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/{}".format(ARRIVING_STATION_CODE)
         params = {
             "arrived_trains": 1,  # API minumum to already arrived and departed trains is 1
-            "arriving_trains": 10,
+            "arriving_trains": 20,
             "departed_trains": 1
         }
 
