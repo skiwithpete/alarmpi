@@ -39,19 +39,26 @@ class TrainPlugin:
                 label.setText("ERR")
             return
 
-        for train, label in zip(trains, self.train_labels):
-            line_id = train["commuterLineID"]
-            scheduled_time = train["scheduledTime"].strftime("%H:%M")
+        for i, label in enumerate(self.train_labels):
+            try:
+                train = trains[i]
+                line_id = train["commuterLineID"]
+                scheduled_time = train["scheduledTime"].strftime("%H:%M")
 
-            # If an estimate exists, display both values
-            if train["liveEstimateTime"]:
-                estimate_time = train["liveEstimateTime"].strftime("%H:%M")
-                msg = "{} {} => {}".format(line_id, scheduled_time, estimate_time)
+                # If an estimate exists, display both values
+                if train["liveEstimateTime"]:
+                    estimate_time = train["liveEstimateTime"].strftime("%H:%M")
+                    msg = "{} {} => {}".format(line_id, scheduled_time, estimate_time)
 
-            else:
-                msg = "{} {}".format(line_id, scheduled_time)
+                else:
+                    msg = "{} {}".format(line_id, scheduled_time)
 
-            if train["cancelled"]:
-                msg = "{} {} CANCELLED".format(line_id, scheduled_time)
+                if train["cancelled"]:
+                    msg = "{} {} CANCELLED".format(line_id, scheduled_time)
 
-            label.setText(msg)
+                label.setText(msg)
+
+            # API response may contain fewer trains than MAX_NUMBER_OF_TRAINS trains,
+            # clear any remaining labels.
+            except IndexError:
+                label.clear()
