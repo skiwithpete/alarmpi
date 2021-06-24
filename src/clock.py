@@ -71,9 +71,14 @@ class Clock:
         if kwargs.get("debug"):
             logger.debug("Disabling weather plugin")
             self.env.config.set("openweathermap", "enabled", "0")
-            for key in self.env.get_section("plugins"):
-                logger.debug("Disabling %s", key)
-                self.env.config.set("plugins", key, "0")
+
+            # Disable plugins if any listed in the configuration
+            try:
+                for key in self.env.get_section("plugins"):
+                    logger.debug("Disabling %s", key)
+                    self.env.config.set("plugins", key, "0")
+            except KeyError:
+                pass
 
             self.env.rpi_brightness_write_access = True  # Enables brightness buttons
 
