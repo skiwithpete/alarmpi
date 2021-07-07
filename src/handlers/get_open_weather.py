@@ -86,7 +86,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         """API request to fetch current weather data."""
         URL = "http://api.openweathermap.org/data/2.5/weather"
         params = {
-            "APPID": self.credentials,
+            "appid": self.credentials,
             "id": self.city_id,
             "units": "metric"
         }
@@ -136,7 +136,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         """Get weather icon matching an id from the response.
         https://openweathermap.org/weather-conditions
         """
-        url = "http://openweathermap.org/img/w/{}.png".format(icon_id)
+        url = "http://openweathermap.org/img/wn/{}@2x.png".format(icon_id)
         r = requests.get(url)
         return r.content  # return binary content
 
