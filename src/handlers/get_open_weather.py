@@ -34,10 +34,8 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         except requests.exceptions.RequestException as e:
             self.content = "Failed to connect to openweathermap.org. "
             event_logger.error(str(e))
-            return
         except (TypeError, KeyError):
             self.content = "Failed to read openweathermap.org. "
-            return
 
         weather_string = "Weather for today is {}. It is currently {} degrees ".format(
             conditions, temperature)
@@ -103,7 +101,6 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             return OpenWeatherMapClient.format_response(api_response)
         except requests.exceptions.RequestException as e:
             event_logger.error(str(e))
-            return None
 
 
     @staticmethod
@@ -118,7 +115,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         sunrise = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunrise"])
         sunset = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunset"])
 
-        formatted = {
+        return {
             "temp": today_temp,
             "conditions": response["weather"][0]["description"],
             "wind_speed_ms": wind,
@@ -128,8 +125,6 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             "sunset": sunset,
             "icon": response["weather"][0]["icon"]
         }
-
-        return formatted
 
     @staticmethod
     def get_weather_icon(icon_id):

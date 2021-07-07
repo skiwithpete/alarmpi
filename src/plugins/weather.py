@@ -60,4 +60,5 @@ class WeatherPlugin:
 
         pixmap = QPixmap()
         pixmap.loadFromData(icon_binary)
+        pixmap = pixmap.scaledToWidth(64)
         self.icon_label.setPixmap(pixmap)
