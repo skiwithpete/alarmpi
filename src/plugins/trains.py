@@ -48,7 +48,7 @@ class TrainPlugin:
                 # If an estimate exists, display both values
                 if train["liveEstimateTime"]:
                     estimate_time = train["liveEstimateTime"].strftime("%H:%M")
-                    msg = "{} {} => {}".format(line_id, scheduled_time, estimate_time)
+                    msg = "{} {} ⇒ {}".format(line_id, scheduled_time, estimate_time)
 
                 else:
                     msg = "{} {}".format(line_id, scheduled_time)
