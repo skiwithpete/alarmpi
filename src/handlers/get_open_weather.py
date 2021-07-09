@@ -34,8 +34,10 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         except requests.exceptions.RequestException as e:
             self.content = "Failed to connect to openweathermap.org. "
             event_logger.error(str(e))
+            return
         except (TypeError, KeyError):
             self.content = "Failed to read openweathermap.org. "
+            return
 
         weather_string = "Weather for today is {}. It is currently {} degrees ".format(
             conditions, temperature)
