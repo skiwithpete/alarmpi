@@ -133,10 +133,14 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         """Get weather icon matching an id from the response.
         https://openweathermap.org/weather-conditions
         """
-        url = "http://openweathermap.org/img/wn/{}@2x.png".format(icon_id)
-        r = requests.get(url)
-        return r.content  # return binary content
-
+        try:
+            url = "http://openweathermap.org/img/wn/{}@2x.png".format(icon_id)
+            r = requests.get(url)
+            return r.content  # binary content
+        except requests.exceptions.RequestException as e:
+            event_logger.error(str(e))
+            return
+       
     @staticmethod
     def ms_to_kmh(wind_speed):
         """Convert wind speed measure from meters/second to kilometres/hour."""
