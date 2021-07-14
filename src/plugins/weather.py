@@ -1,3 +1,4 @@
+from functools import partial
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap
@@ -32,19 +33,30 @@ class WeatherPlugin:
 
         _30_MINUTES = 30*60*1000
         _timer = QTimer(self.parent.main_window)
-        _timer.timeout.connect(self.update_weather)
-        _timer.start(_30_MINUTES)
+        weather_update_slot = partial(self.run_with_retry, func=self.update_weather)
+        _timer.timeout.connect(weather_update_slot)
+        _timer.start(_30_MINUTES)   
 
     def update_weather(self):
         """Update the weather labels on the main window. Makes an API request to
         openweathermap.org for current temperature and windspeed.
         """
         weather = self.parser.fetch_and_format_weather()
+        pixmap = QPixmap()
 
+        # Clear all labels if the call failed and raise an error to
+        # trigger retry.
         if weather is None:
             self.temperature_label.setText("ERR")
             self.wind_label.setText("ERR")
-            return
+            self.icon_label.setPixmap(pixmap)
+            raise RuntimeError()
+
+        # Weather icon is fetched via a separate API call which
+        # may fail regardless of the main call.
+        if weather["icon"] is None:
+            self.icon_label.setPixmap(pixmap)
+            raise RuntimeError()
 
         temperature = weather["temp"]
         wind = weather["wind_speed_ms"]
@@ -55,10 +67,18 @@ class WeatherPlugin:
         msg = "{}m/s".format(round(wind))
         self.wind_label.setText(msg)
 
-        icon_id = weather["icon"]
-        icon_binary = get_open_weather.OpenWeatherMapClient.get_weather_icon(icon_id)
-
-        pixmap = QPixmap()
-        pixmap.loadFromData(icon_binary)
+        pixmap.loadFromData(weather["icon"])
         pixmap = pixmap.scaledToWidth(64)
         self.icon_label.setPixmap(pixmap)
+
+    def run_with_retry(self, func, retry=120000):
+        """Run func with single retry after a delay.
+        Default delay is 2 minutes.
+        """
+        try:
+            func()
+        except RuntimeError as e:
+            _timer = QTimer(self.parent.main_window)
+            _timer.setSingleShot(True)
+            _timer.timeout.connect(func)
+            _timer.start(retry)

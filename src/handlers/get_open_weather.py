@@ -116,6 +116,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
         sunrise = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunrise"])
         sunset = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunset"])
+        icon = OpenWeatherMapClient.get_weather_icon(response["weather"][0]["icon"])
 
         return {
             "temp": today_temp,
@@ -125,7 +126,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             "wind_chill": wind_chill,
             "sunrise": sunrise,
             "sunset": sunset,
-            "icon": response["weather"][0]["icon"]
+            "icon": icon
         }
 
     @staticmethod
