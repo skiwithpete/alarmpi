@@ -10,6 +10,7 @@ from src.handlers import get_open_weather
 class WeatherPlugin:
 
     def __init__(self, parent):
+        self.retry_flag = False
         self.parent = parent
         config = parent.env.get_section("openweathermap")
         self.parser = get_open_weather.OpenWeatherMapClient(config)
@@ -33,30 +34,25 @@ class WeatherPlugin:
 
         _30_MINUTES = 30*60*1000
         _timer = QTimer(self.parent.main_window)
-        weather_update_slot = partial(self.run_with_retry, func=self.update_weather)
-        _timer.timeout.connect(weather_update_slot)
+        _weather_update_slot = partial(self.run_with_retry, func=self.update_weather)
+        _timer.timeout.connect(_weather_update_slot)
         _timer.start(_30_MINUTES)   
 
     def update_weather(self):
         """Update the weather labels on the main window. Makes an API request to
         openweathermap.org for current temperature and windspeed.
         """
+        self.retry_flag = False
         weather = self.parser.fetch_and_format_weather()
         pixmap = QPixmap()
 
-        # Clear all labels if the call failed and raise an error to
-        # trigger retry.
+        # Clear all labels if the call failed and set retry flag.
         if weather is None:
             self.temperature_label.setText("ERR")
             self.wind_label.setText("ERR")
             self.icon_label.setPixmap(pixmap)
-            raise RuntimeError()
-
-        # Weather icon is fetched via a separate API call which
-        # may fail regardless of the main call.
-        if weather["icon"] is None:
-            self.icon_label.setPixmap(pixmap)
-            raise RuntimeError()
+            self.retry_flag = True
+            return
 
         temperature = weather["temp"]
         wind = weather["wind_speed_ms"]
@@ -67,6 +63,13 @@ class WeatherPlugin:
         msg = "{}m/s".format(round(wind))
         self.wind_label.setText(msg)
 
+        # Weather icon is fetched via a separate API call which
+        # may fail regardless of the main call.
+        if weather["icon"] is None:
+            self.icon_label.setPixmap(pixmap)
+            self.retry_flag = True
+            return
+
         pixmap.loadFromData(weather["icon"])
         pixmap = pixmap.scaledToWidth(64)
         self.icon_label.setPixmap(pixmap)
@@ -75,9 +78,9 @@ class WeatherPlugin:
         """Run func with single retry after a delay.
         Default delay is 2 minutes.
         """
-        try:
-            func()
-        except RuntimeError as e:
+        func()
+        if self.retry_flag:
+            self.retry_flag = False
             _timer = QTimer(self.parent.main_window)
             _timer.setSingleShot(True)
             _timer.timeout.connect(func)
