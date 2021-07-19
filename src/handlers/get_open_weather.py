@@ -86,7 +86,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         """API request to fetch current weather data."""
         URL = "http://api.openweathermap.org/data/2.5/weather"
         params = {
-            "APPID": self.credentials,
+            "appid": self.credentials,
             "id": self.city_id,
             "units": "metric"
         }
@@ -103,7 +103,6 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             return OpenWeatherMapClient.format_response(api_response)
         except requests.exceptions.RequestException as e:
             event_logger.error(str(e))
-            return None
 
 
     @staticmethod
@@ -117,8 +116,9 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
         sunrise = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunrise"])
         sunset = OpenWeatherMapClient.timesamp_to_time_str(response["sys"]["sunset"])
+        icon = OpenWeatherMapClient.get_weather_icon(response["weather"][0]["icon"])
 
-        formatted = {
+        return {
             "temp": today_temp,
             "conditions": response["weather"][0]["description"],
             "wind_speed_ms": wind,
@@ -126,20 +126,22 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             "wind_chill": wind_chill,
             "sunrise": sunrise,
             "sunset": sunset,
-            "icon": response["weather"][0]["icon"]
+            "icon": icon
         }
-
-        return formatted
 
     @staticmethod
     def get_weather_icon(icon_id):
         """Get weather icon matching an id from the response.
         https://openweathermap.org/weather-conditions
         """
-        url = "http://openweathermap.org/img/w/{}.png".format(icon_id)
-        r = requests.get(url)
-        return r.content  # return binary content
-
+        try:
+            url = "http://openweathermap.org/img/wn/{}@2x.png".format(icon_id)
+            r = requests.get(url)
+            return r.content  # binary content
+        except requests.exceptions.RequestException as e:
+            event_logger.error(str(e))
+            return
+       
     @staticmethod
     def ms_to_kmh(wind_speed):
         """Convert wind speed measure from meters/second to kilometres/hour."""
