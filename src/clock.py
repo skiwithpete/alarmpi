@@ -18,7 +18,6 @@ from src import (
     GUIWidgets,
     rpi_utils
 )
-from src.plugins import weather, trains, dht22
 
 
 logger = logging.getLogger("eventLogger")
@@ -89,16 +88,19 @@ class Clock:
 
         # Enable various plugin pollers if enabled in the config
         if self.env.get_value("openweathermap", "enabled") == "1":
+            from src.plugins import weather
             weather_plugin = weather.WeatherPlugin(self)
             weather_plugin.create_widgets()
             weather_plugin.setup_polling()
 
         if self.env.get_value("plugins", "trains", fallback=False) == "1":
+            from src.plugins import trains
             train_plugin = trains.TrainPlugin(self)
             train_plugin.create_widgets()
             train_plugin.setup_polling()
 
         if self.env.get_value("plugins", "DHT22", fallback=False) == "1":
+            from src.plugins import dht22
             dht22_plugin = dht22.DHT22Plugin(self)
             dht22_plugin.create_widgets()
             dht22_plugin.setup_polling()
