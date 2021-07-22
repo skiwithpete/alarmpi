@@ -1,7 +1,7 @@
 import textwrap
-import requests
 import io
 
+import requests
 import pydub
 import pydub.playback
 

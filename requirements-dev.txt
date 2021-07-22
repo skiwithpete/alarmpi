@@ -1,0 +1,11 @@
+adafruit-circuitpython-dht
+google-cloud-texttospeech
+pydub
+PyQt5
+PyQt5-sip
+pytest
+requests
+python-dateutil
+num2words
+dnspython
+ipython

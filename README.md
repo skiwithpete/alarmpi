@@ -49,15 +49,18 @@ This project is built around the following hardware.
  * Raspberry Pi
  * Official Raspberry Pi Display
  * A speaker
+ * A DHT22 temperature and humidity sensor (optional)
 
-Apart from the speaker these aren't requirements per se. The project is mostly a couple of Python scripts which will likely run on many Linux platforms. The GUI does have two bindings to a Raspberry Pi: the buttons for toggling screen brightness and putting it to sleep are disabled on a different system.
+While this is built for a Rapsberry Pi, other Linux systems can be used for the main functionality. The GUI does have two bindings to a Raspberry Pi: the buttons for toggling screen brightness and putting it to sleep are disabled on a different system.
+
+The DHT22 sensor is used for indoor temperature measurement and can be disabled from the configuration, see [configs/README.md](./configs/README.md).
 
 It's also possible to run the alarm without the GUI on a headless setup, see Usage below.
 
 
 ## Setup
 First, install required system packages with  
-```apt install python-all-dev qt5-default ffmpeg festival vlc portaudio19-dev```  
+```apt install python-all-dev qt5-default ffmpeg festival vlc portaudio19-dev gpiod```  
 These include the Qt 5 development package, Festival text-to-speech engine, the command line media player cvlc and audio libraries enabling playback of mp3 files directly in Python.
 
 Next, install Python packages with  

@@ -1,10 +1,8 @@
 import os.path
 import datetime
-import json
 
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
-
 
 
 def nighttime(target_time, offset, compare_time=None):

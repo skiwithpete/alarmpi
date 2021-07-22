@@ -4,9 +4,10 @@
 # https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
 
 
-import requests
 import datetime
 import logging
+
+import requests
 from dateutil import tz
 
 

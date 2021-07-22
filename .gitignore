@@ -1,0 +1,7 @@
+**__pycache__/
+venv/
+.vscode/
+*.mp3
+logs/*.log
+test_gcp_text_to_speech.py
+debug_info.log
