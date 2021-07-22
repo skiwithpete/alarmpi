@@ -26,7 +26,7 @@ class WeatherPlugin:
         self.parent.main_window.right_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
         self.parent.main_window.right_grid.addWidget(self.wind_label, 1, 0, Qt.AlignRight)
         self.parent.main_window.right_grid.addWidget(self.icon_label, 2, 0, Qt.AlignRight | Qt.AlignTop)
-        self.parent.main_window.right_grid.setRowStretch(2, 1)
+        #self.parent.main_window.right_grid.setRowStretch(2, 1)
 
     def setup_weather_polling(self):
         """Setup polling for updating the weather every 30 minutes."""

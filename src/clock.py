@@ -19,7 +19,7 @@ from src import (
     GUIWidgets,
     rpi_utils
 )
-from src.plugins import weather, trains
+from src.plugins import weather, trains, dht22
 
 
 logger = logging.getLogger("eventLogger")
@@ -88,7 +88,7 @@ class Clock:
         """
         self.setup_button_handlers()
 
-        # Enable weather polling if enabled as part of the alarm
+        # Enable various plugin pollers if enabled in the config
         weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
         if weather_enabled:
             self.weather_plugin = weather.WeatherPlugin(self)
@@ -100,6 +100,11 @@ class Clock:
             self.train_plugin = trains.TrainPlugin(self)
             self.train_plugin.create_widgets()
             self.train_plugin.setup_train_polling()
+
+        if self.env.get_value("plugins", "DHT22", fallback=False) == "1":
+            self.dht22_plugin = dht22.DHT22Plugin(self)
+            self.dht22_plugin.create_widgets()
+            self.dht22_plugin.setup_polling()
 
         # Setup settings window's checkbox initial values:
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
