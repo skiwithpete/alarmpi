@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
 
 """A PyQt5 clock radio application."""
 
@@ -89,22 +88,25 @@ class Clock:
         self.setup_button_handlers()
 
         # Enable various plugin pollers if enabled in the config
-        weather_enabled = self.env.get_value("openweathermap", "enabled") == "1"
-        if weather_enabled:
-            self.weather_plugin = weather.WeatherPlugin(self)
-            self.weather_plugin.create_widgets()
-            self.weather_plugin.setup_weather_polling()
+        if self.env.get_value("openweathermap", "enabled") == "1":
+            weather_plugin = weather.WeatherPlugin(self)
+            weather_plugin.create_widgets()
+            weather_plugin.setup_polling()
 
-        train_polling_enabled = self.env.get_value("plugins", "trains", fallback=False) == "1"
-        if train_polling_enabled:
-            self.train_plugin = trains.TrainPlugin(self)
-            self.train_plugin.create_widgets()
-            self.train_plugin.setup_train_polling()
+        if self.env.get_value("plugins", "trains", fallback=False) == "1":
+            train_plugin = trains.TrainPlugin(self)
+            train_plugin.create_widgets()
+            train_plugin.setup_polling()
 
         if self.env.get_value("plugins", "DHT22", fallback=False) == "1":
-            self.dht22_plugin = dht22.DHT22Plugin(self)
-            self.dht22_plugin.create_widgets()
-            self.dht22_plugin.setup_polling()
+            dht22_plugin = dht22.DHT22Plugin(self)
+            dht22_plugin.create_widgets()
+            dht22_plugin.setup_polling()
+
+        # Set a higher row streches to the last used row to push elements
+        # closer together
+        nrows = self.main_window.right_grid.rowCount()
+        self.main_window.right_grid.setRowStretch(nrows-1, 1)
 
         # Setup settings window's checkbox initial values:
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")

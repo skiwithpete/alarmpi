@@ -15,7 +15,6 @@ class DHT22Plugin:
         """Create and set QLabel for displaying temperature."""
         self.dht22_label = QLabel(self.parent.main_window)
         self.parent.main_window.right_grid.addWidget(self.dht22_label, 3, 0, Qt.AlignRight | Qt.AlignTop)
-        self.parent.main_window.right_grid.setRowStretch(3, 1)
 
     def setup_polling(self):
         self.update_temperature()

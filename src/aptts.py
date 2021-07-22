@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-
 class AlarmpiTTS:
     """Helper base class for tts clients. Sets path to key file as an attribute
     for tts clients that require one and lists an abstract play method for

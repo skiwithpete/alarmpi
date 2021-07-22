@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 """PyQt5 QWidgets for main and settings windows."""
 
 

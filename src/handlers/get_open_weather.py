@@ -1,3 +1,7 @@
+# Client for fetching current weather data from openweathermap.org.
+# Acts as both alarm content source and as a plugin source. Hence, unlike
+# plugin only clients, this is a subclass of AlarmpiContent.
+
 import requests
 import datetime
 import logging
