@@ -4,7 +4,6 @@ from PyQt5.QtCore import QTimer, Qt
 from src.handlers import get_dht22_readings
 
 
-
 class DHT22Plugin:
 
     def __init__(self, parent):
@@ -31,6 +30,5 @@ class DHT22Plugin:
         if temperature is None:
             self.dht22_label.setText("ERR")
         else:
-            msg = "⌂ {}°C".format(int(temperature))
+            msg = "⌂ {}°C".format(round(temperature))
             self.dht22_label.setText(msg)
-
