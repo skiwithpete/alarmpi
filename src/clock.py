@@ -86,24 +86,26 @@ class Clock:
         """
         self.setup_button_handlers()
 
-        # Enable various plugin pollers if enabled in the config
+        # Enable various plugin pollers if enabled in the config.
+        # Note: plugins defined as instance variables to prevent
+        # their pollers from being garbage collected.
         if self.env.get_value("openweathermap", "enabled") == "1":
             from src.plugins import weather
-            weather_plugin = weather.WeatherPlugin(self)
-            weather_plugin.create_widgets()
-            weather_plugin.setup_polling()
+            self.weather_plugin = weather.WeatherPlugin(self)
+            self.weather_plugin.create_widgets()
+            self.weather_plugin.setup_polling()
 
         if self.env.get_value("plugins", "trains", fallback=False) == "1":
             from src.plugins import trains
-            train_plugin = trains.TrainPlugin(self)
-            train_plugin.create_widgets()
-            train_plugin.setup_polling()
+            self.train_plugin = trains.TrainPlugin(self)
+            self.train_plugin.create_widgets()
+            self.train_plugin.setup_polling()
 
         if self.env.get_value("plugins", "DHT22", fallback=False) == "1":
             from src.plugins import dht22
-            dht22_plugin = dht22.DHT22Plugin(self)
-            dht22_plugin.create_widgets()
-            dht22_plugin.setup_polling()
+            self.dht22_plugin = dht22.DHT22Plugin(self)
+            self.dht22_plugin.create_widgets()
+            self.dht22_plugin.setup_polling()
 
         # Set a higher row streches to the last used row to push elements
         # closer together
@@ -426,8 +428,7 @@ class Clock:
         alarm and window configuration to file.
         """ 
         if event.key() == Qt.Key_F2:
-            config = {section: dict(self.env.config[section])
-                      for section in self.env.config.sections()}
+            config = self.env.config._sections
 
             OUTPUT_FILE = "debug_info.log"
             with open(OUTPUT_FILE, "w") as f:
@@ -436,7 +437,12 @@ class Clock:
 
                 f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
                 for window in (self.main_window, self.settings_window):
-                    f.write("\n{:60} {:9} {:12} {:14}".format(str(window), window.isVisible(), window.isFullScreen(), window.isActiveWindow()))
+                    f.write("\n{:60} {:9} {:12} {:14}".format(
+                        str(window),
+                        window.isVisible(),
+                        window.isFullScreen(),
+                        window.isActiveWindow()
+                    ))
 
             logger.info("Debug status written to %s", OUTPUT_FILE)
 
