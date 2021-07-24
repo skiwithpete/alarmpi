@@ -1,13 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 # Creates a demo alarm with greeting, weather and news and stores as an mp3 file.
 
 from google.cloud import texttospeech
-from google.oauth2 import service_account
 
 from src import alarm_builder, alarmenv
-from src.handlers import get_gcp_tts
 
 
 client = texttospeech.TextToSpeechClient()

@@ -6,7 +6,6 @@ from PyQt5.QtGui import QPixmap
 from src.handlers import get_open_weather
 
 
-
 class WeatherPlugin:
 
     def __init__(self, parent):
@@ -33,7 +32,7 @@ class WeatherPlugin:
         _timer = QTimer(self.parent.main_window)
         _weather_update_slot = partial(self.run_with_retry, func=self.update_weather)
         _timer.timeout.connect(_weather_update_slot)
-        _timer.start(_30_MINUTES)   
+        _timer.start(_30_MINUTES)
 
     def update_weather(self):
         """Update the weather labels on the main window. Makes an API request to

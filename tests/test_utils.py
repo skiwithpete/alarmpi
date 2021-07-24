@@ -26,4 +26,3 @@ def test_nighttime_with_day_hour(compare_time, target_time):
     """
     offset = 8
     assert not utils.nighttime(target_time, offset, compare_time)
-

@@ -7,6 +7,7 @@ import adafruit_dht
 event_logger = logging.getLogger("eventLogger")
 PIN = board.D4  # the GPIO pin the sensor is connected to
 
+
 class DHT22Client:
     """Get readings from a DHT22 sensor."""
 

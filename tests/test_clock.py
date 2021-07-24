@@ -131,7 +131,7 @@ class TestClockCase():
         """Are the brightness buttons disabled when the undelying system configurations files
         are not writable?
         """
-        # Since we want ti intercept the AlarmEnv property rpi_brightness_write_access, create a 
+        # Since we want ti intercept the AlarmEnv property rpi_brightness_write_access, create a
         # distinct Clock object separate from the fixture and force the value to False
         # before the button status is checked in setup()
         mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.conf")

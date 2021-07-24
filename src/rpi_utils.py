@@ -23,7 +23,11 @@ def _open_config_file_or_tempfile(file_path, mode="r"):
     try:
         return open(file_path, mode=mode)
     except FileNotFoundError:
-        logger.warning("Using tempfile instead of non-existing file %s when calling %s", file_path, inspect.stack()[1].function)
+        logger.warning(
+            "Using tempfile instead of non-existing file %s when calling %s",
+            file_path,
+            inspect.stack()[1].function
+        )
         return tempfile.TemporaryFile(mode=mode)
     except PermissionError as e:
         logging.warning("Couldn't open file %s, using tempfile. Original error was\n%s", file_path, str(e))
@@ -40,7 +44,7 @@ def get_current_display_backlight_brightness():
         try:
             value = int(f.read().strip())
         except ValueError:
-            value = HIGH_BRIGHTNESS # default to max value if unable to read the file (ie. is a dummy tempfile)
+            value = HIGH_BRIGHTNESS  # default to max value if unable to read the file (ie. is a dummy tempfile)
 
     return value
 

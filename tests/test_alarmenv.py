@@ -18,7 +18,6 @@ def dummy_env(mock_get_config_file_path):
     env.setup()
     return env
 
-
 @patch("src.alarmenv.AlarmEnv.get_sections")
 def test_validate_config_raises_runtime_error_on_invalid_options(mock_get_sections, dummy_env):
     """Does validate_config raise RuntimeError when configparser detects invalid
@@ -69,4 +68,3 @@ def test_get_sections_with_exclusions(dummy_env):
 def test_read_content_sections(dummy_env):
     """Does get_enabled_sections return correct 'content' section names?"""
     assert dummy_env.get_enabled_sections("content") == ["BBC_news"]
-

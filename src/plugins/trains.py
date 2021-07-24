@@ -4,7 +4,6 @@ from PyQt5.QtCore import QTimer
 from src.handlers import get_next_trains
 
 
-
 class TrainPlugin:
 
     def __init__(self, parent):

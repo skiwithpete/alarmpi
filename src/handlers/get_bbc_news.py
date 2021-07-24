@@ -6,6 +6,7 @@ from src import apcontent
 
 event_logger = logging.getLogger("eventLogger")
 
+
 class NewsParser(apcontent.AlarmpiContent):
 
     def __init__(self, section_data):

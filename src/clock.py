@@ -141,7 +141,7 @@ class Clock:
         self.radio_streams = self.env.get_radio_stations()
         self.settings_window.radio_station_combo_box.addItems(self.radio_streams.keys())
 
-        # Ensure station set as default is set as current item 
+        # Ensure station set as default is set as current item
         default_station = self.env.get_value("radio", "default")
         self.settings_window.radio_station_combo_box.setCurrentText(default_station)
 
@@ -163,7 +163,8 @@ class Clock:
         # Disable backlight manipulation buttons if the underlying system
         # files dont't exists (ie. not a Raspberry Pi) or no write access to them.
         if not self.env.rpi_brightness_write_access:
-            msg = ["No write access to system backlight brightness files:",
+            msg = [
+                "No write access to system backlight brightness files:",
                 "\t" + rpi_utils.BRIGHTNESS_FILE,
                 "\t" + rpi_utils.POWER_FILE,
                 "Disabling brightness buttons"
@@ -251,7 +252,7 @@ class Clock:
 
             # Setup alarm build time for 5 minutes earlier (given large enough timer)
             ALARM_BUILD_DELTA = 5 * 60 * 1000
-            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA)) # 0 if not enough time
+            alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA))  # 0 if not enough time
 
             alarm_build_dt = self.alarm_dt - datetime.timedelta(minutes=5)
             logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
@@ -296,13 +297,13 @@ class Clock:
         else:
             # Look for station name from listed streams in stream config file
             current_radio_station = ""
-            
+
             for name, stream_url in self.radio_streams.items():
                 if stream_url == url:
                     current_radio_station = name
                     break
 
-        # The radio button is a checkable (ie. a toggle): radio should start playing 
+        # The radio button is a checkable (ie. a toggle): radio should start playing
         # when the button gets checked and stop when state changes to not checked.
         # (The state change occurs before this callback runs.)
         if button.isChecked():
@@ -321,7 +322,7 @@ class Clock:
         self.enable_screen_and_show_control_buttons()
         rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
 
-         # Clear 'Alarm set for ...' label in the settings window
+        # Clear 'Alarm set for ...' label in the settings window
         self.settings_window.alarm_time_status_label.setText("")
 
         self.alarm_play_thread.start()
@@ -343,7 +344,7 @@ class Clock:
 
     def build_and_play_alarm(self):
         """Custom callback for the 'Play now' button: builds and plays an alarm."""
-        self.alarm_play_thread.build() # Note: a new alarm is built every time the button is pressed
+        self.alarm_play_thread.build()  # Note: a new alarm is built every time the button is pressed
         self.alarm_play_thread.start()
 
     def toggle_display_mode(self):
@@ -426,7 +427,7 @@ class Clock:
     def debug_key_press_event(self, event):
         """Custom keyPressEvent handler for debuggin purposes: writes the current
         alarm and window configuration to file.
-        """ 
+        """
         if event.key() == Qt.Key_F2:
             config = self.env.config._sections
 

@@ -25,6 +25,7 @@ RETURN_TEMPLATE_KEYS = [
 
 event_logger = logging.getLogger("eventLogger")
 
+
 class TrainParser:
 
     def run(self):

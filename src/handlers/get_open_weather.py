@@ -11,6 +11,7 @@ from src import apcontent
 
 event_logger = logging.getLogger("eventLogger")
 
+
 class OpenWeatherMapClient(apcontent.AlarmpiContent):
     """Fetch waether predictions from openweathermap.org
     https://openweathermap.org/api
@@ -145,7 +146,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         except requests.exceptions.RequestException as e:
             event_logger.error(str(e))
             return
-       
+
     @staticmethod
     def ms_to_kmh(wind_speed):
         """Convert wind speed measure from meters/second to kilometres/hour."""
