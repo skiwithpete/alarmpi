@@ -8,4 +8,6 @@ requests
 python-dateutil
 num2words
 dnspython
+feedparser
+flake8
 ipython

@@ -19,5 +19,5 @@ class DHT22Client:
         except RuntimeError as e:
             event_logger.error(str(e))
         except Exception as e:
-            event_logger.error("%s: %s", type(ex).__name__, str(e))
+            event_logger.error("%s: %s", type(e).__name__, str(e))
             self.dht_device.exit()
