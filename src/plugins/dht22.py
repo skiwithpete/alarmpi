@@ -27,8 +27,7 @@ class DHT22Plugin:
         """Fetch new temperature readings from the handler."""
         temperature = self.client.get_temperature()
 
-        if temperature is None:
-            self.dht22_label.setText("ERR")
-        else:
+        # Only change the label if a valid temperature was received
+        if temperature:
             msg = "⌂ {}°C".format(round(temperature))
             self.dht22_label.setText(msg)
