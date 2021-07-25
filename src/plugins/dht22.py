@@ -25,7 +25,7 @@ class DHT22Plugin:
 
     def update_temperature(self):
         """Fetch new temperature readings from the handler."""
-        temperature = self.client.get_temperature()
+        temperature = self.client.try_get_temperature()
 
         # Only change the label if a valid temperature was received
         if temperature:
