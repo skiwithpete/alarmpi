@@ -1,0 +1,59 @@
+main:
+  low_brightness: 12
+  full_brightness_on_alarm: true
+  nightmode_offset: 8
+  TTS: true
+  end: Thats all for now. Have a nice day.
+
+content:
+  greeting:
+    handler: get_greeting.py
+    name: ""
+
+  openweathermap.org:
+    enabled: true
+    handler: get_weather.py
+    credentials: null       # openweather API key https://openweathermap.org/appid
+    city_id: null           # http://bulk.openweathermap.org/sample/
+    units: metric           # # metric|imperial
+
+  BBC_news:
+    enabled: true
+    handler: get_bbc_news.py
+
+# Supported TTS engines, only 1 can be enabled.
+# TTS option in main section disables TTS.
+TTS:
+  GCP:
+    enabled: true
+    handler: get_gcp_tts.py
+    credentials: null       # GCP service account key file
+
+  google_translate:
+    enabled: false
+    handler: get_google_translate_tts.py
+
+  festival:
+    enabled: false
+    handler: get_festival_tts.py
+
+
+radio:
+  enabled: true
+  urls:
+    "Radio Suomi": https://yleuni-f.akamaihd.net/i/yleliveradiohd_3@113880/master.m3u8
+    "Yle Puhe": https://yleuni-f.akamaihd.net/i/yleliveradiohd_5@113882/master.m3u8
+    "Yle X3M": https://yleuni-f.akamaihd.net/i/yleliveradiohd_6@113883/master.m3u8
+    "Yle Vega": https://yleuni-f.akamaihd.net/i/yleliveradiohd_7@113884/master.m3u8
+  default: Radio Suomi
+  args: ""
+
+plugins:
+  HSL:
+    enabled: false
+    trains: 5
+    station_code: KE
+
+  DHT22:
+    enabled: false
+    GPIO: 4
