@@ -34,21 +34,23 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
 
     def play(self, text):
         """Create a TTS client and speak input text using pydub."""
-        synthesis_input = texttospeech.types.SynthesisInput(text=text)
+        # Set the text input to be synthesized
+        synthesis_input = texttospeech.SynthesisInput(text=text)
 
         # Build the voice request and specify a WaveNet voice for more human like speech
-        voice = texttospeech.types.VoiceSelectionParams(
+        voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
             name="en-US-Wavenet-C"
         )
 
         # Select the type of audio file you want returned
-        audio_config = texttospeech.types.AudioConfig(
-            audio_encoding=texttospeech.enums.AudioEncoding.MP3)
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3
+        )
 
         # Perform the text-to-speech request on the text input with the selected
         # voice parameters and audio file type
-        response = self.client.synthesize_speech(synthesis_input, voice, audio_config)
+        response = self.client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
 
         # create a BytesIO buffer and play via pydub
         f = io.BytesIO(response.audio_content)
