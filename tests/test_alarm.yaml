@@ -1,0 +1,54 @@
+main:
+  low_brightness: 12
+  full_brightness_on_alarm: true
+  nightmode_offset: 8
+  TTS: true
+  end: Thats all for now. Have a nice day.
+
+content:
+  greeting:
+    handler: get_greeting.py
+    name: ""
+
+  openweathermap.org:
+    enabled: true
+    handler: get_weather.py
+    credentials: null
+    city_id: null
+    units: metric
+
+  BBC_news:
+    enabled: true
+    handler: get_bbc_news.py
+
+TTS:
+  GCP:
+    enabled: true
+    handler: get_gcp_tts.py
+    credentials: ""
+
+  google_translate:
+    enabled: false
+    handler: get_google_translate_tts.py
+
+  festival:
+    enabled: false
+    handler: get_festival_tts.py
+
+
+radio:
+  enabled: true
+  urls:
+    Foo: www.example.com
+  default: Foo
+  args: ""
+
+plugins:
+  HSL:
+    enabled: false
+    trains: 5
+    station_code: KE
+
+  DHT22:
+    enabled: false
+    GPIO: 4

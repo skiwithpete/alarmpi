@@ -24,6 +24,8 @@ class AlarmConfig:
         with open(path_to_config) as f:
             self.config = yaml.safe_load(f)
 
+        self.validate()
+
         # Check for write access to Raspberry Pi system backlight brightness files
         self.rpi_brightness_write_access = all([os.access(p, os.W_OK) for p in [
             rpi_utils.BRIGHTNESS_FILE, rpi_utils.POWER_FILE]]
@@ -63,7 +65,7 @@ class AlarmConfig:
             logger.warning("Could not resolve '%s'. Assuming the network is down.", host)
             return False
 
-    def validate_config(self):
+    def validate(self):
         """Validate configuration file: checks that
          * low_brightness value is valid
          * default radio station is valid 
