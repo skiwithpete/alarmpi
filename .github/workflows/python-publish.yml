@@ -42,10 +42,10 @@ jobs:
     - name: Test with pytest
       run: |
         # Run tests individually, python -m pytest tests seems to occasionally cause segmentation fault
-        #python -m pytest tests/test_clock.py    # Need graphical window manager to run these
+        #python -m pytest tests/test_clock.py    # Need a graphical window manager to run these
         #python -m pytest tests/test_GUIWidgets.py
         python -m pytest tests/test_alarm_builder.py
-        python -m pytest tests/test_alarmenv.py
+        python -m pytest tests/test_apconfig.py
         python -m pytest tests/test_handlers.py
         python -m pytest tests/test_utils.py
 

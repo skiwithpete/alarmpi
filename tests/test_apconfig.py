@@ -36,4 +36,6 @@ def test_validate_on_too_many_tts(dummy_env):
 
 def test_read_content_sections(dummy_env):
     """Does get_enabled_sections return enabled 'content' section names?"""
+    dummy_env.config["content"]["openweathermap.org"]["enabled"] = True
+
     assert set(dummy_env.get_enabled_sections("content").keys()) == {"BBC_news", "openweathermap.org"}
