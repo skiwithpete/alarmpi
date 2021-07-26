@@ -11,9 +11,9 @@ content:
     name: ""
 
   openweathermap.org:
-    enabled: true
+    enabled: false
     handler: get_weather.py
-    credentials: null
+    credentials: /path/to/file.dat
     city_id: null
     units: metric
 
@@ -25,7 +25,7 @@ TTS:
   GCP:
     enabled: true
     handler: get_gcp_tts.py
-    credentials: ""
+    credentials: /path/to/key.json
 
   google_translate:
     enabled: false
