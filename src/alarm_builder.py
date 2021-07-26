@@ -36,7 +36,7 @@ class Alarm:
         content_sections = self.config.get_enabled_sections("content")
         for section in content_sections:
             class_ = self.get_content_parser_class(content_sections[section])
-            parser = class_(section)
+            parser = class_(content_sections[section])
 
             # call build to run the parser and store output
             try:
