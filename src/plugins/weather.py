@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap
 
-from src.handlers import get_open_weather
+from src.handlers import get_weather
 
 
 class WeatherPlugin:
@@ -11,8 +11,8 @@ class WeatherPlugin:
     def __init__(self, parent):
         self.retry_flag = False
         self.parent = parent
-        config = parent.env.get_section("openweathermap")
-        self.parser = get_open_weather.OpenWeatherMapClient(config)
+        config = parent.config["content"]["openweathermap.org"]
+        self.parser = get_weather.OpenWeatherMapClient(config)
 
     def create_widgets(self):
         """Create and set QLabels for displaying weather components."""
