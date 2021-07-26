@@ -7,7 +7,7 @@ pytest
 requests
 python-dateutil
 num2words
-dnspython
 feedparser
+pyyaml
 flake8
 ipython

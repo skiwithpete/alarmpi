@@ -30,7 +30,7 @@ def backlight_excepthook(type, value, tb):
         exits. The handling of such top-level exceptions can be customized by assigning another three-argument
         function to sys.excepthook.
 
-    If the program crashes due to an unpredictable cause such as network error on API call while the screen is blank
+    If the program crashes due to an unpredictable cause, such as network error on API call, while the screen is blank
     it is difficult to turn it back on again (usually this means SSH'ing in and running stop.sh).
     By overwriting the default handler we can take care of this automatically.
 
@@ -52,12 +52,11 @@ def backlight_excepthook(type, value, tb):
 
 
 if __name__ == "__main__":
-    event_logger.info("Overriding sys.excepthook")
     sys.excepthook = backlight_excepthook
 
     parser = argparse.ArgumentParser(description="Run alarmpi GUI")
     parser.add_argument("config", metavar="config", nargs="?",
-                        default="default.conf", help="Configuration file to use. Defaults to default.conf")
+                        default="default.yaml", help="Configuration file to use. Defaults to default.yaml")
     parser.add_argument("--fullscreen", action="store_true",
                         help="fullscreen mode")
     parser.add_argument("--debug", action="store_true",
