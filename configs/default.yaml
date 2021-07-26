@@ -11,7 +11,7 @@ content:
     name: ""
 
   openweathermap.org:
-    enabled: true
+    enabled: false
     handler: get_weather.py
     credentials: /path/to/credentials       # file containing openweather API key, see https://openweathermap.org/appid
     city_id: null                           # http://bulk.openweathermap.org/sample/
@@ -25,12 +25,12 @@ content:
 # TTS option in main section disables TTS.
 TTS:
   GCP:
-    enabled: true
+    enabled: false
     handler: get_gcp_tts.py
     credentials: /path/to/credentials       # GCP service account key file
 
   google_translate:
-    enabled: false
+    enabled: true
     handler: get_google_translate_tts.py
 
   festival:
