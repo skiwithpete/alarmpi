@@ -13,9 +13,9 @@ content:
   openweathermap.org:
     enabled: true
     handler: get_weather.py
-    credentials: null       # openweather API key https://openweathermap.org/appid
-    city_id: null           # http://bulk.openweathermap.org/sample/
-    units: metric           # # metric|imperial
+    credentials: /path/to/credentials       # file containing openweather API key, see https://openweathermap.org/appid
+    city_id: null                           # http://bulk.openweathermap.org/sample/
+    units: metric                           # # metric|imperial
 
   BBC_news:
     enabled: true
@@ -27,7 +27,7 @@ TTS:
   GCP:
     enabled: true
     handler: get_gcp_tts.py
-    credentials: null       # GCP service account key file
+    credentials: /path/to/credentials       # GCP service account key file
 
   google_translate:
     enabled: false

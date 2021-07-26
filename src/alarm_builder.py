@@ -80,7 +80,7 @@ class Alarm:
         self.play(content)
 
         # Play the radio stream if enabled
-        if self.env.config_has_match("radio", "enabled", "1"):
+        if self.config["radio"]["enabled"]:
             self.play_radio()
 
     def generate_greeting(self):
@@ -131,10 +131,10 @@ class Alarm:
 
     def play_radio(self):
         """Open a stream to the default radio station using cvlc."""
-        default_station = self["radio"]["default"]
-        url = self["radio"]["urls"][default_station]
+        default_station = self.config["radio"]["default"]
+        url = self.config["radio"]["urls"][default_station]
 
-        args = self["radio"].get("args", "")
+        args = self.config["radio"].get("args", "")
         cmd = "/usr/bin/cvlc {} {}".format(url, args).split()
         # Run the command via Popen directly to open the stream as a child process without
         # waiting for it to finish.
