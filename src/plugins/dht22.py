@@ -8,7 +8,8 @@ class DHT22Plugin:
 
     def __init__(self, parent):
         self.parent = parent
-        self.client = get_dht22_readings.DHT22Client()
+        self.config_data = parent.config["plugins"]["DHT22"]
+        self.client = get_dht22_readings.DHT22Client(self.config_data)
 
     def create_widgets(self):
         """Create and set QLabel for displaying temperature."""
@@ -18,10 +19,10 @@ class DHT22Plugin:
     def setup_polling(self):
         self.update_temperature()
 
-        DELAY = 30*1000
+        refresh_interval_msec = self.config_data["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
         _timer.timeout.connect(self.update_temperature)
-        _timer.start(DELAY)
+        _timer.start(refresh_interval_msec)
 
     def update_temperature(self):
         """Fetch new temperature readings from the handler."""

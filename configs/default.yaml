@@ -57,5 +57,5 @@ plugins:
 
   DHT22:
     enabled: false
-    GPIO: 4
+    GPIO: 4               # GPIO pin
     refresh_interval: 30  # seconds
