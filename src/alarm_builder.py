@@ -98,13 +98,12 @@ class Alarm:
         in the config file. First enabled section is used.
         """
         # Valid config can only have 1 enabled TTS engine. Note that
-        # response is a wrapper containing the single item dictionary. 
+        # response is a wrapper containing dicionary with the top level TTS key.
         section_wrapper = self.config.get_enabled_sections("TTS")
         
         # Instantiate the correct class
         if section_wrapper:
-            dummy_key = [k for k in section_wrapper][0]
-            section = section_wrapper[dummy_key]
+            section = list(section_wrapper.values())[0]
 
             class_ = self.get_content_parser_class(section)
             # read the path to the keyfile if provided/applicable
