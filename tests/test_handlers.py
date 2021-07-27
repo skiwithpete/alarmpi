@@ -9,7 +9,7 @@ from src.handlers import get_weather, get_next_trains
 def test_failed_train_api_request_returns_error_template(mock_fetch_daily_train_data):
     """Does get_next_trains.run return None if API call fails"""
     mock_fetch_daily_train_data.side_effect = requests.exceptions.RequestException()
-    parser = get_next_trains.TrainParser()
+    parser = get_next_trains.TrainParser(None)
     res = parser.run()
 
     assert res is None
