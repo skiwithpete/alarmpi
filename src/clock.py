@@ -186,7 +186,8 @@ class Clock:
         brightness_toggle_slot = partial(rpi_utils.toggle_display_backlight_brightness, low_brightness=low_brightness)
         brightness_button.clicked.connect(brightness_toggle_slot)
 
-        self.alarm_play_button.clicked.connect(self.play_alarm)
+        #self.alarm_play_button.clicked.connect(self.play_alarm)
+        self.alarm_play_button.clicked.connect(self.build_and_play_alarm)
         window_button.clicked.connect(self.toggle_display_mode)
 
         alarm_set_button.clicked.connect(self.set_alarm)
@@ -199,7 +200,8 @@ class Clock:
             self.enable_alarm_brightness_change)
 
     def open_settings_window(self):
-        """Callback for opening the settings window: clear screen blanking timer (if active)
+        """Button callback - settings window. Open the settings window and
+        clear any existing screen blanking timer.
         and dislpay the window.
         """
         self.screen_blank_timer.stop()
@@ -228,9 +230,14 @@ class Clock:
             self.screen_blank_timer.start(3*1000)  # 3 second timer
 
     def set_alarm(self):
-        """Callback to 'Set alarm' button: starts timers for alarm build and play
-        and updates main and settings window labels.
+        """Button callback - set alarm. Sets timers for alarm build and alarm play based
+        on a valid value on settings window's alarm time widget. Updates main window's
+        alarm label.
+        On invalid time value sets an error message to error label.
         """
+
+        # Ensure any existing error messages are cleared
+        self.settings_window.alarm_time_error_label.setText("")
         time_str = self.settings_window.validate_alarm_input()
         if time_str:
             # Update displayed alarm time settings and main window
@@ -259,8 +266,8 @@ class Clock:
                 rpi_utils.set_display_backlight_brightness(low_brightness)
 
     def clear_alarm(self):
-        """Handler for settings window's 'clear' button. Stops any running
-        alarm timers. Also clears both window's alarm displays.
+        """Button callback - clear alarm. Stop any running alarm timers and clears all
+        alarm related labels.
         """
         self.alarm_timer.stop()
         self.alarm_build_timer.stop()
@@ -275,8 +282,8 @@ class Clock:
             return self.alarm_dt.strftime("%H:%M")
 
     def play_radio(self, url=None):
-        """Callback to the 'Play radio' button: open or close the radio stream
-        depending on the button state.
+        """Button callback - play radio. Open or close the radio stream
+        depending on the button's current state.
         Args:
             url (string): the url of the stream to play. If none, currently active
                 stream from the settings window QComboBox is used.
@@ -309,8 +316,8 @@ class Clock:
             self.radio.stop()
 
     def play_alarm(self):
-        """Callback to playing the alarm: runs the alarm play thread. Called when
-        on alarm timeout signal and on 'Play now' button.
+        """Alarm timer callback - play alarm. Generate and play an alarm. Starts a new
+        AlarmPlayThread. Existing set alarms are not effected.
         """
         # Update main display
         self.main_window.alarm_time_lcd.display("")
@@ -323,8 +330,8 @@ class Clock:
         self.alarm_play_thread.start()
 
     def finish_playing_alarm(self):
-        """Slot function for finishing playing the alarm: re-enables the play button
-        and, if activated, starts a separated cvlc process for the radio stream.
+        """Slot function for finishing alarm play: re-enables the play button
+        and, if enabled, starts a separated cvlc process for the radio stream.
         Called when the alarm thread emits its finished signal.
         """
         self.alarm_play_button.setEnabled(True)
@@ -338,13 +345,16 @@ class Clock:
             self.play_radio(url=url)
 
     def build_and_play_alarm(self):
-        """Custom callback for the 'Play now' button: builds and plays an alarm."""
-        self.alarm_play_thread.build()  # Note: a new alarm is built every time the button is pressed
+        """Button callback - play alarm. Generate and play an alarm. Starts a new
+        AlarmPlayThread. Existing set alarms are not effected.
+        """
+        # TODO: Ensure existing alarm is unaffected
+        self.alarm_play_thread.build()
         self.alarm_play_thread.start()
 
     def toggle_display_mode(self):
-        """Change main window dispaly mode between fullscreen and normal
-        depending on current its mode.
+        """Button callback - toggle window. Change main window display mode between
+        fullscreen and windowed depending on current its state.
         """
         if self.main_window.windowState() == Qt.WindowFullScreen:
             self.main_window.showNormal()
@@ -355,7 +365,7 @@ class Clock:
             self.settings_window.activateWindow()
 
     def blank_screen_and_hide_control_buttons(self):
-        """Callback to turning the screen off: turn off backlight power and
+        """Button callback - blank screen. Turn off display backlight power and
         hide the main window's control buttons to prevent accidentally hitting
         them when the screen in blank.
         """
@@ -364,9 +374,7 @@ class Clock:
         self.hide_control_buttons()
 
     def enable_screen_and_show_control_buttons(self):
-        """Callback to turning the screen on: re-enable backlight power and show
-        the main window's control buttons.
-        """
+        """Turn on display backlight power and show the main window's control buttons."""
         logger.debug("Activating display")
         rpi_utils.toggle_screen_state("on")
         self.show_control_buttons()
@@ -404,7 +412,7 @@ class Clock:
         self.config["main"]["full_brightness_on_alarm"] = self.settings_window.alarm_brightness_checkbox.isChecked()
 
     def cleanup_and_exit(self):
-        """Callback to the close button. Close any existing radio streams and the
+        """Button callback - Exit application. Close any existing radio streams and the
         application itself.
         """
         self.radio.stop()
