@@ -416,6 +416,9 @@ class Clock:
         application itself.
         """
         self.radio.stop()
+        # Ensure display is on and at full brightness
+        rpi_utils.toggle_screen_state("on")
+        rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
         QApplication.instance().quit()
 
     def debug_key_press_event(self, event):
