@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import subprocess
 import importlib
@@ -28,7 +27,7 @@ class Alarm:
 
         # Initialize content with greeting
         contents.append(self.generate_greeting())
-       
+
         # For each content section get the handler module and create the approriate
         # instance
         content_sections = self.env.get_enabled_sections("content")
@@ -58,7 +57,7 @@ class Alarm:
         """Play an alarm.
         Args:
             content (list): list of various contents to play via TTS. Each list item
-            item should be the text to 
+            item should be the text to
         """
         tts_enabled = self.env.config_has_match("main", "readaloud", "1")
 
@@ -133,7 +132,7 @@ class Alarm:
         radio_streams = self.env.get_radio_stations()
         default_station = self.env.get_value("radio", "default")
         url = radio_streams[default_station]
-        
+
         args = self.env.get_value("radio", "args")
         cmd = "/usr/bin/cvlc {} {}".format(url, args).split()
         # Run the command via Popen directly to open the stream as a child process without

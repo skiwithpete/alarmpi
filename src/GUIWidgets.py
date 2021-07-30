@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 """PyQt5 QWidgets for main and settings windows."""
 
 
@@ -34,6 +31,7 @@ ButtonConfig.__new__.__defaults__ = (
     None, None, None, None, (QSizePolicy.Preferred, QSizePolicy.Preferred))
 
 logger = logging.getLogger("eventLogger")
+
 
 class AlarmWindow(QWidget):
     """QWidget subclass for main window."""
@@ -93,7 +91,7 @@ class AlarmWindow(QWidget):
             bottom_grid.addWidget(button, *config.position)
 
         # Right hand sidebat: separate grids for plugin (top) and radio play
-        # indicator (bottom) 
+        # indicator (bottom)
         radio_station_grid = QGridLayout()
         self.radio_play_indicator = QLabel(self)
         self.radio_play_indicator.hide()
@@ -102,7 +100,7 @@ class AlarmWindow(QWidget):
         right_grid_container = QGridLayout()
         right_grid_container.addLayout(self.right_grid, 0, 2)
         right_grid_container.addLayout(radio_station_grid, 1, 2)
-        
+
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(self.left_grid, 0, 0)
         base_layout.addLayout(right_grid_container, 0, 2)
@@ -127,7 +125,7 @@ class AlarmWindow(QWidget):
             s = time.strftime("%H:%M:%S")
             self.clock_lcd.display(s)
 
-        tick() # Call tick once to set the initial time 
+        tick()  # Call tick once to set the initial time
         _timer = QTimer(self)
         _timer.timeout.connect(tick)
         _timer.start(1000)
@@ -140,7 +138,7 @@ class AlarmWindow(QWidget):
 
     def _show_radio_play_indicator(self, station_name):
         """Display QLabel for active radio station."""
-        html="<html><img src='resources/icons/radio64x64.png' height='28'><span style='font-size:14px'> {}</span></html>".format(station_name)
+        html = "<html><img src='resources/icons/radio64x64.png' height='28'><span style='font-size:14px'> {}</span></html>".format(station_name)
         self.radio_play_indicator.setText(html)
         self.radio_play_indicator.show()
 

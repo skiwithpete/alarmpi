@@ -1,12 +1,8 @@
-#!/usr/bin/env python
-
 import os.path
 import datetime
-import json
 
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
-
 
 
 def nighttime(target_time, offset, compare_time=None):
@@ -17,7 +13,7 @@ def nighttime(target_time, offset, compare_time=None):
         compare_time (str): the time to test in HH:MM, defaults to
             current time
     """
-    dummy_base_date = datetime.date.today() 
+    dummy_base_date = datetime.date.today()
 
     # convert times from strtings to datetimes with date set to today
     target_dt = datetime.datetime.strptime(target_time, "%H:%M")
@@ -25,7 +21,7 @@ def nighttime(target_time, offset, compare_time=None):
         year=dummy_base_date.year,
         month=dummy_base_date.month,
         day=dummy_base_date.day
-    )  
+    )
 
     if compare_time is not None:
         compare_dt = datetime.datetime.strptime(compare_time, "%H:%M")
@@ -33,7 +29,7 @@ def nighttime(target_time, offset, compare_time=None):
             year=dummy_base_date.year,
             month=dummy_base_date.month,
             day=dummy_base_date.day
-        ) 
+        )
 
     else:
         compare_dt = datetime.datetime.now()

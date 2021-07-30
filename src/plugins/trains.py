@@ -4,7 +4,6 @@ from PyQt5.QtCore import QTimer
 from src.handlers import get_next_trains
 
 
-
 class TrainPlugin:
 
     def __init__(self, parent):
@@ -21,7 +20,7 @@ class TrainPlugin:
 
         self.parent.main_window.left_grid.setRowStretch(get_next_trains.MAX_NUMBER_OF_TRAINS, 1)
 
-    def setup_train_polling(self):
+    def setup_polling(self):
         """Setup polling for next train departure."""
         self.update_trains()
 

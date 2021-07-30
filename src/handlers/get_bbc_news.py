@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import feedparser
 import logging
 
@@ -7,6 +5,7 @@ from src import apcontent
 
 
 event_logger = logging.getLogger("eventLogger")
+
 
 class NewsParser(apcontent.AlarmpiContent):
 

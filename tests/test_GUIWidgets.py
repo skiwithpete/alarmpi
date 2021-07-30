@@ -73,4 +73,3 @@ def test_clear_alarm_changes_current_alarm_time(settings_window):
     assert settings_window.alarm_time_status_label.text() == "Alarm cleared"
     assert settings_window.current_alarm_time == ""
     assert settings_window.alarm_time_error_label.text() == ""
-    

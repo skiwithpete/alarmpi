@@ -1,9 +1,7 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import textwrap
-import requests
 import io
 
+import requests
 import pydub
 import pydub.playback
 

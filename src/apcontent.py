@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-
 class AlarmpiContent:
     """Helper base class for all handlers. Defines functions for creating an actual
     handler from a particular section read from the configuration file. The build

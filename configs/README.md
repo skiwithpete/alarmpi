@@ -1,6 +1,6 @@
 
 ## Alarm configuration
-Alarm content can be configured by editing `alarmpi.conf`. This configuration file specifies which components of the alarm are enabled and which text-to-speech (TTS) engine should be used, if any. Alernatively configurations can also be placed in `$HOME/.alarmpi/`.
+Many features of the alarm, such as alarm content and radio streams to use, can be configured via a configuration. By default `default.conf` will be used. Alernatively configurations can also be placed in `$HOME/.alarmpi/`.
 
 ### default.conf description
 
@@ -59,15 +59,15 @@ Three TTS engines are supported:
  * When **readaloud=0** is set, TTS is disabled and a beeping sound effect will be played as the alarm.
 
 **[radio]**  
-Determines command line arguments, including the url of the radio stream, to be passed to `mplayer`. The stream is played after all TTS content has been processed.
+Determines command line arguments to `cvlc` and the streams urls to play.
 
 **Note:** The radio stream plays in a separate process from the Python process running the alarm. While the UI's _radio_ and _close_ buttons take care of terminating the process, a separate `stop.sh` shell script can also be used to terminate both processes. This is useful if the alarm is run in headless mode.
 
-**[polling]**  
-This enables the two polling features of the main window. When enabled
-  1. weather data from openweathermap.org is displayed on the right side of the window. Updated every 30 minutes. Disabled if no keyfile is present in **[openweathermap]**, see above.
-  2. the next departing trains from Kerava train station is shown on the left. Data is fetched from Finnish Transport agency's DigiTraffic API, see https://www.digitraffic.fi/en/railway-traffic/. This is largely a hardcoded feature to serve my own use case.
-Both polling features are disabled by default.
+**[plugins]**  
+Additional content known as plugins can be enabled:
+ 1. `trains` - displays the next departing commuter trains from Kerava station. Uses Finnish Transport agency's DigiTraffic API, see https://www.digitraffic.fi/en/railway-traffic/. This is largely a hardcoded feature to serve my own use case.
+ 2. `DHT22` - displays indoor temperature using a [DHT22 sensor](https://learn.adafruit.com/dht). Also hardcoded to use Raspberry Pi's GPIO 4 pin. Disabled by default.
+
 
 ## Using a custom configuration
 You can either modify the provided configuration file `default.conf` or create a new file and pass that to `alarm_builder.py` and `main.py` via a command line argument, eg.

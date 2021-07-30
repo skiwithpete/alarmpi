@@ -1,11 +1,16 @@
-import requests
+# Client for fetching current weather data from openweathermap.org.
+# Acts as both alarm content source and as a plugin source. Hence, unlike
+# plugin only clients, this is a subclass of AlarmpiContent.
+
 import datetime
 import logging
+import requests
 
 from src import apcontent
 
 
 event_logger = logging.getLogger("eventLogger")
+
 
 class OpenWeatherMapClient(apcontent.AlarmpiContent):
     """Fetch waether predictions from openweathermap.org
@@ -141,7 +146,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         except requests.exceptions.RequestException as e:
             event_logger.error(str(e))
             return
-       
+
     @staticmethod
     def ms_to_kmh(wind_speed):
         """Convert wind speed measure from meters/second to kilometres/hour."""

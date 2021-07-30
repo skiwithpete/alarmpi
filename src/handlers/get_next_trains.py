@@ -1,16 +1,13 @@
-# Helper module for fetching the next 3 trains arriving at Kerava station using the
+# Client for fetching the next trains arriving at Kerava station using the
 # Finnish Transport agency's DigiTraffic API.
 # https://www.digitraffic.fi/en/railway-traffic/
 # https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
 
-# This module differs from the other content handlers in that it is not a subclass
-# of AlarmpiContent and not called by alarm_builder. Instead this serves
-# as a pure helper class to clock.py for fetching the next train departures.
 
-
-import requests
 import datetime
 import logging
+
+import requests
 from dateutil import tz
 
 
@@ -27,6 +24,7 @@ RETURN_TEMPLATE_KEYS = [
 ]
 
 event_logger = logging.getLogger("eventLogger")
+
 
 class TrainParser:
 

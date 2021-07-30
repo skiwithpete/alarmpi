@@ -10,6 +10,7 @@ from src import utils, rpi_utils
 
 logger = logging.getLogger("eventLogger")
 
+
 class AlarmEnv:
     """Parses the configuration file to a readable object."""
 
@@ -25,7 +26,7 @@ class AlarmEnv:
 
         # Check for write access to Raspberry Pi system backlight brightness files
         self.rpi_brightness_write_access = all([os.access(p, os.W_OK) for p in [rpi_utils.BRIGHTNESS_FILE, rpi_utils.POWER_FILE]])
-        
+
     def setup(self):
         """Setup the environment: parse and validate the configuration file and test
         for network connectivity.
