@@ -3,9 +3,8 @@ main:
   full_brightness_on_alarm: true
   nighttime:
     enabled: true
-    start: '22:00'
+    start: '22:00'    # time in HH:MM format
     end: '07:00'
-  nightmode_offset: 8
   TTS: true
   end: Thats all for now. Have a nice day.
 
@@ -61,5 +60,5 @@ plugins:
 
   DHT22:
     enabled: false
-    GPIO: 4               # GPIO pin
+    GPIO: 4               # GPIO pin the sensor is connected to
     refresh_interval: 30  # seconds

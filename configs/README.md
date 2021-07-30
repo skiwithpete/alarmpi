@@ -11,8 +11,11 @@ Many features of the alarm, such as alarm content and radio streams to use, can 
 * **full_brightness_on_alarm**  
   * When enabled, screen brightness is set to full when the alarm triggers.
   * Can also be toggled from the settings window.
-* **nightmode_offset**  
-  * Number of hours before alarm time to label as _nightmode_. During nightmode the screen will automatically blank after a short while of touching the screen. Useful for quickly checking the time during the night.
+* **nighttime**  
+  * Determines time range for nightmode. During this time:
+    * display brightness will be set to low when an alarm is set, and
+    * when the display is woken up from blank mode, a short timer will be set to re-blank it.
+  * Nightmode is useful for quickly checking the time during the night without to manually interact with full brigtness display.
   * Nightmode can also be toggled from the settings window.
 * **TTS**
   * Enable/disable text-to-speech alarms. When enabled alarm content will be played as speech, when disabled a beeping sound effect will play as the alarm.

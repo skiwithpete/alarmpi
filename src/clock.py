@@ -113,7 +113,6 @@ class Clock:
         tts_enabled = self.config["main"]["TTS"]
         self.settings_window.readaloud_checkbox.setChecked(tts_enabled)
 
-        # Set nightmode as enabled if non zero offset specified in the config
         nightmode = self.config["main"]["nighttime"].get("enabled", False)
         self.settings_window.nightmode_checkbox.setChecked(nightmode)
 
