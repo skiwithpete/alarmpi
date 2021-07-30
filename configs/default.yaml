@@ -1,6 +1,10 @@
 main:
   low_brightness: 12
   full_brightness_on_alarm: true
+  nighttime:
+    enabled: true
+    start: '22:00'
+    end: '07:00'
   nightmode_offset: 8
   TTS: true
   end: Thats all for now. Have a nice day.

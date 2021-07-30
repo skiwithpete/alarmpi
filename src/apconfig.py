@@ -2,8 +2,9 @@
 
 import logging
 import os
-import yaml
+from datetime import datetime
 
+import yaml
 import requests
 from src import utils, rpi_utils
 
@@ -24,7 +25,18 @@ class AlarmConfig:
         with open(self.path_to_config) as f:
             self.config = yaml.safe_load(f)
 
-        self.validate()
+        try:
+            self.validate()
+        except AssertionError as e:
+            msg = "Couldn't validate configuration file {}.\nError received was: {}.\
+            \nSee configs/default.yaml for reference.\
+            ".format(self.path_to_config, e)
+            raise RuntimeError(msg) from e
+        except KeyError as e:
+            msg = "Couldn't validate configuration file {}.\nMissing key detected: {}.\
+            \nSee configs/default.yaml for reference.\
+            ".format(self.path_to_config, e)
+            raise RuntimeError(msg) from e
 
         # Check for write access to Raspberry Pi system backlight brightness files
         self.rpi_brightness_write_access = all([os.access(p, os.W_OK) for p in [
@@ -67,10 +79,11 @@ class AlarmConfig:
 
     def validate(self):
         """Validate configuration file: checks that
-         * low_brightness value is valid
-         * default radio station is valid 
          * content and TTS sections have 'handler' key
          * at most 1 TTS engine is enabled
+         * low_brightness value is valid
+         * default radio station is valid 
+         * nighttime values are in HH:MM
         """
 
         for item in self["content"]:
@@ -80,13 +93,19 @@ class AlarmConfig:
             assert "handler" in self["TTS"][item], "Missing handler from TTS" + item
 
         n_tts_enabled = len([self["TTS"][item]["enabled"] for item in self["TTS"] if self["TTS"][item]["enabled"]])
-        assert n_tts_enabled == 1, "Multiple TTS engines enabled"
+        assert n_tts_enabled == 1, "Multiple TTS enabled engines not allowed"
 
         brightness = self["main"]["low_brightness"]
         assert 9 <= brightness <= 255, "Invalid configuration: Brightness should be between 9 and 255"
 
         default = self["radio"]["default"]
         assert default in self["radio"]["urls"], "No stream url for defult radio station" + default
+
+        try:
+            datetime.strptime(self["main"]["nighttime"]["start"], "%H:%M")
+            datetime.strptime(self["main"]["nighttime"]["end"], "%H:%M")
+        except ValueError as e:
+            raise AssertionError("Invalid time value in nighttime: " + e.args[0])
 
         return True
 

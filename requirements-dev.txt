@@ -10,4 +10,5 @@ num2words
 feedparser
 pyyaml
 flake8
+freezegun
 ipython

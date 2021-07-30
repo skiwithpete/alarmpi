@@ -55,8 +55,8 @@ class Clock:
         self.alarm_build_timer.setSingleShot(True)
         self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
 
-        self.main_window.keyPressEvent = self.debug_key_press_event
-        self.settings_window.keyPressEvent = self.debug_key_press_event
+        self.main_window.keyPressEvent = self._debug_key_press_event
+        self.settings_window.keyPressEvent = self._debug_key_press_event
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
@@ -114,8 +114,7 @@ class Clock:
         self.settings_window.readaloud_checkbox.setChecked(tts_enabled)
 
         # Set nightmode as enabled if non zero offset specified in the config
-        self.original_nightmode_offset = self.config["main"].get("nightmode_offset", 8)
-        nightmode = (self.original_nightmode_offset != 0)
+        nightmode = self.config["main"]["nighttime"].get("enabled", False)
         self.settings_window.nightmode_checkbox.setChecked(nightmode)
 
         alarm_brightness_enabled = self.config["main"]["full_brightness_on_alarm"]
@@ -209,25 +208,24 @@ class Clock:
         logger.debug("Settings window opened")
 
     def on_release_event_handler(self, event):
-        """Event handler for touching the screen: ensure screen is turned on
-        and if an active alarm is set and it is currently nighttime,
-        set a short timeout for blanking the screen.
+        """Event handler for touching the screen. Ensure screen is turned on.
+        If and alarm is set, nightmode is enabled and it is currently nighttime,
+        sets a short timer for blanking the screen.
         """
-        # get screen state before the event occured and set it as enabled
+        # Get screen state before the event occured and set it as enabled.
         logger.debug("Activating display")
         old_screen_state = rpi_utils.get_and_set_screen_state("on")
         self.show_control_buttons()
 
-        alarm_time = self.get_current_active_alarm()  # HH:MM
+        alarm_time = self.get_current_active_alarm()
         if alarm_time is None:
             return
 
-        # set screen blanking timeout if the screen was blank before the event
+        # Set screen blanking timeout if the screen was blank before the event
         # and it is currently nightime.
-        offset = self.config["main"].get("nightmode_offset", 0)
-        if old_screen_state == "off" and utils.nighttime(alarm_time, offset):
-            logger.info("Screen blank timer activated")
+        if self._nightmode_active() and old_screen_state == "off":
             self.screen_blank_timer.start(3*1000)  # 3 second timer
+            logger.info("Screen blank timer activated")
 
     def set_alarm(self):
         """Button callback - set alarm. Sets timers for alarm build and alarm play based
@@ -260,8 +258,8 @@ class Clock:
             logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
             self.alarm_build_timer.start(alarm_build_wait_ms)
 
-            # Set screen brightness to low
-            if self.config["main"]["full_brightness_on_alarm"]:
+            # Set screen brightness to low if nighttime and nigthmode enabled 
+            if self._nightmode_active():
                 low_brightness = self.config["main"].get("low_brightness", 12)
                 rpi_utils.set_display_backlight_brightness(low_brightness)
 
@@ -316,8 +314,8 @@ class Clock:
             self.radio.stop()
 
     def play_alarm(self):
-        """Alarm timer callback - play alarm. Generate and play an alarm. Starts a new
-        AlarmPlayThread. Existing set alarms are not effected.
+        """Alarm timer callback - play alarm. Play a previously built alarm.
+        Clears alarm related labels from both windows.
         """
         # Update main display
         self.main_window.alarm_time_lcd.display("")
@@ -345,10 +343,9 @@ class Clock:
             self.play_radio(url=url)
 
     def build_and_play_alarm(self):
-        """Button callback - play alarm. Generate and play an alarm. Starts a new
-        AlarmPlayThread. Existing set alarms are not effected.
+        """Button callback - play alarm. Generate and play an alarm.
+        Note that this uses the same alarm builder as any scheduled alarm.
         """
-        # TODO: Ensure existing alarm is unaffected
         self.alarm_play_thread.build()
         self.alarm_play_thread.start()
 
@@ -398,17 +395,11 @@ class Clock:
         self.config["main"]["TTS"] = self.settings_window.readaloud_checkbox.isChecked()
 
     def enable_nightmode(self):
-        """Settings window checkbox callback for nightmode: set offset to 0 or
-        the original values.
-        """
-        offset = 0
-        if self.settings_window.nightmode_checkbox.isChecked():
-            offset = self.original_nightmode_offset
-
-        self.config["main"]["nightmode_offset"] = offset
+        """Checkbox callback - nightmode. Set the config to matching value."""
+        self.config["main"]["nighttime"]["enabled"] = self.settings_window.nightmode_checkbox.isChecked()
 
     def enable_alarm_brightness_change(self):
-        """Settings window checkbox callback for brightness change:set the config to matching value."""
+        """Checkbox callback - brightness on alarm. Set the config to matching value."""
         self.config["main"]["full_brightness_on_alarm"] = self.settings_window.alarm_brightness_checkbox.isChecked()
 
     def cleanup_and_exit(self):
@@ -416,12 +407,22 @@ class Clock:
         application itself.
         """
         self.radio.stop()
+
         # Ensure display is on and at full brightness
         rpi_utils.toggle_screen_state("on")
         rpi_utils.set_display_backlight_brightness(rpi_utils.HIGH_BRIGHTNESS)
         QApplication.instance().quit()
 
-    def debug_key_press_event(self, event):
+    def _nightmode_active(self):
+        """Helper function for checking if nightmode is enabled and it is currently nighttime."""
+        nightmode = self.config["main"]["nighttime"].get("enabled")
+        is_nighttime = utils.time_is_in(
+            self.config["main"]["nighttime"]["start"],
+            self.config["main"]["nighttime"]["end"]
+        )
+        return nightmode and is_nighttime
+
+    def _debug_key_press_event(self, event):
         """Custom keyPressEvent handler for debuggin purposes: writes the current
         alarm and window configuration to file.
         """
