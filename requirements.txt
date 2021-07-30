@@ -11,6 +11,7 @@ decorator==5.0.9
 docopt==0.6.2
 feedparser==6.0.8
 flake8==3.9.2
+freezegun==1.1.0
 google-api-core==1.31.0
 google-auth==1.33.1
 google-cloud-texttospeech==2.5.1
