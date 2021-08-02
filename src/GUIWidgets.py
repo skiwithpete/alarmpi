@@ -7,7 +7,7 @@ import logging
 from functools import partial
 from collections import namedtuple
 
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import Qt, QTimer, QSize
 from PyQt5.QtWidgets import (
     QWidget,
@@ -18,7 +18,8 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
     QDesktopWidget,
     QCheckBox,
-    QComboBox
+    QComboBox,
+    QSlider
 )
 
 from src import utils
@@ -48,9 +49,6 @@ class AlarmWindow(QWidget):
         self.left_grid = QGridLayout()
         self.right_grid = QGridLayout()
         bottom_grid = QGridLayout()
-
-        with open("src/style.qss") as f:
-            self.setStyleSheet(f.read())
         self.setAutoFillBackground(True)
 
         # ** Center grid: current and alarm time displays **
@@ -226,9 +224,9 @@ class SettingsWindow(QWidget):
 
         # ** Left grid: misc settings **
         settings_title = QLabel("Alarm settings", self)
-        self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech Alarm", self)
+        self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech alarm", self)
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
-        self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
+        self.alarm_brightness_checkbox = QCheckBox("Full Brightness on alarm", self)
 
         # ComboBox for radio station, filled from config file
         self.radio_station_combo_box = QComboBox(self)
@@ -245,9 +243,26 @@ class SettingsWindow(QWidget):
         left_grid.addWidget(self.readaloud_checkbox, 1, 0)
         left_grid.addWidget(self.nightmode_checkbox, 2, 0)
         left_grid.addWidget(self.alarm_brightness_checkbox, 3, 0)
-        left_grid.addWidget(self.alarm_time_status_label, 4, 0)
-        left_grid.addWidget(self.alarm_time_error_label, 5, 0)
-        left_grid.addWidget(self.radio_station_combo_box, 6, 0)
+
+        volume_grid = QGridLayout()
+        sld = QSlider(Qt.Horizontal, self)
+        sld.setRange(0, 100)
+        sld.setFocusPolicy(Qt.NoFocus)
+        sld.valueChanged.connect(self.set_volume)
+        self.volume_label = QLabel(self)
+
+        volume_grid.addWidget(sld, 0, 0)
+        volume_grid.addWidget(self.volume_label, 0, 1)
+        left_grid.addLayout(volume_grid, 4, 0)
+
+        # Set initial handle position and icon
+        volume_level = utils.get_volume()
+        self.set_volume(volume_level)
+        sld.setValue(volume_level)
+
+        left_grid.addWidget(self.alarm_time_status_label, 5, 0)
+        left_grid.addWidget(self.alarm_time_error_label, 6, 0)
+        left_grid.addWidget(self.radio_station_combo_box, 7, 0)
 
         # Add grids to base layout
         base_layout.addLayout(left_grid, 0, 0)
@@ -336,3 +351,23 @@ class SettingsWindow(QWidget):
     def set_alarm_input_time_label(self, time):
         """Helper function for setting the numpad label displaying selected time."""
         self.input_alarm_time_label.setText(time)
+
+    def set_volume(self, value):
+        original = QPixmap(os.path.join(utils.BASE, "resources", "icons", "volume_640.png"))
+        Y = 70
+        HEIGHT = 212
+        utils.set_volume(value)
+
+        if value == 0:
+            icon = original.copy(0, Y, 172, HEIGHT)
+            icon = icon.scaledToHeight(32)
+            self.volume_label.setPixmap(icon)
+        elif value <= 50:
+            icon = original.copy(165, Y, 198, HEIGHT)
+            icon = icon.scaledToHeight(32)
+            self.volume_label.setPixmap(icon)
+        else:
+            icon = original.copy(375, Y, 258, HEIGHT)
+            icon = icon.scaledToHeight(32)
+            self.volume_label.setPixmap(icon)
+    

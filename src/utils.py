@@ -1,5 +1,7 @@
+import subprocess
+import re
 import os.path
-from  datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta
 
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
@@ -46,3 +48,13 @@ def time_str_to_dt(s):
         dt = dt + timedelta(days=1)
 
     return dt
+
+def get_volume():
+    res = subprocess.run("amixer -c 1 sget PCM".split(), capture_output=True)
+
+    # Parse volume %-level from stdout 
+    s = re.search("\[(\d*)%\]", res.stdout.decode("utf8"))
+    return int(s.group(1))
+
+def set_volume(level):
+    subprocess.run("amixer --quiet -c 1 sset PCM {}%".format(level).split())

@@ -257,7 +257,7 @@ class Clock:
             logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
             self.alarm_build_timer.start(alarm_build_wait_ms)
 
-            # Set screen brightness to low if nighttime and nigthmode enabled 
+            # Set screen brightness to low if nighttime and nigthmode enabled
             if self._nightmode_active():
                 low_brightness = self.config["main"].get("low_brightness", 12)
                 rpi_utils.set_display_backlight_brightness(low_brightness)

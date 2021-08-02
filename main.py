@@ -71,6 +71,9 @@ if __name__ == "__main__":
             handler.setLevel(logging.DEBUG)
 
     app = QApplication(sys.argv)
+    with open("src/style.qss") as f:
+        app.setStyleSheet(f.read())
+
     ex = clock.Clock(args.config, **kwargs)
     ex.setup()
     res = app.exec_()
