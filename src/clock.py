@@ -184,7 +184,6 @@ class Clock:
         brightness_toggle_slot = partial(rpi_utils.toggle_display_backlight_brightness, low_brightness=low_brightness)
         brightness_button.clicked.connect(brightness_toggle_slot)
 
-        #self.alarm_play_button.clicked.connect(self.play_alarm)
         self.alarm_play_button.clicked.connect(self.build_and_play_alarm)
         window_button.clicked.connect(self.toggle_display_mode)
 
@@ -192,10 +191,15 @@ class Clock:
         alarm_clear_button.clicked.connect(self.clear_alarm)
 
         # Settings window checkbox callbacks
-        self.settings_window.readaloud_checkbox.stateChanged.connect(self.enable_tts)
-        self.settings_window.nightmode_checkbox.stateChanged.connect(self.enable_nightmode)
+        self.settings_window.readaloud_checkbox.stateChanged.connect(
+            lambda state: self.config.config["main"].update({"TTS": state == Qt.CheckState.Checked})
+        )
+        self.settings_window.nightmode_checkbox.stateChanged.connect(
+            lambda state: self.config.config["main"]["nighttime"].update({"enabled": state == Qt.CheckState.Checked})
+        )
         self.settings_window.alarm_brightness_checkbox.stateChanged.connect(
-            self.enable_alarm_brightness_change)
+            lambda state: self.config.config["main"].update({"full_brightness_on_alarm": state == Qt.CheckState.Checked})
+        )
 
         self.settings_window.volume_slider.valueChanged.connect(self.set_volume)
         # Set initial handle position and icon
@@ -203,7 +207,6 @@ class Clock:
         self.set_volume(volume_level)
         self.settings_window.volume_slider.setValue(volume_level)
         
-
     def open_settings_window(self):
         """Button callback - settings window. Open the settings window and
         clear any existing screen blanking timer.
@@ -395,18 +398,6 @@ class Clock:
         self.radio_button.show()
         self.blank_button.show()
         self.close_button.show()
-
-    def enable_tts(self):
-        """Settings window checkbox callback for TTS: set the config to matching value."""
-        self.config["main"]["TTS"] = self.settings_window.readaloud_checkbox.isChecked()
-
-    def enable_nightmode(self):
-        """Checkbox callback - nightmode. Set the config to matching value."""
-        self.config["main"]["nighttime"]["enabled"] = self.settings_window.nightmode_checkbox.isChecked()
-
-    def enable_alarm_brightness_change(self):
-        """Checkbox callback - brightness on alarm. Set the config to matching value."""
-        self.config["main"]["full_brightness_on_alarm"] = self.settings_window.alarm_brightness_checkbox.isChecked()
 
     def set_volume(self, value):
         """Slider callback - set system volume level to match volume slider lever and
