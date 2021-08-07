@@ -197,6 +197,13 @@ class Clock:
         self.settings_window.alarm_brightness_checkbox.stateChanged.connect(
             self.enable_alarm_brightness_change)
 
+        self.settings_window.volume_slider.valueChanged.connect(self.set_volume)
+        # Set initial handle position and icon
+        volume_level = utils.get_volume()
+        self.set_volume(volume_level)
+        self.settings_window.volume_slider.setValue(volume_level)
+        
+
     def open_settings_window(self):
         """Button callback - settings window. Open the settings window and
         clear any existing screen blanking timer.
@@ -400,6 +407,24 @@ class Clock:
     def enable_alarm_brightness_change(self):
         """Checkbox callback - brightness on alarm. Set the config to matching value."""
         self.config["main"]["full_brightness_on_alarm"] = self.settings_window.alarm_brightness_checkbox.isChecked()
+
+    def set_volume(self, value):
+        """Slider callback - set system volume level to match volume slider lever and
+        update volume level icon.
+        """
+        utils.set_volume(value) # Sets the actual volume level
+
+        if value == 0:
+            mode = "muted"
+        elif value <= 25:
+            mode = "low"
+        elif value <= 75:
+            mode = "medium"
+        else:
+            mode = "high"
+        
+        icon = utils.get_volume_icon(mode)
+        self.settings_window.volume_label.setPixmap(icon)
 
     def cleanup_and_exit(self):
         """Button callback - Exit application. Close any existing radio streams and the

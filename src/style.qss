@@ -13,6 +13,10 @@ AlarmWindow QLabel {
   font: 18pt;
 }
 
+QSlider {
+  padding-right: 100px;
+}
+
 QSlider::handle:horizontal {
     background-color: rgb(85, 170, 255);
     border: none;

@@ -245,20 +245,16 @@ class SettingsWindow(QWidget):
         left_grid.addWidget(self.alarm_brightness_checkbox, 3, 0)
 
         volume_grid = QGridLayout()
-        sld = QSlider(Qt.Horizontal, self)
-        sld.setRange(0, 100)
-        sld.setFocusPolicy(Qt.NoFocus)
-        sld.valueChanged.connect(self.set_volume)
+        self.volume_slider = QSlider(Qt.Horizontal, self)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setFocusPolicy(Qt.NoFocus)
         self.volume_label = QLabel(self)
 
-        volume_grid.addWidget(sld, 0, 0)
+        volume_grid.addWidget(self.volume_slider, 0, 0)
         volume_grid.addWidget(self.volume_label, 0, 1)
         left_grid.addLayout(volume_grid, 4, 0)
-
-        # Set initial handle position and icon
-        volume_level = utils.get_volume()
-        self.set_volume(volume_level)
-        sld.setValue(volume_level)
+        self.volume_slider.setMaximumWidth(180)
+        volume_grid.setHorizontalSpacing(20)
 
         left_grid.addWidget(self.alarm_time_status_label, 5, 0)
         left_grid.addWidget(self.alarm_time_error_label, 6, 0)
@@ -351,23 +347,3 @@ class SettingsWindow(QWidget):
     def set_alarm_input_time_label(self, time):
         """Helper function for setting the numpad label displaying selected time."""
         self.input_alarm_time_label.setText(time)
-
-    def set_volume(self, value):
-        original = QPixmap(os.path.join(utils.BASE, "resources", "icons", "volume_640.png"))
-        Y = 70
-        HEIGHT = 212
-        utils.set_volume(value)
-
-        if value == 0:
-            icon = original.copy(0, Y, 172, HEIGHT)
-            icon = icon.scaledToHeight(32)
-            self.volume_label.setPixmap(icon)
-        elif value <= 50:
-            icon = original.copy(165, Y, 198, HEIGHT)
-            icon = icon.scaledToHeight(32)
-            self.volume_label.setPixmap(icon)
-        else:
-            icon = original.copy(375, Y, 258, HEIGHT)
-            icon = icon.scaledToHeight(32)
-            self.volume_label.setPixmap(icon)
-    
