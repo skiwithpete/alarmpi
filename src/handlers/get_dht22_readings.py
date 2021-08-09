@@ -6,7 +6,9 @@ import adafruit_dht
 from src import apcontent
 
 
-event_logger = logging.getLogger("eventLogger")
+# Use pluginLogger to send (frequent) error events to separate file in order to keep
+# main event log clean.
+plugin_logger = logging.getLogger("pluginLogger")
 
 
 class DHT22Client(apcontent.AlarmpiContent):
@@ -32,10 +34,10 @@ class DHT22Client(apcontent.AlarmpiContent):
         except RuntimeError as e:
             self.error_counter += 1
             if self.error_counter >= ERROR_LIMIT:
-                event_logger.error("Previous %s temperature reads failed. Latest received error: %s", ERROR_LIMIT, str(e))
+                plugin_logger.error("Previous %s temperature reads failed. Latest received error: %s", ERROR_LIMIT, str(e))
                 self.error_counter = 0
 
         # Log other exceptions as is
         except Exception as e:
-            event_logger.error("%s: %s", type(e).__name__, str(e))
+            plugin_logger.error("%s: %s", type(e).__name__, str(e))
             self.error_counter += 1
