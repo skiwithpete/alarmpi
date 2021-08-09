@@ -203,7 +203,7 @@ class Clock:
 
         self.settings_window.volume_slider.valueChanged.connect(self.set_volume)
         # Set initial handle position and icon
-        volume_level = utils.get_volume()
+        volume_level = utils.get_volume(self.config["alsa"]["card"])
         self.set_volume(volume_level)
         self.settings_window.volume_slider.setValue(volume_level)
         
@@ -386,14 +386,14 @@ class Clock:
         self.show_control_buttons()
 
     def hide_control_buttons(self):
-        """Hides the main window's bottom row buttons."""
+        """Hide main window's bottom row buttons."""
         self.settings_button.hide()
         self.radio_button.hide()
         self.blank_button.hide()
         self.close_button.hide()
 
     def show_control_buttons(self):
-        """Showes the main window's bottom row buttons."""
+        """Display main window's bottom row buttons."""
         self.settings_button.show()
         self.radio_button.show()
         self.blank_button.show()
@@ -403,7 +403,7 @@ class Clock:
         """Slider callback - set system volume level to match volume slider lever and
         update volume level icon.
         """
-        utils.set_volume(value) # Sets the actual volume level
+        utils.set_volume(self.config["alsa"]["card"], value) # Sets the actual volume level
 
         if value == 0:
             mode = "muted"
