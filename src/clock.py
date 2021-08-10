@@ -20,7 +20,7 @@ from src import (
 )
 
 
-logger = logging.getLogger("eventLogger")
+event_logger = logging.getLogger("eventLogger")
 
 
 class Clock:
@@ -64,13 +64,13 @@ class Clock:
             self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
-            logger.debug("Disabling weather plugin")
+            event_logger.debug("Disabling weather plugin")
             self.config["content"]["openweathermap.org"]["enabled"] = False
 
             # Disable plugins if any listed in the configuration
             try:
                 for key in self.config["plugins"]:
-                    logger.debug("Disabling %s", key)
+                    event_logger.debug("Disabling %s", key)
                     self.config["plugins"][key]["enabled"] = False
             except KeyError:
                 pass
@@ -162,7 +162,7 @@ class Clock:
                 "\t" + rpi_utils.POWER_FILE,
                 "Disabling brightness buttons"
             ]
-            logger.info("\n".join(msg))
+            event_logger.info("\n".join(msg))
             self.blank_button.setEnabled(False)
             brightness_button.setEnabled(False)
 
@@ -202,11 +202,17 @@ class Clock:
         )
 
         self.settings_window.volume_slider.valueChanged.connect(self.set_volume)
-        # Set initial handle position and icon
-        volume_level = utils.get_volume(self.config["alsa"]["card"])
-        self.set_volume(volume_level)
-        self.settings_window.volume_slider.setValue(volume_level)
-        
+        # Set initial handle position and icon. Disable the slider if
+        # couldn't get a meaningful volume level (ie. invalid card in configuration)
+        try:
+            volume_level = utils.get_volume(self.config["alsa"]["card"])
+            self.set_volume(volume_level)
+            self.settings_window.volume_slider.setValue(volume_level)
+        except AttributeError as e:
+            self.settings_window.volume_slider.setEnabled(False)
+            self.set_volume(0) # Sets icon to muted (as well as attempting to set PCM control to selected card)
+            event_logger.warning("Couldn't get volume level. Wrong card value in configuration? Disabling volume slider.")
+
     def open_settings_window(self):
         """Button callback - settings window. Open the settings window and
         clear any existing screen blanking timer.
@@ -214,7 +220,7 @@ class Clock:
         """
         self.screen_blank_timer.stop()
         self.settings_window.show()
-        logger.debug("Settings window opened")
+        event_logger.debug("Settings window opened")
 
     def on_release_event_handler(self, event):
         """Event handler for touching the screen. Ensure screen is turned on.
@@ -222,7 +228,7 @@ class Clock:
         sets a short timer for blanking the screen.
         """
         # Get screen state before the event occured and set it as enabled.
-        logger.debug("Activating display")
+        event_logger.debug("Activating display")
         old_screen_state = rpi_utils.get_and_set_screen_state("on")
         self.show_control_buttons()
 
@@ -234,7 +240,7 @@ class Clock:
         # and it is currently nightime.
         if self._nightmode_active() and old_screen_state == "off":
             self.screen_blank_timer.start(3*1000)  # 3 second timer
-            logger.info("Screen blank timer activated")
+            event_logger.info("Screen blank timer activated")
 
     def set_alarm(self):
         """Button callback - set alarm. Sets timers for alarm build and alarm play based
@@ -256,7 +262,7 @@ class Clock:
             now = datetime.datetime.now()
             alarm_wait_ms = (self.alarm_dt - now).seconds * 1000
 
-            logger.info("Setting alarm for %s", time_str)
+            event_logger.info("Setting alarm for %s", time_str)
             self.alarm_timer.start(alarm_wait_ms)
 
             # Setup alarm build time for 5 minutes earlier (given large enough timer)
@@ -264,7 +270,7 @@ class Clock:
             alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA))  # 0 if not enough time
 
             alarm_build_dt = self.alarm_dt - datetime.timedelta(minutes=5)
-            logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
+            event_logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
             self.alarm_build_timer.start(alarm_build_wait_ms)
 
             # Set screen brightness to low if nighttime and nigthmode enabled
@@ -278,7 +284,7 @@ class Clock:
         """
         self.alarm_timer.stop()
         self.alarm_build_timer.stop()
-        logger.info("Alarm cleared")
+        event_logger.info("Alarm cleared")
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
 
@@ -375,13 +381,13 @@ class Clock:
         hide the main window's control buttons to prevent accidentally hitting
         them when the screen in blank.
         """
-        logger.debug("Blanking display")
+        event_logger.debug("Blanking display")
         rpi_utils.toggle_screen_state("off")
         self.hide_control_buttons()
 
     def enable_screen_and_show_control_buttons(self):
         """Turn on display backlight power and show the main window's control buttons."""
-        logger.debug("Activating display")
+        event_logger.debug("Activating display")
         rpi_utils.toggle_screen_state("on")
         self.show_control_buttons()
 
@@ -456,7 +462,7 @@ class Clock:
                         window.isActiveWindow()
                     ))
 
-            logger.info("Debug status written to %s", OUTPUT_FILE)
+            event_logger.info("Debug status written to %s", OUTPUT_FILE)
 
 
 class AlarmPlayThread(QThread):
@@ -469,7 +475,7 @@ class AlarmPlayThread(QThread):
 
     def build(self):
         """Build and alarm."""
-        logger.info("Building alarm")
+        event_logger.info("Building alarm")
         self.content = self.alarm_builder.build()
 
     def run(self):
@@ -503,7 +509,7 @@ class RadioStreamer:
         """
         args = self.config.get("args", "")
         cmd = "/usr/bin/cvlc {} {}".format(url, args)
-        logger.info("Running %s", cmd)
+        event_logger.info("Running %s", cmd)
 
         # Run the command via Popen directly to open the stream as an independent child
         # process. This way we do not wait for the stream to finish.
