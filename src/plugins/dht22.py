@@ -31,8 +31,8 @@ class DHT22Plugin:
         # If initial call fails, display an error message.
         # Otherwise do not set message on failed calls.
         if temperature is None and not self.dht22_label.text():
-            msg = "ERR"
+            self.dht22_label.setText("ERR")
+
         elif temperature:
             msg = "⌂ {}°C".format(round(temperature))
-
-        self.dht22_label.setText(msg)
+            self.dht22_label.setText(msg)
