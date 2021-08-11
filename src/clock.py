@@ -248,9 +248,6 @@ class Clock:
         alarm label.
         On invalid time value sets an error message to error label.
         """
-
-        # Ensure any existing error messages are cleared
-        self.settings_window.alarm_time_error_label.setText("")
         time_str = self.settings_window.validate_alarm_input()
         if time_str:
             # Update displayed alarm time settings and main window
