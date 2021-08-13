@@ -11,18 +11,17 @@
 import argparse
 
 from src import alarm_builder
-from src import alarmenv
+from src import apconfig
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Play an alarm using a specified configuration file")
     parser.add_argument("config", metavar="config", nargs="?",
-                        default="default.conf", help="alarm configuration file in ./configs to use. Defaults to default.conf")
+                        default="default.yaml", help="alarm configuration file in ./configs to use. Defaults to default.yaml")
     args = parser.parse_args()
 
-    env = alarmenv.AlarmEnv(args.config)
-    env.setup()
+    config = apconfig.AlarmConfig(args.config)
 
-    alarm = alarm_builder.Alarm(env)
+    alarm = alarm_builder.Alarm(config)
     alarm.build_and_play()

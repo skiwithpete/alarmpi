@@ -1,0 +1,67 @@
+main:
+  low_brightness: 12
+  full_brightness_on_alarm: true
+  nighttime:
+    enabled: true
+    start: '22:00'    # time in HH:MM format
+    end: '07:00'
+  TTS: true
+  end: Thats all for now. Have a nice day.
+
+alsa:
+  card: 1     # ALSA sound card to use for audio level, see aplay -l for available cards
+
+content:
+  greeting:
+    handler: get_greeting.py
+    name: ""
+
+  openweathermap.org:
+    enabled: false
+    handler: get_weather.py
+    credentials: /path/to/credentials       # file containing openweather API key, see https://openweathermap.org/appid
+    city_id: null                           # http://bulk.openweathermap.org/sample/
+    units: metric                           # # metric|imperial
+
+  BBC_news:
+    enabled: true
+    handler: get_bbc_news.py
+
+# Supported TTS engines, only 1 can be enabled.
+# TTS option in main section disables TTS.
+TTS:
+  GCP:
+    enabled: false
+    handler: get_gcp_tts.py
+    credentials: /path/to/credentials       # GCP service account key file
+
+  google_translate:
+    enabled: true
+    handler: get_google_translate_tts.py
+
+  festival:
+    enabled: false
+    handler: get_festival_tts.py
+
+
+radio:
+  enabled: true
+  urls:
+    "Radio Suomi": https://yleuni-f.akamaihd.net/i/yleliveradiohd_3@113880/master.m3u8
+    "Yle Puhe": https://yleuni-f.akamaihd.net/i/yleliveradiohd_5@113882/master.m3u8
+    "Yle X3M": https://yleuni-f.akamaihd.net/i/yleliveradiohd_6@113883/master.m3u8
+    "Yle Vega": https://yleuni-f.akamaihd.net/i/yleliveradiohd_7@113884/master.m3u8
+  default: Radio Suomi
+  args: ""
+
+plugins:
+  HSL:
+    enabled: false
+    trains: 5
+    station_code: KE
+    refresh_interval: 300  # seconds
+
+  DHT22:
+    enabled: false
+    GPIO: 4               # GPIO pin the sensor is connected to
+    refresh_interval: 30  # seconds

@@ -22,9 +22,7 @@ def test_hour_update_alarm_display_time(settings_window):
     # in the wrong order.
 
     # Manually empty the label and add the first digit
-    settings_window.input_alarm_time_label.setText(
-        GUIWidgets.SettingsWindow.ALARM_LABEL_EMPTY
-    )
+    settings_window.input_alarm_time_label.setText(GUIWidgets.Status.EMPTY.value)
     settings_window.update_input_alarm_display("0")
     assert settings_window.input_alarm_time_label.text() == "0 :  "
 
@@ -50,10 +48,9 @@ def test_validate_alarm_input_rejects_invalid_input(settings_window):
     settings_window.validate_alarm_input()
 
     # check labels contain expected error values
-    error_value = settings_window.alarm_time_error_label.text()
     alarm_time_value = settings_window.input_alarm_time_label.text()
 
-    assert error_value == "ERROR: Invalid time"
+    assert "ERROR: Invalid time" in settings_window.alarm_time_status_label.text()
     assert alarm_time_value == "  :  "
 
 def test_validate_alarm_input_returns_valid_input(settings_window):
@@ -72,4 +69,4 @@ def test_clear_alarm_changes_current_alarm_time(settings_window):
     assert settings_window.input_alarm_time_label.text() == "  :  "
     assert settings_window.alarm_time_status_label.text() == "Alarm cleared"
     assert settings_window.current_alarm_time == ""
-    assert settings_window.alarm_time_error_label.text() == ""
+

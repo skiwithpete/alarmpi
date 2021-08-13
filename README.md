@@ -87,9 +87,9 @@ python play_alarm.py [configuration_file]
 ```
 where `[configuration_file]` is an optional alarm configuration file either in `./configs/` or `$HOME/.alarmpi/`, ie.
 ```
-python main.py default.conf
+python main.py default.yaml
 ```
-If no argument is used, `./configs/default.conf` will be used.
+If no argument is used, `./configs/default.yaml` will be used.
 
 
 
@@ -101,7 +101,7 @@ If the radio stream is enabled as part of the alarm it will be played in a separ
 
 When used from the GUI, the alarm works as a toggle. Once the alarm triggers, it will be deactivated and needs to be re-enabled in order to trigger again the next morning. Previous alarm time, however, is saved and need not be reset every time. 
 
-The optional argument in both forms is a path to a configuration file for customizing the alarm, see [configs/README.md](./configs/README.md) for instructions. By default `configs/default.conf` will be used.
+The optional argument in both forms is a path to a configuration file for customizing the alarm, see [configs/README.md](./configs/README.md) for instructions. By default `configs/default.yaml` will be used.
 
 
 
@@ -110,7 +110,7 @@ The full interface to `main.py` is:
 Run alarmpi GUI
 
 positional arguments:
-  config        path to an alarm configuration file. Defaults to default.conf
+  config        path to an alarm configuration file. Defaults to default.yaml
 
 optional arguments:
   -h, --help    show this help message and exit

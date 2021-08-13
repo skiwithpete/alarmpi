@@ -6,6 +6,7 @@ import os.path
 import logging
 from functools import partial
 from collections import namedtuple
+from enum import Enum
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QTimer, QSize
@@ -18,7 +19,8 @@ from PyQt5.QtWidgets import (
     QSizePolicy,
     QDesktopWidget,
     QCheckBox,
-    QComboBox
+    QComboBox,
+    QSlider
 )
 
 from src import utils
@@ -48,9 +50,6 @@ class AlarmWindow(QWidget):
         self.left_grid = QGridLayout()
         self.right_grid = QGridLayout()
         bottom_grid = QGridLayout()
-
-        with open("src/style.qss") as f:
-            self.setStyleSheet(f.read())
         self.setAutoFillBackground(True)
 
         # ** Center grid: current and alarm time displays **
@@ -68,6 +67,7 @@ class AlarmWindow(QWidget):
         alarm_grid.addWidget(self.alarm_time_lcd, 1, 0, 1, 1, Qt.AlignTop)
 
         # ** Bottom grid: main UI control buttons **
+        # Note: handlers are defined and set in clock.py
         button_configs = [
             ButtonConfig(text="Settings", position=(0, 0), icon="settings.png"),
             ButtonConfig(text="Blank", position=(0, 1), icon="moon64x64.png"),
@@ -80,9 +80,6 @@ class AlarmWindow(QWidget):
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
             self.control_buttons[config.text] = button  # store a reference to the button
-
-            if config.slot:
-                button.clicked.connect(config.slot)
 
             if config.icon:
                 button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
@@ -148,9 +145,6 @@ class AlarmWindow(QWidget):
 
 
 class SettingsWindow(QWidget):
-    ALARM_INPUT_ERROR = "ERROR: Invalid time"
-    ALARM_INPUT_CLEAR = "Alarm cleared"
-    ALARM_LABEL_EMPTY = "  :  "
 
     def __init__(self):
         super().__init__()
@@ -188,25 +182,25 @@ class SettingsWindow(QWidget):
                 QSizePolicy.Preferred,
                 QSizePolicy.Expanding  # buttons should expand in vertical direction
             )
+            self.numpad_buttons[config.text] = button
 
-            if config.slot is True:
-                # create a partial function with the button text to pass to
-                # the handler
+            # Assign a handler to numeric buttons updating the display with that value.
+            # Control button handlers are set in clock.py
+            if config.slot:
                 slot = partial(self.update_input_alarm_display, config.text)
                 button.clicked.connect(slot)
-            else:
-                self.numpad_buttons[config.text] = button
+
             right_grid.addWidget(button, *config.position)
 
         # Labels for displaying current active alarm time and time
         # set using the numpad controls.
-        self.input_alarm_time_label = QLabel(SettingsWindow.ALARM_LABEL_EMPTY, self)
+        self.input_alarm_time_label = QLabel(Status.EMPTY.value, self)
         self.input_alarm_time_label.setAlignment(Qt.AlignCenter)
         right_grid.addWidget(self.input_alarm_time_label, 4, 1)
 
         # ** Bottom level main buttons **
         control_button_config = [
-            ButtonConfig(text="Play now", position=(0, 0), icon="play64x64.png"),
+            ButtonConfig(text="Play Now", position=(0, 0), icon="play64x64.png"),
             ButtonConfig(text="Toggle\nWindow", position=(0, 1), icon="window64x64.png"),
             ButtonConfig(text="Toggle\nBrightness", position=(0, 2), icon="brightness64x64.png"),
             ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
@@ -227,10 +221,9 @@ class SettingsWindow(QWidget):
             bottom_grid.addWidget(button, *config.position)
 
         # ** Left grid: misc settings **
-        settings_title = QLabel("Alarm settings", self)
-        self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech Alarm", self)
+        self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech alarm", self)
         self.nightmode_checkbox = QCheckBox("Enable Nightmode", self)
-        self.alarm_brightness_checkbox = QCheckBox("Full Brightness on Alarm", self)
+        self.alarm_brightness_checkbox = QCheckBox("Full Brightness on alarm", self)
 
         # ComboBox for radio station, filled from config file
         self.radio_station_combo_box = QComboBox(self)
@@ -240,16 +233,25 @@ class SettingsWindow(QWidget):
         )
 
         self.alarm_time_status_label = QLabel(self)
-        self.alarm_time_error_label = QLabel(self)
-        self.alarm_time_error_label.setStyleSheet("color: #FF1414;")
 
-        left_grid.addWidget(settings_title, 0, 0)
-        left_grid.addWidget(self.readaloud_checkbox, 1, 0)
-        left_grid.addWidget(self.nightmode_checkbox, 2, 0)
-        left_grid.addWidget(self.alarm_brightness_checkbox, 3, 0)
+        left_grid.addWidget(self.readaloud_checkbox, 0, 0)
+        left_grid.addWidget(self.nightmode_checkbox, 1, 0)
+        left_grid.addWidget(self.alarm_brightness_checkbox, 2, 0)
+
+        volume_grid = QGridLayout()
+        self.volume_slider = QSlider(Qt.Horizontal, self)
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.setFocusPolicy(Qt.NoFocus)
+        self.volume_label = QLabel(self)
+
+        volume_grid.addWidget(self.volume_slider, 0, 0)
+        volume_grid.addWidget(self.volume_label, 0, 1)
+        left_grid.addLayout(volume_grid, 3, 0)
+        self.volume_slider.setMaximumWidth(180)
+        volume_grid.setHorizontalSpacing(20)
+
         left_grid.addWidget(self.alarm_time_status_label, 4, 0)
-        left_grid.addWidget(self.alarm_time_error_label, 5, 0)
-        left_grid.addWidget(self.radio_station_combo_box, 6, 0)
+        left_grid.addWidget(self.radio_station_combo_box, 5, 0)
 
         # Add grids to base layout
         base_layout.addLayout(left_grid, 0, 0)
@@ -267,15 +269,10 @@ class SettingsWindow(QWidget):
         self.setWindowTitle("Settings")
 
     def clear_labels_and_close(self):
-        """Button handler for 'close' Button: clear any temporary status messages
-        before closing the window.
-        """
-        if self.alarm_time_error_label.text() == SettingsWindow.ALARM_INPUT_ERROR:
-            self.alarm_time_error_label.setText("")
-
-        # Clear the status label if it not displaying a valid alarm time
-        if self.alarm_time_status_label.text() == SettingsWindow.ALARM_INPUT_CLEAR:
-            self.alarm_time_status_label.setText("")
+        """Button callback - close window. Close the settings window and clear any
+        temporary status messages."""
+        if self.alarm_time_status_label.text() in (Status.ERROR.value, Status.CLEAR.value):
+             self.alarm_time_status_label.setText("")
 
         logger.debug("Closing settings window")
         self.hide()
@@ -287,7 +284,7 @@ class SettingsWindow(QWidget):
         self.move(qr.topLeft())
 
     def update_input_alarm_display(self, val):
-        """Button handler for alarm input numpad. Updates the Label displaying
+        """Button callback - alarm input numpad. Updates the Label displaying
         the time corresponding to the input.
         Args:
             val (string): a single digit string to write as the next character
@@ -297,7 +294,7 @@ class SettingsWindow(QWidget):
         current_display_value = self.input_alarm_time_label.text()
         current_display_digits_num = sum(c.isdigit() for c in current_display_value)
 
-        # The format for the alarm setup label is HH:MM. Depending on the length
+        # Alarm time is in HH:MM format. Depending on the length
         # of the currently displayed value either set the next digit or start
         # building a new value from the first digit.
         new_value = list(current_display_value)
@@ -308,31 +305,27 @@ class SettingsWindow(QWidget):
             new_value[current_display_digits_num + 1] = val
 
         else:
-            new_value = list(val + SettingsWindow.ALARM_LABEL_EMPTY[1:])
+            new_value = list(val + Status.EMPTY.value[1:])
 
         new_value = "".join(new_value)
         self.input_alarm_time_label.setText(new_value)
 
     def validate_alarm_input(self):
-        """Callback for "Set alarm" button: write a new cron entry for the alarm and
-        display a message for the user. Existing cron alarms will be overwritten
-        Invalid time values are not accepted.
-        """
+        """Read current value from alarm time label and test it is in %H:%M format."""
         try:
             entry_time = self.input_alarm_time_label.text()
             time.strptime(entry_time, "%H:%M")
             return entry_time
         except ValueError:
-            self.alarm_time_error_label.setText(SettingsWindow.ALARM_INPUT_ERROR)
-            self.input_alarm_time_label.setText(SettingsWindow.ALARM_LABEL_EMPTY)
+            self.alarm_time_status_label.setText(Status.ERROR.value)
+            self.input_alarm_time_label.setText(Status.EMPTY.value)
             return
 
     def clear_alarm(self):
         """Clear the time displayed on the alarm set label."""
-        self.input_alarm_time_label.setText(SettingsWindow.ALARM_LABEL_EMPTY)
-        self.alarm_time_status_label.setText(SettingsWindow.ALARM_INPUT_CLEAR)
+        self.input_alarm_time_label.setText(Status.EMPTY.value)
+        self.alarm_time_status_label.setText(Status.CLEAR.value)
         self.current_alarm_time = ""
-        self.alarm_time_error_label.setText("")
 
     def set_alarm_input_success_message_with_time(self, time):
         """Helper function for setting the left pane alarm time info label."""
@@ -342,3 +335,10 @@ class SettingsWindow(QWidget):
     def set_alarm_input_time_label(self, time):
         """Helper function for setting the numpad label displaying selected time."""
         self.input_alarm_time_label.setText(time)
+
+
+class Status(Enum):
+    """Status messages to show in status label and input time label."""
+    ERROR = "<font color='#FF1414'>ERROR: Invalid time</font>"
+    CLEAR = "Alarm cleared"
+    EMPTY = "  :  "

@@ -6,7 +6,6 @@
 
 import argparse
 import sys
-import os
 import logging
 import logging.config
 
@@ -16,9 +15,7 @@ from src import clock
 
 
 logging.config.fileConfig("logging.conf")
-error_logger = logging.getLogger("errorLogger")
 event_logger = logging.getLogger("eventLogger")
-
 
 
 def backlight_excepthook(type, value, tb):
@@ -30,7 +27,7 @@ def backlight_excepthook(type, value, tb):
         exits. The handling of such top-level exceptions can be customized by assigning another three-argument
         function to sys.excepthook.
 
-    If the program crashes due to an unpredictable cause such as network error on API call while the screen is blank
+    If the program crashes due to an unpredictable cause, such as network error on API call, while the screen is blank
     it is difficult to turn it back on again (usually this means SSH'ing in and running stop.sh).
     By overwriting the default handler we can take care of this automatically.
 
@@ -40,24 +37,16 @@ def backlight_excepthook(type, value, tb):
     import traceback
     import subprocess
     tbtext = "".join(traceback.format_exception(type, value, tb))
-    error_logger.error(tbtext)
-
-    BASE = os.path.dirname(__file__)
-    path_to_stop_script = os.path.join(BASE, "stop.sh")
-
-    # Call the stop script and log output
-    process = subprocess.Popen(["/bin/bash", path_to_stop_script], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    output, error = process.communicate()
-    error_logger.info(output)
+    event_logger.critical(tbtext)
+    subprocess.run("./stop.sh")
 
 
 if __name__ == "__main__":
-    event_logger.info("Overriding sys.excepthook")
     sys.excepthook = backlight_excepthook
 
     parser = argparse.ArgumentParser(description="Run alarmpi GUI")
     parser.add_argument("config", metavar="config", nargs="?",
-                        default="default.conf", help="Configuration file to use. Defaults to default.conf")
+                        default="default.yaml", help="Configuration file to use. Defaults to default.yaml")
     parser.add_argument("--fullscreen", action="store_true",
                         help="fullscreen mode")
     parser.add_argument("--debug", action="store_true",
@@ -72,6 +61,9 @@ if __name__ == "__main__":
             handler.setLevel(logging.DEBUG)
 
     app = QApplication(sys.argv)
+    with open("src/style.qss") as f:
+        app.setStyleSheet(f.read())
+
     ex = clock.Clock(args.config, **kwargs)
     ex.setup()
     res = app.exec_()

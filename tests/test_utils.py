@@ -1,28 +1,29 @@
 import pytest
+from freezegun import freeze_time
 
 from src import utils
 
 
-
-
-@pytest.mark.parametrize("compare_time,target_time", [
-    ("01:14", "07:02"),
-    ("12:54", "19:20"),
+@pytest.mark.parametrize("start_time,end_time", [
+    ("22:00", "07:00"),
+    ("08:10", "18:20")
 ])
-def test_nighttime_with_night_hour(compare_time, target_time):
-    """Does nightime return True when called with compare_times matching
-    the targeted nighttime offset?
+@freeze_time("2021-07-30 23:10")
+def test_nighttime_with_night_hour(start_time, end_time):
+    """Does time_is_in return True for:
+      * overnight schedule
+      * already passed end time (ie. is end time interpreted as next day)
     """
-    offset = 8
-    assert utils.nighttime(target_time, offset, compare_time)
+    assert utils.time_is_in(start_time, end_time)
 
-@pytest.mark.parametrize("compare_time,target_time", [
-    ("22:14", "07:02"),
-    ("07:05", "07:00"),
+@pytest.mark.parametrize("start_time,end_time", [
+    ("22:00", "07:00"),
+    ("18:00", "23:59")
 ])
-def test_nighttime_with_day_hour(compare_time, target_time):
-    """Does nightime return False when called with compare_times outside of
-    target_time thresholds?
+@freeze_time("2021-07-30 11:10")
+def test_nighttime_with_day_hour(start_time, end_time):
+    """Does time_is_in return False for:
+      * overnight schedule
+      * schedule not containing current time
     """
-    offset = 8
-    assert not utils.nighttime(target_time, offset, compare_time)
+    assert not utils.time_is_in(start_time, end_time)

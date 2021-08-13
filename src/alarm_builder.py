@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Generates alarm content based on configuration file.
+
+
 import subprocess
 import importlib
 import os
@@ -14,8 +17,8 @@ from src.handlers import get_festival_tts, get_greeting
 
 class Alarm:
 
-    def __init__(self, env):
-        self.env = env
+    def __init__(self, config):
+        self.config = config
 
     def build(self):
         """Loop through the configuration file for enabled content sections
@@ -29,14 +32,11 @@ class Alarm:
         contents.append(self.generate_greeting())
 
         # For each content section get the handler module and create the approriate
-        # instance
-        content_sections = self.env.get_enabled_sections("content")
-        for section_name in content_sections:
-            class_ = self.get_content_parser_class(section_name)
-
-            # create an instance using the config section name
-            section = self.env.get_section(section_name)
-            parser = class_(section)
+        # content parser
+        content_sections = self.config.get_enabled_sections("content")
+        for section in content_sections:
+            class_ = self.get_content_parser_class(content_sections[section])
+            parser = class_(content_sections[section])
 
             # call build to run the parser and store output
             try:
@@ -46,7 +46,7 @@ class Alarm:
             contents.append(parser.get())
 
         # Add ending phrase from the config file
-        contents.append(self.env.get_value("main", "end"))
+        contents.append(self.config["main"].get("end", ""))
 
         for section in contents:
             print(section)
@@ -54,22 +54,22 @@ class Alarm:
         return contents
 
     def play(self, content):
-        """Play an alarm.
+        """Play an alarm. Either send alarm content to TTS client or play a beeping
+        sound effect.
         Args:
             content (list): list of various contents to play via TTS. Each list item
             item should be the text to
         """
-        tts_enabled = self.env.config_has_match("main", "readaloud", "1")
+        tts_enabled = self.config["main"]["TTS"]
 
-        # If no network connection is detected, or the 'readaloud' option is not set,
-        # return None to signify alarm player should play beep instead.
-        if not self.env._testnet() or not tts_enabled:
+        # If no network connection is detected, or TTS is not enabled play beep
+        if not self.config._testnet() or not tts_enabled:
             Alarm.play_beep()
+            return
 
-        else:
-            tts_client = self.get_tts_client()
-            content_text = "\n".join(content)
-            tts_client.play(content_text)
+        tts_client = self.get_tts_client()  # First enabled client
+        content_text = "\n".join(content)
+        tts_client.play(content_text)
 
     def build_and_play(self):
         """Build and play an alarm.
@@ -80,7 +80,7 @@ class Alarm:
         self.play(content)
 
         # Play the radio stream if enabled
-        if self.env.config_has_match("radio", "enabled", "1"):
+        if self.config["radio"]["enabled"]:
             self.play_radio()
 
     def generate_greeting(self):
@@ -88,7 +88,7 @@ class Alarm:
         Return:
             the greeting as string.
         """
-        section = self.env.get_section("greeting")
+        section = self.config["content"]["greeting"]
         greeter = get_greeting.Greeting(section)
         greeter.build()
         return greeter.get()
@@ -97,14 +97,17 @@ class Alarm:
         """Determine which TTS engine to use based on the enabled tts sections
         in the config file. First enabled section is used.
         """
-        tts = self.env.get_enabled_sections("tts")
-
+        # Valid config can only have 1 enabled TTS engine. Note that
+        # response is a wrapper containing dicionary with the top level TTS key.
+        section_wrapper = self.config.get_enabled_sections("TTS")
+        
         # Instantiate the correct class
-        if tts:
-            tts_section = tts[0]
-            class_ = self.get_content_parser_class(tts_section)
+        if section_wrapper:
+            section = list(section_wrapper.values())[0]
+
+            class_ = self.get_content_parser_class(section)
             # read the path to the keyfile if provided/applicable
-            credentials = self.env.get_value(tts_section, "credentials", fallback=False)
+            credentials = section.get("credentials")
             client = class_(credentials=credentials)
 
         # by default, use Festival tts client
@@ -113,27 +116,24 @@ class Alarm:
 
         return client
 
-    def get_content_parser_class(self, section_name):
-        """Given config file handler section name, return the class of the handler."""
+    def get_content_parser_class(self, section):
+        """Given config file section name, return the class matching the handler."""
         # use importlib to dynamically import the correct module within
         # the 'handlers' package.
-        handler_module_name = self.env.get_value(section_name, "handler")[:-3]
-        path_to_module = "src.handlers.{}".format(handler_module_name)
+        path_to_module = "src.handlers.{}".format(section["handler"][:-3])
         handler_module = importlib.import_module(path_to_module)
 
         # Inspect the handler module for classes and return the first class.
-        # Note: assumes there is excatly one class in each handler module!
         class_ = inspect.getmembers(handler_module, inspect.isclass)[0][1]
 
         return class_
 
     def play_radio(self):
-        """Play the first radio stream defined in the configuration using cvlc."""
-        radio_streams = self.env.get_radio_stations()
-        default_station = self.env.get_value("radio", "default")
-        url = radio_streams[default_station]
+        """Open a stream to the default radio station using cvlc."""
+        default_station = self.config["radio"]["default"]
+        url = self.config["radio"]["urls"][default_station]
 
-        args = self.env.get_value("radio", "args")
+        args = self.config["radio"].get("args", "")
         cmd = "/usr/bin/cvlc {} {}".format(url, args).split()
         # Run the command via Popen directly to open the stream as a child process without
         # waiting for it to finish.

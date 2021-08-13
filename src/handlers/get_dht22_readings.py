@@ -3,16 +3,20 @@ import logging
 import board
 import adafruit_dht
 
-
-event_logger = logging.getLogger("eventLogger")
-PIN = board.D4  # the GPIO pin the sensor is connected to
-ERROR_LIMIT = 3
+from src import apcontent
 
 
-class DHT22Client:
+# Use pluginLogger to send (frequent) error events to separate file in order to keep
+# main event log clean.
+plugin_logger = logging.getLogger("pluginLogger")
+
+
+class DHT22Client(apcontent.AlarmpiContent):
     """Get readings from a DHT22 sensor."""
 
-    def __init__(self):
+    def __init__(self, section_data):
+        super().__init__(section_data)
+        PIN = board.pin.Pin(self.section_data["GPIO"])
         self.dht_device = adafruit_dht.DHT22(PIN, use_pulseio=False)
         self.error_counter = 0
 
@@ -22,6 +26,7 @@ class DHT22Client:
             https://learn.adafruit.com/dht-humidity-sensing-on-raspberry-pi-with-gdocs-logging/python-setup
         Return None if call fails. Consecutive failed calls are logged as events.
         """
+        ERROR_LIMIT = 3
         try:
             t = self.dht_device.temperature
             self.error_counter = 0
@@ -29,10 +34,10 @@ class DHT22Client:
         except RuntimeError as e:
             self.error_counter += 1
             if self.error_counter >= ERROR_LIMIT:
-                event_logger.error("Previous %s temperature reads failed. Latest received error: %s", ERROR_LIMIT, str(e))
+                plugin_logger.error("Previous %s temperature reads failed. Latest received error: %s", ERROR_LIMIT, str(e))
                 self.error_counter = 0
 
         # Log other exceptions as is
         except Exception as e:
-            event_logger.error("%s: %s", type(e).__name__, str(e))
+            plugin_logger.error("%s: %s", type(e).__name__, str(e))
             self.error_counter += 1

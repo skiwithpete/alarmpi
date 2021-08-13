@@ -19,9 +19,11 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
 
     def __init__(self, section_data):
         super().__init__(section_data)
-        self.credentials = section_data["credentials"]
         self.city_id = section_data["city_id"]
         self.units = section_data["units"]
+
+        with open(section_data["credentials"]) as f:
+            self.credentials = f.read().strip()
 
     def build(self):
         try:

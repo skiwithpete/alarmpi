@@ -1,8 +1,7 @@
-# Client for fetching the next trains arriving at Kerava station using the
+# Client for fetching arriving commuter trains to a station using
 # Finnish Transport agency's DigiTraffic API.
 # https://www.digitraffic.fi/en/railway-traffic/
 # https://www.digitraffic.fi/rautatieliikenne/#liikennepaikan-saapuvat-ja-l%C3%A4htev%C3%A4t-junat-lukum%C3%A4%C3%A4r%C3%A4rajoitus
-
 
 import datetime
 import logging
@@ -10,23 +9,15 @@ import logging
 import requests
 from dateutil import tz
 
+from src import apcontent
 
-# Define common top level parameters: number of arriving trains
-# and API response values to parse,
-MAX_NUMBER_OF_TRAINS = 5
-ARRIVING_STATION_CODE = "KE"
-RETURN_TEMPLATE_KEYS = [
-    "liveEstimateTime",
-    "scheduledTime",
-    "commuterLineID",
-    "cancelled",
-    "sortKey"
-]
 
 event_logger = logging.getLogger("eventLogger")
 
 
-class TrainParser:
+# While this feature is not part of the alarm, subclassing AlarmpiContent provides
+# access to the config.
+class TrainParser(apcontent.AlarmpiContent):
 
     def run(self):
         """Run the parser: either fetch the next departures or, in case of
@@ -49,7 +40,7 @@ class TrainParser:
         for train in locals_:
             row = self.get_local_departure_row(train)
 
-            # Drop already departed trains
+            # Ignore already departed trains
             if "actualTime" in row:
                 continue
 
@@ -69,23 +60,23 @@ class TrainParser:
                     live_estimate_time_dt = None
 
             sort_dt = self.utc_timestamp_to_local_datetime(row[sort_key])
-
-            d = dict.fromkeys(RETURN_TEMPLATE_KEYS)
-            d.update({
+            departure_rows.append({
                 "liveEstimateTime": live_estimate_time_dt,
                 "scheduledTime": scheduled_time_dt,
                 "commuterLineID": train["commuterLineID"],
                 "cancelled": train["cancelled"],
                 "sortKey": sort_dt
             })
-            departure_rows.append(d)
 
         departure_rows.sort(key=lambda row: row["sortKey"])
+
+        # Limit trains to return to the count in the config
+        MAX_NUMBER_OF_TRAINS = self.section_data["trains"]
         return departure_rows[:MAX_NUMBER_OF_TRAINS]
 
     def fetch_daily_train_data(self):
         """API call to get the next local arrivivals."""
-        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/{}".format(ARRIVING_STATION_CODE)
+        URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/{}".format(self.section_data["station_code"])
         params = {
             "arrived_trains": 1,  # API minumum to already arrived and departed trains is 1
             "arriving_trains": 20,
@@ -119,7 +110,7 @@ class TrainParser:
         """
         rows = [row for row in train["timeTableRows"] if
                 row["type"] == "DEPARTURE" and
-                row["stationShortCode"] == ARRIVING_STATION_CODE
+                row["stationShortCode"] == self.section_data["station_code"]
                 ]
 
         return rows[0]

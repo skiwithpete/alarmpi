@@ -1,60 +1,105 @@
+import subprocess
+import re
 import os.path
-import datetime
+from datetime import datetime, date, timedelta
+
+from PyQt5.QtGui import QPixmap
 
 
 BASE = os.path.join(os.path.dirname(__file__), "..")
 
 
-def nighttime(target_time, offset, compare_time=None):
-    """Check whether compare_time is within offset hours of target_time.
+def time_is_in(start, end):
+    """Check if current time is between start and end.
+    If end has already passed for current date, take it to be
+    the next day. Ie. time_is_in('22:00', '07:00') returns True
+    when called at 23:10.
     Args:
-        target_time (str): target time for the test in HH:MM.
-        offset (int): hour offset
-        compare_time (str): the time to test in HH:MM, defaults to
-            current time
+        start (str): start time in HH:MM
+        end (str): end time in HH:MM
     """
-    dummy_base_date = datetime.date.today()
+    now = datetime.now()
+    start_time = datetime.strptime(start, "%H:%M").time()
+    end_time = datetime.strptime(end, "%H:%M").time()
 
-    # convert times from strtings to datetimes with date set to today
-    target_dt = datetime.datetime.strptime(target_time, "%H:%M")
-    target_dt = target_dt.replace(
-        year=dummy_base_date.year,
-        month=dummy_base_date.month,
-        day=dummy_base_date.day
+    start = now.replace(
+        hour=start_time.hour,
+        minute=start_time.minute,
+        second=start_time.second
+    )
+    end = now.replace(
+        hour=end_time.hour,
+        minute=end_time.minute,
+        second=end_time.second
     )
 
-    if compare_time is not None:
-        compare_dt = datetime.datetime.strptime(compare_time, "%H:%M")
-        compare_dt = compare_dt.replace(
-            year=dummy_base_date.year,
-            month=dummy_base_date.month,
-            day=dummy_base_date.day
-        )
+    if now >= end:
+        end = end + timedelta(1)
 
-    else:
-        compare_dt = datetime.datetime.now()
-
-    offset_target_dt = target_dt - datetime.timedelta(hours=offset)
-    return compare_dt >= offset_target_dt and compare_dt <= target_dt
-
-def time_str_to_minutes(s):
-    """Convert a time string in %H:%M format to minutes since midnight."""
-    input_time = datetime.datetime.strptime(s, "%H:%M")
-    return input_time.hour * 60 + input_time.minute
-
-def datetime_to_minutes(d):
-    """Convert a datetime into minutes since midnight."""
-    return d.hour * 60 + d.minute
+    return start <= now < end
 
 def time_str_to_dt(s):
     """Convert a time string in HH:MM format to a datetime object. The date is set to
     current date if the time has not yet occured or the next day if it has.
     """
-    today = datetime.date.today()
-    dummy_dt = datetime.datetime.strptime(s, "%H:%M")
+    today = date.today()
+    dummy_dt = datetime.strptime(s, "%H:%M")
 
     dt = dummy_dt.replace(year=today.year, month=today.month, day=today.day)
-    if dt <= datetime.datetime.now():
-        dt = dt + datetime.timedelta(days=1)
+    if dt <= datetime.now():
+        dt = dt + timedelta(days=1)
 
     return dt
+
+def get_volume(card):
+    """Get current audio volume level from amixer as integer from 0 to 100.
+    Args:
+        card (int): the sound card to read, see aplay -l for list of
+        cards available.
+    """
+    res = subprocess.run("amixer -c {} sget PCM".format(card).split(), capture_output=True)
+
+    # Response contains volume level as percentage, parse the digits
+    s = re.search("\[(\d*)%\]", res.stdout.decode("utf8"))
+    return int(s.group(1))
+
+def set_volume(card, level):
+    """Set audio volume.
+    Args:
+        card (int): same as get_volume
+        level (int): volume level as percentage, 0 - 100
+    """
+    subprocess.run("amixer --quiet -c {} sset PCM {}%".format(card, level).split())
+
+def get_volume_icon(mode):
+    """Determine icon set to use as volume level. If Adwaita Ubuntu theme exists use its icons.
+    Otherwise use custom icons.
+    Args:
+        mode (str): volume level: muted/low/medium/high
+    Return:
+        QPixmap object matching the mode
+    """
+
+    SYSTEM_THEME_BASE = "/usr/share/icons/Adwaita/32x32/status/"
+    if os.path.isfile(os.path.join(SYSTEM_THEME_BASE, "audio-volume-high-symbolic.symbolic.png")):
+        img_map = {
+            "muted": os.path.join(SYSTEM_THEME_BASE, "audio-volume-muted-symbolic.symbolic.png"),
+            "low": os.path.join(SYSTEM_THEME_BASE, "audio-volume-low-symbolic.symbolic.png"),
+            "medium": os.path.join(SYSTEM_THEME_BASE, "audio-volume-medium-symbolic.symbolic.png"),
+            "high": os.path.join(SYSTEM_THEME_BASE, "audio-volume-high-symbolic.symbolic.png")
+        }
+        return QPixmap(img_map[mode])
+
+    else:
+        original = QPixmap(os.path.join(BASE, "resources", "icons", "volume_640.png"))
+        Y = 70
+        HEIGHT = 212
+
+        img_map = {
+            "muted": original.copy(0, Y, 172, HEIGHT),
+            "low": original.copy(165, Y, 198, HEIGHT),
+            "medium": original.copy(165, Y, 198, HEIGHT), # same as low
+            "high": original.copy(375, Y, 258, HEIGHT)
+        }
+
+        return img_map[mode].scaledToHeight(32)

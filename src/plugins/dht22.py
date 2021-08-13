@@ -8,7 +8,8 @@ class DHT22Plugin:
 
     def __init__(self, parent):
         self.parent = parent
-        self.client = get_dht22_readings.DHT22Client()
+        self.config_data = parent.config["plugins"]["DHT22"]
+        self.client = get_dht22_readings.DHT22Client(self.config_data)
 
     def create_widgets(self):
         """Create and set QLabel for displaying temperature."""
@@ -18,16 +19,20 @@ class DHT22Plugin:
     def setup_polling(self):
         self.update_temperature()
 
-        DELAY = 30*1000
+        refresh_interval_msec = self.config_data["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
         _timer.timeout.connect(self.update_temperature)
-        _timer.start(DELAY)
+        _timer.start(refresh_interval_msec)
 
     def update_temperature(self):
         """Fetch new temperature readings from the handler."""
         temperature = self.client.try_get_temperature()
 
-        # Only change the label if a valid temperature was received
-        if temperature:
+        # If initial call fails, display an error message.
+        # Otherwise do not set message on failed calls.
+        if temperature is None and not self.dht22_label.text():
+            self.dht22_label.setText("ERR")
+
+        elif temperature:
             msg = "⌂ {}°C".format(round(temperature))
             self.dht22_label.setText(msg)

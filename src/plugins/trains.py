@@ -8,26 +8,30 @@ class TrainPlugin:
 
     def __init__(self, parent):
         self.parent = parent
-        self.parser = get_next_trains.TrainParser()
+        self.config_data = parent.config["plugins"]["HSL"]
+        self.parser = get_next_trains.TrainParser(self.config_data)
 
     def create_widgets(self):
         """Create and set QLabels for displaying train components."""
         self.train_labels = []
-        for i in range(get_next_trains.MAX_NUMBER_OF_TRAINS):
+        MAX_NUMBER_OF_TRAINS = self.config_data["trains"]
+
+        for i in range(MAX_NUMBER_OF_TRAINS):
             label = QLabel(self.parent.main_window)
             self.parent.main_window.left_grid.addWidget(label, i, 0)
             self.train_labels.append(label)
 
-        self.parent.main_window.left_grid.setRowStretch(get_next_trains.MAX_NUMBER_OF_TRAINS, 1)
+        self.parent.main_window.left_grid.setRowStretch(MAX_NUMBER_OF_TRAINS, 1)
 
     def setup_polling(self):
         """Setup polling for next train departure."""
         self.update_trains()
 
-        _5_MINUTES = 5*60*1000
+        # Assume refresh interval in the config as seconds
+        refresh_interval_msec = self.config_data["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
         _timer.timeout.connect(self.update_trains)
-        _timer.start(_5_MINUTES)
+        _timer.start(refresh_interval_msec)
 
     def update_trains(self):
         """Fetch new train data from DigiTraffic API and display on the right sidebar."""
@@ -57,7 +61,7 @@ class TrainPlugin:
 
                 label.setText(msg)
 
-            # API response may contain fewer trains than MAX_NUMBER_OF_TRAINS trains,
+            # API response may contain fewer trains than there are labels,
             # clear any remaining labels.
             except IndexError:
                 label.clear()
