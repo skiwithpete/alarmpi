@@ -8,6 +8,9 @@ main:
   TTS: true
   end: Thats all for now. Have a nice day.
 
+alsa:
+  card: 1
+
 content:
   greeting:
     handler: get_greeting.py
