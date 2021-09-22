@@ -60,8 +60,11 @@ class Clock:
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
-            self.main_window.setCursor(Qt.BlankCursor)
-            self.settings_window.setCursor(Qt.BlankCursor)
+
+            # Hide mouse cursor unless in debug mode
+            if not kwargs.get("debug"):
+                self.main_window.setCursor(Qt.BlankCursor)
+                self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
             event_logger.debug("Disabling weather plugin")
@@ -75,7 +78,8 @@ class Clock:
             except KeyError:
                 pass
 
-            self.config.rpi_brightness_write_access = True  # Force enable brightness buttons
+            # Force enable brightness buttons
+            self.config.rpi_brightness_write_access = True
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
@@ -220,6 +224,10 @@ class Clock:
         """
         self.screen_blank_timer.stop()
         self.settings_window.show()
+        # Ensure the window is raised in top, useful when main window is fullscreened
+        # and settings window is accidentally sent to the background
+        getattr(self.settings_window, "raise")()
+        self.settings_window.activateWindow()
         event_logger.debug("Settings window opened")
 
     def on_release_event_handler(self, event):
