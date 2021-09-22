@@ -6,6 +6,7 @@ import datetime
 import subprocess
 import logging
 import json
+import signal
 from functools import partial
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
@@ -55,8 +56,7 @@ class Clock:
         self.alarm_build_timer.setSingleShot(True)
         self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
 
-        self.main_window.keyPressEvent = self._debug_key_press_event
-        self.settings_window.keyPressEvent = self._debug_key_press_event
+        signal.signal(signal.SIGUSR1, self._debug_key_signal_handler)
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
@@ -440,26 +440,22 @@ class Clock:
         )
         return nightmode and is_nighttime
 
-    def _debug_key_press_event(self, event):
-        """Custom keyPressEvent handler for debuggin purposes: writes the current
-        alarm and window configuration to file.
-        """
-        if event.key() == Qt.Key_F2:
-            OUTPUT_FILE = "debug_info.log"
-            with open(OUTPUT_FILE, "w") as f:
-                f.write("config file: {}\n".format(self.config.path_to_config))
-                json.dump(self.config.config, f, indent=4)
+    def _debug_key_signal_handler(self, sig, frame):
+        OUTPUT_FILE = "debug_info.log"
+        with open(OUTPUT_FILE, "w") as f:
+            f.write("config file: {}\n".format(self.config.path_to_config))
+            json.dump(self.config.config, f, indent=4)
 
-                f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
-                for window in (self.main_window, self.settings_window):
-                    f.write("\n{:60} {:9} {:12} {:14}".format(
-                        str(window),
-                        window.isVisible(),
-                        window.isFullScreen(),
-                        window.isActiveWindow()
-                    ))
+            f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
+            for window in (self.main_window, self.settings_window):
+                f.write("\n{:60} {:9} {:12} {:14}".format(
+                    str(window),
+                    window.isVisible(),
+                    window.isFullScreen(),
+                    window.isActiveWindow()
+                ))
 
-            event_logger.info("Debug status written to %s", OUTPUT_FILE)
+        event_logger.info("Debug status written to %s", OUTPUT_FILE)      
 
 
 class AlarmPlayThread(QThread):
