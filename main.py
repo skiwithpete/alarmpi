@@ -52,7 +52,8 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true",
                         help="debug mode")
     args = parser.parse_args()
-    kwargs = {"fullscreen": args.fullscreen, "debug": args.debug}
+    kwargs = vars(args)
+    config = kwargs.pop("config")
 
     if args.debug:
         event_logger.info("Setting event_logger level to DEBUG")
@@ -64,7 +65,7 @@ if __name__ == "__main__":
     with open("src/style.qss") as f:
         app.setStyleSheet(f.read())
 
-    ex = clock.Clock(args.config, **kwargs)
+    ex = clock.Clock(config, **kwargs)
     ex.setup()
     res = app.exec_()
 
