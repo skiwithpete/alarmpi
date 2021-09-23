@@ -148,7 +148,7 @@ class SettingsWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.control_buttons = []
+        self.control_buttons = {}
         self.numpad_buttons = {}
         self.initUI()
 
@@ -209,7 +209,7 @@ class SettingsWindow(QWidget):
         for config in control_button_config:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
-            self.control_buttons.append(button)
+            self.control_buttons[config.text] = button
 
             if config.slot:
                 button.clicked.connect(config.slot)

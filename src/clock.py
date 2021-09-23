@@ -46,7 +46,7 @@ class Clock:
 
         # Setup a QThread and QTimers for building and playing the alarm
         self.alarm_play_thread = AlarmPlayThread(self.alarm_player)
-        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
+        self.alarm_play_thread.finished_signal.connect(self.finish_playing_alarm)
 
         self.alarm_timer = QTimer(self.main_window)
         self.alarm_timer.setSingleShot(True)
@@ -150,9 +150,9 @@ class Clock:
         self.blank_button = self.main_window.control_buttons["Blank"]
         self.close_button = self.main_window.control_buttons["Close"]
 
-        self.alarm_play_button = self.settings_window.control_buttons[0]
-        window_button = self.settings_window.control_buttons[1]
-        brightness_button = self.settings_window.control_buttons[2]
+        self.alarm_play_button = self.settings_window.control_buttons["Play Now"]
+        window_button = self.settings_window.control_buttons["Toggle\nWindow"]
+        brightness_button = self.settings_window.control_buttons["Toggle\nBrightness"]
 
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
@@ -467,7 +467,7 @@ class Clock:
 
 
 class AlarmPlayThread(QThread):
-    signal = pyqtSignal(int)
+    finished_signal = pyqtSignal(int)
 
     def __init__(self, builder):
         super().__init__()
@@ -489,9 +489,7 @@ class AlarmPlayThread(QThread):
             self.content = [greeting]
 
         self.alarm_builder.play(self.content)
-
-        # inform the main thread that playing has finished
-        self.signal.emit(1)
+        self.finished_signal.emit(1)
 
 
 class RadioStreamer:
