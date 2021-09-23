@@ -33,7 +33,7 @@ class Clock:
         """Setup GUI windows and various configuration objects.
         params
             config_file (str): name (not path!) of the configuration file in /configs to use.
-            kwargs (dict): additional command line paramters passed from main.py
+            kwargs: additional command line parameters passed via main.py
         """
         self.main_window = GUIWidgets.AlarmWindow()
         self.settings_window = GUIWidgets.SettingsWindow()
@@ -68,12 +68,18 @@ class Clock:
 
         if kwargs.get("debug"):
             event_logger.debug("Disabling weather plugin")
-            self.config["content"]["openweathermap.org"]["enabled"] = False
+            self.config["content"]["openweathermap.org"]["enabled"] = False  # TODO: disable plugin, not alarm content
+            self.config["radio"]["enabled"] = False
+
+            # Set special debug flags
+            self.config["debug"] = {
+                "DO_NOT_PLAY_ALARM": True
+            }
 
             # Disable plugins if any listed in the configuration
             try:
                 for key in self.config["plugins"]:
-                    event_logger.debug("Disabling %s", key)
+                    event_logger.debug("Disabling plugin %s", key)
                     self.config["plugins"][key]["enabled"] = False
             except KeyError:
                 pass
@@ -488,7 +494,10 @@ class AlarmPlayThread(QThread):
         except IndexError:
             self.content = [greeting]
 
-        self.alarm_builder.play(self.content)
+        # Play unless explicitely ignored in config
+        if not self.alarm_builder.config._get_debug_option("DO_NOT_PLAY_ALARM"):
+            self.alarm_builder.play(self.content)
+
         self.finished_signal.emit(1)
 
 

@@ -47,6 +47,9 @@ class AlarmConfig:
         # Make the object subscriptable for convenience
         return self.config[item]
 
+    def __setitem__(self, item, value):
+        self.config[item] = value
+
     def get_config_file_path(self):
         """Given a filename, look for an alarm configuration file from either:
           * $HOME/.alarmpi, or
@@ -112,3 +115,9 @@ class AlarmConfig:
     def get_enabled_sections(self, type):
         """Return names of sections sections whose 'type' is section_type (either 'content' or 'tts')."""
         return {k:v for k,v in self[type].items() if self[type][k].get("enabled")}
+
+    def _get_debug_option(self, option):
+        """Get a key from the debug section. The debug section is not defined in the config,
+        but set during config creation in clock.py. Therefore this section may not exist at runtime.
+        """
+        return self.config.get("debug", {}).get(option)
