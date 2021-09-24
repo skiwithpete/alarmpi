@@ -67,8 +67,6 @@ class Clock:
                 self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
-            event_logger.debug("Disabling weather plugin")
-            self.config["content"]["openweathermap.org"]["enabled"] = False  # TODO: disable plugin, not alarm content
             self.config["radio"]["enabled"] = False
 
             # Set special debug flags
@@ -96,7 +94,7 @@ class Clock:
         # Enable various plugin pollers if enabled in the config.
         # Note: plugins defined as instance variables to prevent
         # their pollers from being garbage collected.
-        if self.config["content"]["openweathermap.org"]["enabled"]:
+        if self.config["plugins"]["openweathermap.org"]["enabled"]:
             from src.plugins import weather
             self.weather_plugin = weather.WeatherPlugin(self)
             self.weather_plugin.create_widgets()
