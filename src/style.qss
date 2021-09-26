@@ -14,7 +14,7 @@ AlarmWindow QLabel {
 }
 
 AlarmWindow QLabel#date_label {
-  font: 12pt;
+  font: 16pt;
   margin-top: 10px;
 }
 
