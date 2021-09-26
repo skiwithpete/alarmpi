@@ -55,15 +55,19 @@ if __name__ == "__main__":
     kwargs = vars(args)
     config = kwargs.pop("config")
 
+    app = QApplication(sys.argv)
+    with open("src/style.qss") as f:
+        app.setStyleSheet(f.read())
+
     if args.debug:
+        # Add visible border around elements
+        app.setStyleSheet( app.styleSheet() + "AlarmWindow QLabel, QLCDNumber {border: 1px solid red;}")
+
         event_logger.info("Setting event_logger level to DEBUG")
         event_logger.setLevel(logging.DEBUG)
         for handler in event_logger.handlers:
             handler.setLevel(logging.DEBUG)
 
-    app = QApplication(sys.argv)
-    with open("src/style.qss") as f:
-        app.setStyleSheet(f.read())
 
     ex = clock.Clock(config, **kwargs)
     ex.setup()

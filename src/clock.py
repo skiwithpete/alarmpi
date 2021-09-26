@@ -74,14 +74,6 @@ class Clock:
                 "DO_NOT_PLAY_ALARM": True
             }
 
-            # Disable plugins if any listed in the configuration
-            try:
-                for key in self.config["plugins"]:
-                    event_logger.debug("Disabling plugin %s", key)
-                    self.config["plugins"][key]["enabled"] = False
-            except KeyError:
-                pass
-
             # Force enable brightness buttons
             self.config.rpi_brightness_write_access = True
 
