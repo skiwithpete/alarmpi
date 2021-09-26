@@ -15,6 +15,7 @@ AlarmWindow QLabel {
 
 AlarmWindow QLabel#date_label {
   font: 12pt;
+  margin-top: 10px;
 }
 
 QSlider {
