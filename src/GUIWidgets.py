@@ -53,10 +53,13 @@ class AlarmWindow(QWidget):
         self.setAutoFillBackground(True)
 
         # ** Center grid: current and alarm time displays **
-        # alarm_grid.setVerticalSpacing(0)
+        self.date_label = QLabel("26.9", self, objectName="date_label")
+        alarm_grid.addWidget(self.date_label, 0, 0, Qt.AlignHCenter)
+
         self.clock_lcd = QLCDNumber(8, self)
         self.clock_lcd.setSegmentStyle(QLCDNumber.Flat)
-        alarm_grid.addWidget(self.clock_lcd, 0, 0, 1, 1)
+        alarm_grid.addWidget(self.clock_lcd, 1, 0)
+        alarm_grid.setRowStretch(1, 2)
 
         self.setup_clock_polling()
 
@@ -64,7 +67,8 @@ class AlarmWindow(QWidget):
         self.alarm_time_lcd.display("")
         self.alarm_time_lcd.setMinimumHeight(30)
         self.alarm_time_lcd.setSegmentStyle(QLCDNumber.Flat)
-        alarm_grid.addWidget(self.alarm_time_lcd, 1, 0, 1, 1, Qt.AlignTop)
+        alarm_grid.addWidget(self.alarm_time_lcd, 2, 0, Qt.AlignTop | Qt.AlignHCenter)
+        alarm_grid.setRowStretch(2, 3)
 
         # ** Bottom grid: main UI control buttons **
         # Note: handlers are defined and set in clock.py
@@ -119,8 +123,8 @@ class AlarmWindow(QWidget):
         with 1 second intervals.
         """
         def tick():
-            s = time.strftime("%H:%M:%S")
-            self.clock_lcd.display(s)
+            self.clock_lcd.display(time.strftime("%H:%M:%S"))
+            self.date_label.setText(time.strftime("%a %d.%m.%Y"))
 
         tick()  # Call tick once to set the initial time
         _timer = QTimer(self)

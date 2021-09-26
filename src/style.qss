@@ -13,6 +13,10 @@ AlarmWindow QLabel {
   font: 18pt;
 }
 
+AlarmWindow QLabel#date_label {
+  font: 12pt;
+}
+
 QSlider {
   padding-right: 100px;
 }
