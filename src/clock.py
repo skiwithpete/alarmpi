@@ -349,7 +349,7 @@ class Clock:
         Called when the alarm thread emits its finished signal.
         """
         self.alarm_play_button.setEnabled(True)
-
+        
         if self.config["radio"]["enabled"]:
             # Toggle the radio button and pass the default stream
             # the radio player.
@@ -362,7 +362,14 @@ class Clock:
         """Button callback - play alarm. Generate and play an alarm.
         Note that this uses the same alarm builder as any scheduled alarm.
         """
-        self.alarm_play_thread.build()
+        # Stop any playing radio stream
+        if self.radio_button.isChecked():
+            self.radio_button.click()
+
+        self.alarm_play_button.setEnabled(False)
+        self.main_window.waiting_spinner.start()
+        self.alarm_play_thread.build() # Runs in the main thread!
+        self.main_window.waiting_spinner.stop()
         self.alarm_play_thread.start()
 
     def toggle_display_mode(self):

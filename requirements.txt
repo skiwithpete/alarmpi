@@ -46,6 +46,7 @@ pyparsing==2.4.7
 PyQt5==5.15.4
 PyQt5-Qt5==5.15.2
 PyQt5-sip==12.9.0
+pyqtspinner==0.1.1
 pyserial==3.5
 pytest==6.2.4
 python-dateutil==2.8.2

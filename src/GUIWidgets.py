@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QLCDNumber,
     QGridLayout,
+    QHBoxLayout,
+    QVBoxLayout,
     QSizePolicy,
     QDesktopWidget,
     QCheckBox,
@@ -23,6 +25,7 @@ from PyQt5.QtWidgets import (
     QSlider
 )
 
+from pyqtspinner.spinner import WaitingSpinner
 from src import utils
 
 
@@ -47,13 +50,31 @@ class AlarmWindow(QWidget):
         # Setup base and subgrids for layouting
         base_layout = QGridLayout(self)
         alarm_grid = QGridLayout()
-        self.left_grid = QGridLayout()
+        self.left_grid = QVBoxLayout()
         self.right_grid = QGridLayout()
         bottom_grid = QGridLayout()
         self.setAutoFillBackground(True)
 
+        # Left hand sidebar: subgrids for plugin (trains) and a small loader icon
+        loader_indicator_grid = QVBoxLayout()
+        loader_indicator = QLabel(self, objectName="loader_indicator")
+        self.waiting_spinner = WaitingSpinner(
+            loader_indicator,
+            roundness=70.0, opacity=15.0,
+            fade=70.0, radius=5.0, lines=12,
+            line_length=10.0, line_width=5.0,
+            speed=1.0, color=(255, 20, 20)
+        )
+
+        loader_indicator_grid.addWidget(loader_indicator)
+        #self.waiting_spinner.start()
+
+        left_grid_container = QVBoxLayout()
+        left_grid_container.addLayout(self.left_grid)
+        left_grid_container.addLayout(loader_indicator_grid)
+
         # ** Center grid: current and alarm time displays **
-        self.date_label = QLabel("26.9", self, objectName="date_label")
+        self.date_label = QLabel(self, objectName="date_label")
         alarm_grid.addWidget(self.date_label, 0, 0, Qt.AlignHCenter)
 
         self.clock_lcd = QLCDNumber(8, self)
@@ -91,19 +112,17 @@ class AlarmWindow(QWidget):
 
             bottom_grid.addWidget(button, *config.position)
 
-        # Right hand sidebat: separate grids for plugin (top) and radio play
-        # indicator (bottom)
+        # Right hand sidebar: subgrids for plugin (weather) and a smaller radio play indicator
         radio_station_grid = QGridLayout()
         self.radio_play_indicator = QLabel(self)
-        self.radio_play_indicator.hide()
         radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
         right_grid_container = QGridLayout()
-        right_grid_container.addLayout(self.right_grid, 0, 2)
-        right_grid_container.addLayout(radio_station_grid, 1, 2)
+        right_grid_container.addLayout(self.right_grid, 0, 0)
+        right_grid_container.addLayout(radio_station_grid, 1, 0)
 
         base_layout.addLayout(alarm_grid, 0, 1)
-        base_layout.addLayout(self.left_grid, 0, 0)
+        base_layout.addLayout(left_grid_container, 0, 0)
         base_layout.addLayout(right_grid_container, 0, 2)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 3)
 
