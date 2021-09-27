@@ -50,8 +50,8 @@ class AlarmWindow(QWidget):
         # Setup base and subgrids for layouting
         base_layout = QGridLayout(self)
         alarm_grid = QGridLayout()
-        self.left_grid = QVBoxLayout()
-        self.right_grid = QGridLayout()
+        left_grid_container = QVBoxLayout()
+        right_grid_container = QVBoxLayout()
         bottom_grid = QGridLayout()
         self.setAutoFillBackground(True)
 
@@ -69,8 +69,8 @@ class AlarmWindow(QWidget):
         loader_indicator_grid.addWidget(loader_indicator)
         #self.waiting_spinner.start()
 
-        left_grid_container = QVBoxLayout()
-        left_grid_container.addLayout(self.left_grid)
+        self.left_plugin_grid = QVBoxLayout()
+        left_grid_container.addLayout(self.left_plugin_grid)
         left_grid_container.addLayout(loader_indicator_grid)
 
         # ** Center grid: current and alarm time displays **
@@ -81,8 +81,6 @@ class AlarmWindow(QWidget):
         self.clock_lcd.setSegmentStyle(QLCDNumber.Flat)
         alarm_grid.addWidget(self.clock_lcd, 1, 0)
         alarm_grid.setRowStretch(1, 2)
-
-        self.setup_clock_polling()
 
         self.alarm_time_lcd = QLCDNumber(8, self)
         self.alarm_time_lcd.display("")
@@ -117,9 +115,9 @@ class AlarmWindow(QWidget):
         self.radio_play_indicator = QLabel(self)
         radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
-        right_grid_container = QGridLayout()
-        right_grid_container.addLayout(self.right_grid, 0, 0)
-        right_grid_container.addLayout(radio_station_grid, 1, 0)
+        self.right_plugin_grid = QGridLayout() # QGridLayout for widget rows depend on enabled config items 
+        right_grid_container.addLayout(self.right_plugin_grid)
+        right_grid_container.addLayout(radio_station_grid)
 
         base_layout.addLayout(alarm_grid, 0, 1)
         base_layout.addLayout(left_grid_container, 0, 0)
@@ -135,6 +133,7 @@ class AlarmWindow(QWidget):
         self.center()
 
         self.setWindowTitle("Alarmpi")
+        self.setup_clock_polling()
         self.show()
 
     def setup_clock_polling(self):
@@ -157,14 +156,11 @@ class AlarmWindow(QWidget):
         self.move(qr.topLeft())
 
     def _show_radio_play_indicator(self, station_name):
-        """Display QLabel for active radio station."""
         html = "<html><img src='resources/icons/radio64x64.png' height='28'><span style='font-size:14px'> {}</span></html>".format(station_name)
         self.radio_play_indicator.setText(html)
-        self.radio_play_indicator.show()
 
     def _hide_radio_play_indicator(self):
-        """Hide QLabel for active radio station."""
-        self.radio_play_indicator.hide()
+        self.radio_play_indicator.setText("")
 
 
 class SettingsWindow(QWidget):

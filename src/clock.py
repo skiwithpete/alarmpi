@@ -106,8 +106,8 @@ class Clock:
 
         # Set a higher row streches to the last used row to push elements
         # closer together
-        nrows = self.main_window.right_grid.rowCount()
-        self.main_window.right_grid.setRowStretch(nrows-1, 1)
+        nrows = self.main_window.right_plugin_grid.rowCount()
+        self.main_window.right_plugin_grid.setRowStretch(nrows-1, 1)
 
         # Setup settings window's checkbox initial values:
         tts_enabled = self.config["main"]["TTS"]
