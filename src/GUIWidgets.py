@@ -49,10 +49,10 @@ class AlarmWindow(QWidget):
     def initUI(self):
         # Setup base and subgrids for layouting
         base_layout = QGridLayout(self)
-        alarm_grid = QGridLayout()
+        alarm_grid = QVBoxLayout()
         left_grid_container = QVBoxLayout()
         right_grid_container = QVBoxLayout()
-        bottom_grid = QGridLayout()
+        bottom_grid = QHBoxLayout()
         self.setAutoFillBackground(True)
 
         # Left hand sidebar: subgrids for plugin (trains) and a small loader icon
@@ -75,27 +75,27 @@ class AlarmWindow(QWidget):
 
         # ** Center grid: current and alarm time displays **
         self.date_label = QLabel(self, objectName="date_label")
-        alarm_grid.addWidget(self.date_label, 0, 0, Qt.AlignHCenter)
+        alarm_grid.addWidget(self.date_label, alignment=Qt.AlignHCenter)
 
         self.clock_lcd = QLCDNumber(8, self)
         self.clock_lcd.setSegmentStyle(QLCDNumber.Flat)
-        alarm_grid.addWidget(self.clock_lcd, 1, 0)
-        alarm_grid.setRowStretch(1, 2)
+        alarm_grid.addWidget(self.clock_lcd)
+        alarm_grid.setStretch(1, 2)
 
         self.alarm_time_lcd = QLCDNumber(8, self)
         self.alarm_time_lcd.display("")
         self.alarm_time_lcd.setMinimumHeight(30)
         self.alarm_time_lcd.setSegmentStyle(QLCDNumber.Flat)
-        alarm_grid.addWidget(self.alarm_time_lcd, 2, 0, Qt.AlignTop)
-        alarm_grid.setRowStretch(2, 3)
+        alarm_grid.addWidget(self.alarm_time_lcd, alignment=Qt.AlignTop)
+        alarm_grid.setStretch(2, 3)
 
         # ** Bottom grid: main UI control buttons **
         # Note: handlers are defined and set in clock.py
         button_configs = [
-            ButtonConfig(text="Settings", position=(0, 0), icon="settings.png"),
-            ButtonConfig(text="Blank", position=(0, 1), icon="moon64x64.png"),
-            ButtonConfig(text="Radio", position=(0, 2), icon="radio_bw64x64.png"),
-            ButtonConfig(text="Close", position=(0, 3))
+            ButtonConfig(text="Settings", icon="settings.png"),
+            ButtonConfig(text="Blank", icon="moon64x64.png"),
+            ButtonConfig(text="Radio", icon="radio_bw64x64.png"),
+            ButtonConfig(text="Close")
         ]
 
         bottom_grid.setSpacing(0)
@@ -108,7 +108,7 @@ class AlarmWindow(QWidget):
                 button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
                 button.setIconSize(QSize(28, 28))
 
-            bottom_grid.addWidget(button, *config.position)
+            bottom_grid.addWidget(button)
 
         # Right hand sidebar: subgrids for plugin (weather) and a smaller radio play indicator
         radio_station_grid = QGridLayout()
@@ -177,7 +177,7 @@ class SettingsWindow(QWidget):
         # subgrids for positioning elements
         left_grid = QGridLayout()
         right_grid = QGridLayout()
-        bottom_grid = QGridLayout()
+        bottom_grid = QHBoxLayout()
 
         # ** Right grid: numpad for settings the alarm **
         numpad_button_config = [
@@ -219,10 +219,10 @@ class SettingsWindow(QWidget):
 
         # ** Bottom level main buttons **
         control_button_config = [
-            ButtonConfig(text="Play Now", position=(0, 0), icon="play64x64.png"),
-            ButtonConfig(text="Toggle\nWindow", position=(0, 1), icon="window64x64.png"),
-            ButtonConfig(text="Toggle\nBrightness", position=(0, 2), icon="brightness64x64.png"),
-            ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
+            ButtonConfig(text="Play Now", icon="play64x64.png"),
+            ButtonConfig(text="Toggle\nWindow", icon="window64x64.png"),
+            ButtonConfig(text="Toggle\nBrightness", icon="brightness64x64.png"),
+            ButtonConfig(text="Close", slot=self.clear_labels_and_close)
         ]
 
         for config in control_button_config:
@@ -237,7 +237,7 @@ class SettingsWindow(QWidget):
                 button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
                 button.setIconSize(QSize(28, 28))
 
-            bottom_grid.addWidget(button, *config.position)
+            bottom_grid.addWidget(button)
 
         # ** Left grid: misc settings **
         self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech alarm", self)
