@@ -56,7 +56,7 @@ class Clock:
         self.alarm_build_timer.setSingleShot(True)
         self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
 
-        signal.signal(signal.SIGUSR1, self._debug_key_signal_handler)
+        signal.signal(signal.SIGUSR1, self._debug_signal_handler)
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
@@ -451,7 +451,7 @@ class Clock:
         )
         return nightmode and is_nighttime
 
-    def _debug_key_signal_handler(self, sig, frame):
+    def _debug_signal_handler(self, sig, frame):
         OUTPUT_FILE = "debug_info.log"
         with open(OUTPUT_FILE, "w") as f:
             f.write("config file: {}\n".format(self.config.path_to_config))
