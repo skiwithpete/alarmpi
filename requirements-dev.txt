@@ -12,3 +12,4 @@ pyyaml
 flake8
 freezegun
 ipython
+pyqtspinner
