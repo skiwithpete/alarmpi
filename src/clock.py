@@ -59,6 +59,12 @@ class Clock:
         self.alarm_build_timer.setSingleShot(True)
         self.alarm_build_timer.timeout.connect(self.build_alarm)
 
+        # ... one more worker thread for building and playing an alarm from end to end
+        self.build_and_play_thread = AlarmWorker(self.alarm_player, task="build_and_play")
+        self.build_and_play_thread.build_finished_signal.connect(self.finish_building_alarm)
+        self.build_and_play_thread.play_finished_signal.connect(self.finish_playing_alarm)
+
+        # Set signal handler for custom debug signal
         signal.signal(signal.SIGUSR1, self._debug_signal_handler)
 
         if kwargs.get("fullscreen"):
@@ -372,21 +378,14 @@ class Clock:
         self.main_window.waiting_spinner.stop()
 
     def build_and_play_alarm(self):
-        """Button callback - play alarm. Generate and play an alarm.
-        Note that this uses the same alarm builder as any scheduled alarm.
-        """
+        """Button callback - play alarm. Generate and play an alarm."""
         # Stop any playing radio stream
         if self.radio_button.isChecked():
             self.radio_button.click()
 
         self.alarm_play_button.setEnabled(False)
-
-        # Start the alarm builder worker and wait for it to finish
-        # (diplaying the loader in the mean time)
-        self.build_alarm()
-        #self.alarm_build_thread.wait()
-
-        self.alarm_play_thread.start()
+        self.main_window.waiting_spinner.start()
+        self.build_and_play_thread.start()
 
     def toggle_display_mode(self):
         """Button callback - toggle window. Change main window display mode between
@@ -488,39 +487,43 @@ class Clock:
 class AlarmWorker(QThread):
     play_finished_signal = pyqtSignal(int)
     build_finished_signal = pyqtSignal(int)
+    content = []
 
     def __init__(self, builder, *args, task):
         super().__init__()
         self.alarm_builder = builder
-        self.content = []
         self.task = task
 
     def _build(self):
         """Build and alarm."""
         event_logger.info("Building alarm")
-        self.content = self.alarm_builder.build()
+        AlarmWorker.content = self.alarm_builder.build()
 
     def _play(self):
         """Play an existing alarm."""
-          # Re-generate greeting to get current time.
+        # Re-generate greeting to get current time.
         greeting = self.alarm_builder.generate_greeting()
         try:
-            self.content[0] = greeting
+            AlarmWorker.content[0] = greeting
         except IndexError:
-            self.content = [greeting]
+            AlarmWorker.content = [greeting]
 
         # Play unless explicitely ignored in config
         if not self.alarm_builder.config._get_debug_option("DO_NOT_PLAY_ALARM"):
-            self.alarm_builder.play(self.content)      
+            self.alarm_builder.play(AlarmWorker.content)      
 
     def run(self):
         if self.task == "build":
             self._build()
             self.build_finished_signal.emit(1)
-        else:
+        elif self.task == "play":
             self._play()
             self.play_finished_signal.emit(1)
-
+        elif self.task == "build_and_play":
+            self._build()
+            self.build_finished_signal.emit(1)
+            self._play()
+            self.play_finished_signal.emit(1)
 
 class RadioStreamer:
     """Helper class for playing a radio stream via cvlc."""
