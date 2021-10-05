@@ -21,7 +21,7 @@ def dummy_alarm(mock_get_config_file_path):
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
 
     config = apconfig.AlarmConfig("")
-    return alarm_builder.Alarm(config)
+    return alarm_builder.AlarmBuilder(config)
 
 def test_enabled_tts_client_chosen(dummy_alarm):
     """Does get_tts_client choose the enabled client?"""
@@ -57,7 +57,7 @@ def test_correct_content_parser_chosen(dummy_alarm):
         assert created_class == class_
 
 @patch("src.apconfig.AlarmConfig._testnet")
-@patch("src.alarm_builder.Alarm.play_beep")
+@patch("src.alarm_builder.AlarmBuilder.play_beep")
 def test_beep_played_when_no_network(mock_play_beep, mock_testnet, dummy_alarm):
     """Is the beep played when no network connection is detected?"""
     mock_testnet.return_value = False
@@ -66,7 +66,7 @@ def test_beep_played_when_no_network(mock_play_beep, mock_testnet, dummy_alarm):
     mock_play_beep.assert_called()
 
 
-@patch("src.alarm_builder.Alarm.play_beep")
+@patch("src.alarm_builder.AlarmBuilder.play_beep")
 def test_beep_played_when_tts_disabled(mock_play_beep, dummy_alarm):
     """Is the beep played when TTS is disabled in the configuration?"""
     dummy_alarm.config["main"]["TTS"] = False

@@ -41,7 +41,7 @@ class Clock:
         # Read the alarm configuration file and initialize and alarmenv object
         self.config = apconfig.AlarmConfig(config_file)
 
-        self.alarm_player = alarm_builder.Alarm(self.config)
+        self.alarm_player = alarm_builder.AlarmBuilder(self.config)
         self.radio = RadioStreamer(self.config["radio"])
 
         # Setup a QThread and QTimers for building and playing the alarm

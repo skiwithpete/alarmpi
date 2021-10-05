@@ -32,7 +32,7 @@ def synthesize_and_store(text):
 if __name__ == "__main__":
     env = alarmenv.AlarmEnv("default.conf")
     env.setup()
-    builder = alarm_builder.Alarm(env)
+    builder = alarm_builder.AlarmBuilder(env)
     content = builder.build()
     text = "\n".join(content)
     synthesize_and_store(text)

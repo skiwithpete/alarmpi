@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-
-# Generates alarm content based on configuration file.
-
-
 import subprocess
 import importlib
 import os
@@ -15,7 +10,7 @@ from src import utils
 from src.handlers import get_festival_tts, get_greeting
 
 
-class Alarm:
+class AlarmBuilder:
 
     def __init__(self, config):
         self.config = config
@@ -66,7 +61,7 @@ class Alarm:
         # If no network connection is detected, or TTS is not enabled play beep
         tts_enabled = self.config["main"]["TTS"]
         if not self.config._testnet() or not tts_enabled:
-            Alarm.play_beep()
+            AlarmBuilder.play_beep()
             return
 
         pydub.playback.play(audio)
