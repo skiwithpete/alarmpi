@@ -26,9 +26,8 @@ class Alarm:
         Return:
             list of generated content
         """
-        contents = []
-
         # Initialize content with greeting
+        contents = []
         contents.append(self.generate_greeting())
 
         # For each content section get the handler module and create the approriate
@@ -51,25 +50,26 @@ class Alarm:
         for section in contents:
             print(section)
 
-        return contents
+        # Initialize TTS client with the generated content
+        content_text = "\n".join(contents)
+        self.tts_client = self.get_tts_client()
+        audio = self.tts_client.setup(content_text)
 
-    def play(self, content):
-        """Play an alarm. Either send alarm content to TTS client or play a beeping
-        sound effect.
+        return audio
+
+    def play(self, audio):
+        """Play an alarm. Either play a pre-built alarm via the configured TTS client
+        or play a beeping sound effect.
         Args:
-            content (list): list of various contents to play via TTS. Each list item
-            item should be the text to
+            audio (pydub.AudioSegment): the alarm audio to play.
         """
-        tts_enabled = self.config["main"]["TTS"]
-
         # If no network connection is detected, or TTS is not enabled play beep
+        tts_enabled = self.config["main"]["TTS"]
         if not self.config._testnet() or not tts_enabled:
             Alarm.play_beep()
             return
 
-        tts_client = self.get_tts_client()  # First enabled client
-        content_text = "\n".join(content)
-        tts_client.play(content_text)
+        pydub.playback.play(audio)
 
     def build_and_play(self):
         """Build and play an alarm.
