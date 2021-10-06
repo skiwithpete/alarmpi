@@ -64,15 +64,20 @@ class AlarmBuilder:
             AlarmBuilder.play_beep()
             return
 
-        pydub.playback.play(audio)
+        # Play the alarm, either use the clients play method if it exists,
+        # or play via pydub.
+        try:
+            self.tts_client.play(audio)
+        except AttributeError:
+            pydub.playback.play(audio)
 
     def build_and_play(self):
         """Build and play an alarm.
         This is provided as a CLI interface for playing the alarm.
         Since the alarm is built on the go, there may be a few seconds delay on play.
         """
-        content = self.build()
-        self.play(content)
+        audio = self.build()
+        self.play(audio)
 
         # Play the radio stream if enabled
         if self.config["radio"]["enabled"]:
@@ -105,7 +110,7 @@ class AlarmBuilder:
             credentials = section.get("credentials")
             client = class_(credentials=credentials)
 
-        # by default, use Festival tts client
+        # Default to Festival TTS
         else:
             client = get_festival_tts.FestivalTTSManager()
 
