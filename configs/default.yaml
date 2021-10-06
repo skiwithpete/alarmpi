@@ -39,11 +39,6 @@ TTS:
     enabled: true
     handler: get_google_translate_tts.py
 
-  festival:
-    enabled: false
-    handler: get_festival_tts.py
-
-
 radio:
   enabled: true
   urls:
