@@ -2,12 +2,16 @@ import subprocess
 import importlib
 import os
 import inspect
+import logging
 
 import pydub
 import pydub.playback
 
 from src import utils
 from src.handlers import get_festival_tts, get_greeting
+
+
+event_logger = logging.getLogger("eventLogger")
 
 
 class AlarmBuilder:
@@ -112,6 +116,7 @@ class AlarmBuilder:
 
         # Default to Festival TTS
         else:
+            event_logger.info("No TTS engine specified in config, using Festival")
             client = get_festival_tts.FestivalTTSManager()
 
         return client

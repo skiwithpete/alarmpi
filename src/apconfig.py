@@ -96,7 +96,7 @@ class AlarmConfig:
             assert "handler" in self["TTS"][item], "Missing handler from TTS" + item
 
         n_tts_enabled = len([self["TTS"][item]["enabled"] for item in self["TTS"] if self["TTS"][item]["enabled"]])
-        assert n_tts_enabled == 1, "Multiple TTS enabled engines not allowed"
+        assert n_tts_enabled <= 1, "Multiple TTS enabled engines not allowed"
 
         brightness = self["main"]["low_brightness"]
         assert 9 <= brightness <= 255, "Invalid configuration: Brightness should be between 9 and 255"
