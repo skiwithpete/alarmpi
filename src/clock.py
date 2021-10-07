@@ -64,8 +64,9 @@ class Clock:
         self.build_and_play_thread.build_finished_signal.connect(self.finish_building_alarm)
         self.build_and_play_thread.play_finished_signal.connect(self.finish_playing_alarm)
 
-        # Set signal handler for custom debug signal
+        # Set debug signal handlers for custom debug signal and keyboard event
         signal.signal(signal.SIGUSR1, self._debug_signal_handler)
+        self.main_window.keyPressEvent = self._debug_key_press_event
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
@@ -266,6 +267,7 @@ class Clock:
             # Update displayed alarm time settings and main window
             self.main_window.alarm_time_lcd.display(time_str)
             self.settings_window.set_alarm_input_success_message_with_time(time_str)
+            self.config["main"]["alarm_time"] = time_str
 
             # Set alarm play timer
             self.alarm_dt = utils.time_str_to_dt(time_str)
@@ -297,6 +299,7 @@ class Clock:
         event_logger.info("Alarm cleared")
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
+        self.config["main"]["alarm_time"] = ""
 
     def get_current_active_alarm(self):
         """Check for existing running alarm timers and return alarm time in HH:MM format."""
@@ -467,6 +470,7 @@ class Clock:
         return nightmode and is_nighttime
 
     def _debug_signal_handler(self, sig, frame):
+        """Dump current state to file."""
         OUTPUT_FILE = "debug_info.log"
         with open(OUTPUT_FILE, "w") as f:
             f.write("config file: {}\n".format(self.config.path_to_config))
@@ -483,6 +487,10 @@ class Clock:
 
         event_logger.info("Debug status written to %s", OUTPUT_FILE)      
 
+    def _debug_key_press_event(self, event):
+        """Keyboard event handler, run the debug signal handler when F2 is pressed."""
+        if event.key() == Qt.Key_F2:
+            self._debug_signal_handler(None, None)
 
 class AlarmWorker(QThread):
     play_finished_signal = pyqtSignal(int)
@@ -501,13 +509,6 @@ class AlarmWorker(QThread):
 
     def _play(self):
         """Play an existing alarm."""
-        # Re-generate greeting to get current time.
-        # greeting = self.alarm_builder.generate_greeting()
-        # try:
-        #     AlarmWorker.content[0] = greeting
-        # except IndexError:
-        #     AlarmWorker.content = [greeting]
-
         # Play unless explicitely ignored in config
         if not self.alarm_builder.config._get_debug_option("DO_NOT_PLAY_ALARM"):
             self.alarm_builder.play(AlarmWorker.audio)      
