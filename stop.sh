@@ -1,4 +1,8 @@
 #!/bin/bash
+# Send a debug signal to the main script
+kill -s USR1 $(pgrep -f "python .*(alarmpi/)?main.py")
+
+
 # kill the alarm (if running). Useful for killing radio stream started by cron
 pkill cvlc
 pkill -f "play_alarm.py"  # only kill the python process running the alarm

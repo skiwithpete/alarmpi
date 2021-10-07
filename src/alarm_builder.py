@@ -1,12 +1,8 @@
-#!/usr/bin/env python
-
-# Generates alarm content based on configuration file.
-
-
 import subprocess
 import importlib
 import os
 import inspect
+import logging
 
 import pydub
 import pydub.playback
@@ -15,7 +11,10 @@ from src import utils
 from src.handlers import get_festival_tts, get_greeting
 
 
-class Alarm:
+event_logger = logging.getLogger("eventLogger")
+
+
+class AlarmBuilder:
 
     def __init__(self, config):
         self.config = config
@@ -26,9 +25,8 @@ class Alarm:
         Return:
             list of generated content
         """
-        contents = []
-
         # Initialize content with greeting
+        contents = []
         contents.append(self.generate_greeting())
 
         # For each content section get the handler module and create the approriate
@@ -51,33 +49,39 @@ class Alarm:
         for section in contents:
             print(section)
 
-        return contents
+        # Initialize TTS client with the generated content
+        content_text = "\n".join(contents)
+        self.tts_client = self.get_tts_client()
+        audio = self.tts_client.setup(content_text)
 
-    def play(self, content):
-        """Play an alarm. Either send alarm content to TTS client or play a beeping
-        sound effect.
+        return audio
+
+    def play(self, audio):
+        """Play an alarm. Either play a pre-built alarm via the configured TTS client
+        or play a beeping sound effect.
         Args:
-            content (list): list of various contents to play via TTS. Each list item
-            item should be the text to
+            audio (pydub.AudioSegment): the alarm audio to play.
         """
-        tts_enabled = self.config["main"]["TTS"]
-
         # If no network connection is detected, or TTS is not enabled play beep
+        tts_enabled = self.config["main"]["TTS"]
         if not self.config._testnet() or not tts_enabled:
-            Alarm.play_beep()
+            AlarmBuilder.play_beep()
             return
 
-        tts_client = self.get_tts_client()  # First enabled client
-        content_text = "\n".join(content)
-        tts_client.play(content_text)
+        # Play the alarm, either use the clients play method if it exists,
+        # or play via pydub.
+        try:
+            self.tts_client.play(audio)
+        except AttributeError:
+            pydub.playback.play(audio)
 
     def build_and_play(self):
         """Build and play an alarm.
         This is provided as a CLI interface for playing the alarm.
         Since the alarm is built on the go, there may be a few seconds delay on play.
         """
-        content = self.build()
-        self.play(content)
+        audio = self.build()
+        self.play(audio)
 
         # Play the radio stream if enabled
         if self.config["radio"]["enabled"]:
@@ -89,7 +93,8 @@ class Alarm:
             the greeting as string.
         """
         section = self.config["content"]["greeting"]
-        greeter = get_greeting.Greeting(section)
+        alarm_time_override = self.config["main"].get("alarm_time")
+        greeter = get_greeting.Greeting(section, alarm_time_override)
         greeter.build()
         return greeter.get()
 
@@ -110,8 +115,9 @@ class Alarm:
             credentials = section.get("credentials")
             client = class_(credentials=credentials)
 
-        # by default, use Festival tts client
+        # Default to Festival TTS
         else:
+            event_logger.info("No TTS engine specified in config, using Festival")
             client = get_festival_tts.FestivalTTSManager()
 
         return client

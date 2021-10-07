@@ -2,6 +2,8 @@ import pytest
 import os.path
 from unittest.mock import patch
 
+from freezegun import freeze_time
+
 from src import apconfig
 from src import alarm_builder
 from src.handlers import (
@@ -16,32 +18,33 @@ from src.handlers import (
 
 @pytest.fixture
 @patch("src.apconfig.AlarmConfig.get_config_file_path")
-def dummy_alarm(mock_get_config_file_path):
+def dummy_alarm_builder(mock_get_config_file_path):
     """Create a dummy alarm from test_alarm.conf"""
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
 
     config = apconfig.AlarmConfig("")
-    return alarm_builder.Alarm(config)
+    config["main"]["alarm_time"] = None
+    return alarm_builder.AlarmBuilder(config)
 
-def test_enabled_tts_client_chosen(dummy_alarm):
+def test_enabled_tts_client_chosen(dummy_alarm_builder):
     """Does get_tts_client choose the enabled client?"""
-    dummy_alarm.config["TTS"]["GCP"]["enabled"] = False
-    dummy_alarm.config["TTS"]["google_translate"]["enabled"] = True
-    dummy_alarm.config["TTS"]["festival"]["enabled"] = False
+    dummy_alarm_builder.config["TTS"]["GCP"]["enabled"] = False
+    dummy_alarm_builder.config["TTS"]["google_translate"]["enabled"] = True
+    dummy_alarm_builder.config["TTS"]["festival"]["enabled"] = False
 
-    client = dummy_alarm.get_tts_client()
+    client = dummy_alarm_builder.get_tts_client()
     assert isinstance(client, get_google_translate_tts.GoogleTranslateTTSManager)
 
-def test_default_TTS_client_chosen_when_none_set(dummy_alarm):
+def test_default_TTS_client_chosen_when_none_set(dummy_alarm_builder):
     """Is the Festival client chosen in get_tts_client when none is explicitly enaled?"""
-    dummy_alarm.config["TTS"]["GCP"]["enabled"] = False
-    dummy_alarm.config["TTS"]["google_translate"]["enabled"] = False
-    dummy_alarm.config["TTS"]["festival"]["enabled"] = False
+    dummy_alarm_builder.config["TTS"]["GCP"]["enabled"] = False
+    dummy_alarm_builder.config["TTS"]["google_translate"]["enabled"] = False
+    dummy_alarm_builder.config["TTS"]["festival"]["enabled"] = False
 
-    client = dummy_alarm.get_tts_client()
+    client = dummy_alarm_builder.get_tts_client()
     assert isinstance(client, get_festival_tts.FestivalTTSManager)
 
-def test_correct_content_parser_chosen(dummy_alarm):
+def test_correct_content_parser_chosen(dummy_alarm_builder):
     """Given a content section, is the correct class chosen in get_content_parser_class?"""
     handler_map = {
         "get_bbc_news.py": get_bbc_news.NewsParser,
@@ -53,23 +56,34 @@ def test_correct_content_parser_chosen(dummy_alarm):
     }
 
     for module, class_ in handler_map.items():
-        created_class = dummy_alarm.get_content_parser_class({"handler": module})
+        created_class = dummy_alarm_builder.get_content_parser_class({"handler": module})
         assert created_class == class_
 
 @patch("src.apconfig.AlarmConfig._testnet")
-@patch("src.alarm_builder.Alarm.play_beep")
-def test_beep_played_when_no_network(mock_play_beep, mock_testnet, dummy_alarm):
+@patch("src.alarm_builder.AlarmBuilder.play_beep")
+def test_beep_played_when_no_network(mock_play_beep, mock_testnet, dummy_alarm_builder):
     """Is the beep played when no network connection is detected?"""
     mock_testnet.return_value = False
 
-    dummy_alarm.play("dummy_content")
+    dummy_alarm_builder.play("dummy content")
     mock_play_beep.assert_called()
 
-
-@patch("src.alarm_builder.Alarm.play_beep")
-def test_beep_played_when_tts_disabled(mock_play_beep, dummy_alarm):
+@patch("src.alarm_builder.AlarmBuilder.play_beep")
+def test_beep_played_when_tts_disabled(mock_play_beep, dummy_alarm_builder):
     """Is the beep played when TTS is disabled in the configuration?"""
-    dummy_alarm.config["main"]["TTS"] = False
+    dummy_alarm_builder.config["main"]["TTS"] = False
 
-    dummy_alarm.play("dummy_content")
+    dummy_alarm_builder.play("dummy content")
     mock_play_beep.assert_called()
+
+def test_alarm_time_override(dummy_alarm_builder):
+    """Is alarm time overridden when value specified in config?"""
+    dummy_alarm_builder.config["main"]["alarm_time"] = "20:21"
+    greeting = dummy_alarm_builder.generate_greeting()
+    assert "The time is 08:21 PM" in greeting
+
+@freeze_time("2021-07-30 11:10")
+def test_alarm_time_without_override(dummy_alarm_builder):
+    """Is alarm time current time?"""
+    greeting = dummy_alarm_builder.generate_greeting()
+    assert "The time is 11:10 AM" in greeting
