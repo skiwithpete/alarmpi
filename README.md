@@ -104,6 +104,12 @@ When used from the GUI, the alarm works as a toggle. Once the alarm triggers, it
 The optional argument in both forms is a path to a configuration file for customizing the alarm, see [configs/README.md](./configs/README.md) for instructions. By default `configs/default.yaml` will be used.
 
 
+### Note about locales
+While the TTS alarm is played in English, weekday and month names will be generated according to the runtime environment's current locale. If necessary, the relevant locale setting can be set to English with something like:
+```
+LC_TIME=en_GB.utf8 python main.py wakeup.yaml
+```
+
 
 The full interface to `main.py` is:
 ```
