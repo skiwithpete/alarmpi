@@ -86,7 +86,7 @@ class TrainParser(apcontent.AlarmpiContent):
         except RequestException as e:
             event_logger.error(str(e))
             return []
-        if r.response_code != 200:
+        if r.status_code != 200:
             event_logger.warning("Invalid API response: %s", r.text)
             return []
         else:
