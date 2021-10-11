@@ -471,7 +471,7 @@ class Clock:
 
     def _debug_signal_handler(self, sig, frame):
         """Dump current state to file."""
-        OUTPUT_FILE = "debug_info.log"
+        OUTPUT_FILE = "debug_info.txt"
         with open(OUTPUT_FILE, "w") as f:
             f.write("config file: {}\n".format(self.config.path_to_config))
             json.dump(self.config.config, f, indent=4)
