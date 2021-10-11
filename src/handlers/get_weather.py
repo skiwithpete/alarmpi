@@ -4,7 +4,9 @@
 
 import datetime
 import logging
+
 import requests
+from requests.exceptions import RequestException
 
 from src import apcontent
 
@@ -98,18 +100,24 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             "units": "metric"
         }
 
-        r = requests.get(URL, params=params)
-        return r.json()
+        try:
+            r = requests.get(URL, params=params)
+        except RequestException as e:
+            event_logger.error(str(e))
+            return []
+        if r.response_code != 200:
+            event_logger.warning("Invalid API response: %s", r.text)
+            return []
+        else:
+            return r.json()
 
     def fetch_and_format_weather(self):
         """Helper function for generating a formatted API response dict for clock.py
         with error handling if API request failed.
         """
-        try:
-            api_response = self.get_weather()
+        api_response = self.get_weather()
+        if api_response:
             return OpenWeatherMapClient.format_response(api_response)
-        except requests.exceptions.RequestException as e:
-            event_logger.error(str(e))
 
 
     @staticmethod

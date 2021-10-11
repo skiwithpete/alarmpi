@@ -5,25 +5,37 @@ from src.handlers import get_weather, get_next_trains
 
 
 
-@patch("src.handlers.get_next_trains.TrainParser.fetch_daily_train_data")
-def test_failed_train_api_request_returns_error_template(mock_fetch_daily_train_data):
+def test_failed_train_api_request():
     """Does get_next_trains.run return None if API call fails"""
-    mock_fetch_daily_train_data.side_effect = requests.exceptions.RequestException()
-    parser = get_next_trains.TrainParser(None)
-    res = parser.run()
+    parser = get_next_trains.TrainParser({"station_code": "XYZ"})
 
-    assert res is None
+    # Error raised during request
+    with patch("requests.get") as mock_get:
+        mock_get.side_effect = requests.exceptions.RequestException()
+        res = parser.run()
+        assert res is None
 
-@patch("src.handlers.get_weather.OpenWeatherMapClient.get_weather")
-def test_failed_weather_api_request_returns_error_template(mock_get_weather):
+    # Invalid response
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 500
+        res = parser.run()
+        assert res is None
+    
+def test_failed_weather_api_request():
     """Does fetch_and_format_weather return None if API call fails"""
-    mock_get_weather.side_effect = requests.exceptions.RequestException()
-
-    section_data = {"credentials": None, "city_id": None, "units": None}
-
     # Mock opening non existing credentials file
+    section_data = {"credentials": None, "city_id": None, "units": None}
     with patch("builtins.open", mock_open(read_data="data")) as mock_file:
         parser = get_weather.OpenWeatherMapClient(section_data)
-        res = parser.fetch_and_format_weather()
 
+    # Error raised during request
+    with patch("requests.get") as mock_get:
+        mock_get.side_effect = requests.exceptions.RequestException()
+        res = parser.fetch_and_format_weather()
+        assert res is None
+
+    # Invalid response
+    with patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 500
+        res = parser.fetch_and_format_weather()
         assert res is None
