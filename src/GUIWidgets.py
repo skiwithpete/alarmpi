@@ -16,6 +16,8 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QLCDNumber,
     QGridLayout,
+    QHBoxLayout,
+    QVBoxLayout,
     QSizePolicy,
     QDesktopWidget,
     QCheckBox,
@@ -23,6 +25,7 @@ from PyQt5.QtWidgets import (
     QSlider
 )
 
+from pyqtspinner.spinner import WaitingSpinner
 from src import utils
 
 
@@ -46,33 +49,51 @@ class AlarmWindow(QWidget):
     def initUI(self):
         # Setup base and subgrids for layouting
         base_layout = QGridLayout(self)
-        alarm_grid = QGridLayout()
-        self.left_grid = QGridLayout()
-        self.right_grid = QGridLayout()
-        bottom_grid = QGridLayout()
+        alarm_grid = QVBoxLayout()
+        left_grid_container = QVBoxLayout()
+        right_grid_container = QVBoxLayout()
+        bottom_grid = QHBoxLayout()
         self.setAutoFillBackground(True)
 
+        # Left hand sidebar: subgrids for plugin (trains) and a small loader icon
+        loader_indicator_grid = QVBoxLayout()
+        loader_indicator = QLabel(self, objectName="loader_indicator")
+        self.waiting_spinner = WaitingSpinner(
+            loader_indicator,
+            roundness=70.0, opacity=15.0,
+            fade=70.0, radius=5.0, lines=12,
+            line_length=10.0, line_width=5.0,
+            speed=1.0, color=(255, 20, 20)
+        )
+        loader_indicator_grid.addWidget(loader_indicator, alignment=Qt.AlignBottom)
+
+        self.left_plugin_grid = QVBoxLayout()
+        left_grid_container.addLayout(self.left_plugin_grid)
+        left_grid_container.addLayout(loader_indicator_grid)
+
         # ** Center grid: current and alarm time displays **
-        # alarm_grid.setVerticalSpacing(0)
+        self.date_label = QLabel(self, objectName="date_label")
+        alarm_grid.addWidget(self.date_label, alignment=Qt.AlignHCenter)
+
         self.clock_lcd = QLCDNumber(8, self)
         self.clock_lcd.setSegmentStyle(QLCDNumber.Flat)
-        alarm_grid.addWidget(self.clock_lcd, 0, 0, 1, 1)
-
-        self.setup_clock_polling()
+        alarm_grid.addWidget(self.clock_lcd)
+        alarm_grid.setStretch(1, 2)
 
         self.alarm_time_lcd = QLCDNumber(8, self)
         self.alarm_time_lcd.display("")
         self.alarm_time_lcd.setMinimumHeight(30)
         self.alarm_time_lcd.setSegmentStyle(QLCDNumber.Flat)
-        alarm_grid.addWidget(self.alarm_time_lcd, 1, 0, 1, 1, Qt.AlignTop)
+        alarm_grid.addWidget(self.alarm_time_lcd, alignment=Qt.AlignTop)
+        alarm_grid.setStretch(2, 3)
 
         # ** Bottom grid: main UI control buttons **
         # Note: handlers are defined and set in clock.py
         button_configs = [
-            ButtonConfig(text="Settings", position=(0, 0), icon="settings.png"),
-            ButtonConfig(text="Blank", position=(0, 1), icon="moon64x64.png"),
-            ButtonConfig(text="Radio", position=(0, 2), icon="radio_bw64x64.png"),
-            ButtonConfig(text="Close", position=(0, 3))
+            ButtonConfig(text="Settings", icon="settings.png"),
+            ButtonConfig(text="Blank", icon="moon64x64.png"),
+            ButtonConfig(text="Radio", icon="radio_bw64x64.png"),
+            ButtonConfig(text="Close")
         ]
 
         bottom_grid.setSpacing(0)
@@ -85,21 +106,19 @@ class AlarmWindow(QWidget):
                 button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
                 button.setIconSize(QSize(28, 28))
 
-            bottom_grid.addWidget(button, *config.position)
+            bottom_grid.addWidget(button)
 
-        # Right hand sidebat: separate grids for plugin (top) and radio play
-        # indicator (bottom)
+        # Right hand sidebar: subgrids for plugin (weather) and a smaller radio play indicator
         radio_station_grid = QGridLayout()
         self.radio_play_indicator = QLabel(self)
-        self.radio_play_indicator.hide()
         radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
-        right_grid_container = QGridLayout()
-        right_grid_container.addLayout(self.right_grid, 0, 2)
-        right_grid_container.addLayout(radio_station_grid, 1, 2)
+        self.right_plugin_grid = QGridLayout() # QGridLayout for widget rows depend on enabled config items 
+        right_grid_container.addLayout(self.right_plugin_grid)
+        right_grid_container.addLayout(radio_station_grid)
 
         base_layout.addLayout(alarm_grid, 0, 1)
-        base_layout.addLayout(self.left_grid, 0, 0)
+        base_layout.addLayout(left_grid_container, 0, 0)
         base_layout.addLayout(right_grid_container, 0, 2)
         base_layout.addLayout(bottom_grid, 1, 0, 1, 3)
 
@@ -112,6 +131,7 @@ class AlarmWindow(QWidget):
         self.center()
 
         self.setWindowTitle("Alarmpi")
+        self.setup_clock_polling()
         self.show()
 
     def setup_clock_polling(self):
@@ -119,8 +139,8 @@ class AlarmWindow(QWidget):
         with 1 second intervals.
         """
         def tick():
-            s = time.strftime("%H:%M:%S")
-            self.clock_lcd.display(s)
+            self.clock_lcd.display(time.strftime("%H:%M:%S"))
+            self.date_label.setText(time.strftime("%a %d.%m.%Y"))
 
         tick()  # Call tick once to set the initial time
         _timer = QTimer(self)
@@ -134,21 +154,18 @@ class AlarmWindow(QWidget):
         self.move(qr.topLeft())
 
     def _show_radio_play_indicator(self, station_name):
-        """Display QLabel for active radio station."""
         html = "<html><img src='resources/icons/radio64x64.png' height='28'><span style='font-size:14px'> {}</span></html>".format(station_name)
         self.radio_play_indicator.setText(html)
-        self.radio_play_indicator.show()
 
     def _hide_radio_play_indicator(self):
-        """Hide QLabel for active radio station."""
-        self.radio_play_indicator.hide()
+        self.radio_play_indicator.setText("")
 
 
 class SettingsWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.control_buttons = []
+        self.control_buttons = {}
         self.numpad_buttons = {}
         self.initUI()
 
@@ -158,7 +175,7 @@ class SettingsWindow(QWidget):
         # subgrids for positioning elements
         left_grid = QGridLayout()
         right_grid = QGridLayout()
-        bottom_grid = QGridLayout()
+        bottom_grid = QHBoxLayout()
 
         # ** Right grid: numpad for settings the alarm **
         numpad_button_config = [
@@ -200,16 +217,16 @@ class SettingsWindow(QWidget):
 
         # ** Bottom level main buttons **
         control_button_config = [
-            ButtonConfig(text="Play Now", position=(0, 0), icon="play64x64.png"),
-            ButtonConfig(text="Toggle\nWindow", position=(0, 1), icon="window64x64.png"),
-            ButtonConfig(text="Toggle\nBrightness", position=(0, 2), icon="brightness64x64.png"),
-            ButtonConfig(text="Close", position=(0, 3), slot=self.clear_labels_and_close)
+            ButtonConfig(text="Play Now", icon="play64x64.png"),
+            ButtonConfig(text="Toggle\nWindow", icon="window64x64.png"),
+            ButtonConfig(text="Toggle\nBrightness", icon="brightness64x64.png"),
+            ButtonConfig(text="Close", slot=self.clear_labels_and_close)
         ]
 
         for config in control_button_config:
             button = QPushButton(config.text, self)
             button.setSizePolicy(*config.size_policy)
-            self.control_buttons.append(button)
+            self.control_buttons[config.text] = button
 
             if config.slot:
                 button.clicked.connect(config.slot)
@@ -218,7 +235,7 @@ class SettingsWindow(QWidget):
                 button.setIcon(QIcon(os.path.join(utils.BASE, "resources", "icons", config.icon)))
                 button.setIconSize(QSize(28, 28))
 
-            bottom_grid.addWidget(button, *config.position)
+            bottom_grid.addWidget(button)
 
         # ** Left grid: misc settings **
         self.readaloud_checkbox = QCheckBox("Enable Text-to-Speech alarm", self)

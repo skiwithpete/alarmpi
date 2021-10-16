@@ -39,11 +39,6 @@ TTS:
     enabled: true
     handler: get_google_translate_tts.py
 
-  festival:
-    enabled: false
-    handler: get_festival_tts.py
-
-
 radio:
   enabled: true
   urls:
@@ -64,4 +59,7 @@ plugins:
   DHT22:
     enabled: false
     GPIO: 4               # GPIO pin the sensor is connected to
-    refresh_interval: 30  # seconds
+    refresh_interval: 30  # seconds 
+
+  openweathermap.org:
+    enabled: false

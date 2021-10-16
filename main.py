@@ -52,19 +52,23 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true",
                         help="debug mode")
     args = parser.parse_args()
-    kwargs = {"fullscreen": args.fullscreen, "debug": args.debug}
-
-    if args.debug:
-        event_logger.info("Setting event_logger level to DEBUG")
-        event_logger.setLevel(logging.DEBUG)
-        for handler in event_logger.handlers:
-            handler.setLevel(logging.DEBUG)
+    kwargs = vars(args)
+    config = kwargs.pop("config")
 
     app = QApplication(sys.argv)
     with open("src/style.qss") as f:
         app.setStyleSheet(f.read())
 
-    ex = clock.Clock(args.config, **kwargs)
+    if args.debug:
+        # Add visible border around elements
+        app.setStyleSheet( app.styleSheet() + "AlarmWindow QLabel, QLCDNumber {border: 1px solid red;}")
+
+        event_logger.info("Setting event_logger level to DEBUG")
+        event_logger.setLevel(logging.DEBUG)
+        for handler in event_logger.handlers:
+            handler.setLevel(logging.DEBUG)
+
+    ex = clock.Clock(config, **kwargs)
     ex.setup()
     res = app.exec_()
 

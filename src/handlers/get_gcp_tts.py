@@ -32,7 +32,7 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
                 "Error using Google Speech: couldn't read keyfile {}".format(self.credentials))
         return client
 
-    def play(self, text):
+    def setup(self, text):
         """Create a TTS client and speak input text using pydub."""
         # Set the text input to be synthesized
         synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -52,7 +52,6 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
         # voice parameters and audio file type
         response = self.client.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
 
-        # create a BytesIO buffer and play via pydub
         f = io.BytesIO(response.audio_content)
-        audio = pydub.AudioSegment.from_file(f, format="mp3")
-        pydub.playback.play(audio)
+        return pydub.AudioSegment.from_file(f, format="mp3")
+

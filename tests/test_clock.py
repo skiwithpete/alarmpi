@@ -117,13 +117,13 @@ class TestClockCase():
         mock_get_brightness.return_value = 12
 
         # Ensure the button is enabled before clicking it
-        dummy_clock.settings_window.control_buttons[2].setEnabled(True)
-        dummy_clock.settings_window.control_buttons[2].click()
+        dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].setEnabled(True)
+        dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].click()
         mock_set_brightness.assert_called_with(255)
 
         # Click again and check value is set back to low
         mock_get_brightness.return_value = 255
-        dummy_clock.settings_window.control_buttons[2].click()
+        dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].click()
         mock_set_brightness.assert_called_with(12)  # Default low brightness value is 12
 
     @patch("src.apconfig.AlarmConfig.get_config_file_path")
@@ -139,7 +139,7 @@ class TestClockCase():
         dummy_clock.config.rpi_brightness_write_access = False
         dummy_clock.setup()
         
-        assert not dummy_clock.settings_window.control_buttons[2].isEnabled()
+        assert not dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].isEnabled()
         assert not dummy_clock.main_window.control_buttons["Blank"].isEnabled()
 
 
