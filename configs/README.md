@@ -49,7 +49,7 @@ Three TTS engines are supported:
   * This is the default enabled choice
 
 **festival**  
-  * Festival is a general purpose TTS system. Does not require an internet access and provides by far the most robotic voice.
+  * Festival is a general purpose TTS system. Does not require an internet access and provides by far the most robotic voice. Used as a fallback when TTS is enabled but no engine is explicitly specified.
 
 **Notes:**
  * Only one TTS engine can be enabled

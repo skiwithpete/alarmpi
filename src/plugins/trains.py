@@ -18,10 +18,8 @@ class TrainPlugin:
 
         for i in range(MAX_NUMBER_OF_TRAINS):
             label = QLabel(self.parent.main_window)
-            self.parent.main_window.left_grid.addWidget(label, i, 0)
+            self.parent.main_window.left_plugin_grid.addWidget(label)
             self.train_labels.append(label)
-
-        self.parent.main_window.left_grid.setRowStretch(MAX_NUMBER_OF_TRAINS, 1)
 
     def setup_polling(self):
         """Setup polling for next train departure."""

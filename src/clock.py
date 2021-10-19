@@ -6,6 +6,7 @@ import datetime
 import subprocess
 import logging
 import json
+import signal
 from functools import partial
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
@@ -32,7 +33,7 @@ class Clock:
         """Setup GUI windows and various configuration objects.
         params
             config_file (str): name (not path!) of the configuration file in /configs to use.
-            kwargs (dict): additional command line paramters passed from main.py
+            kwargs: additional command line parameters passed via main.py
         """
         self.main_window = GUIWidgets.AlarmWindow()
         self.settings_window = GUIWidgets.SettingsWindow()
@@ -40,42 +41,51 @@ class Clock:
         # Read the alarm configuration file and initialize and alarmenv object
         self.config = apconfig.AlarmConfig(config_file)
 
-        self.alarm_player = alarm_builder.Alarm(self.config)
+        self.alarm_player = alarm_builder.AlarmBuilder(self.config)
         self.radio = RadioStreamer(self.config["radio"])
 
         # Setup a QThread and QTimers for building and playing the alarm
-        self.alarm_play_thread = AlarmPlayThread(self.alarm_player)
-        self.alarm_play_thread.signal.connect(self.finish_playing_alarm)
+        self.alarm_play_thread = AlarmWorker(self.alarm_player, task="play")
+        self.alarm_play_thread.play_finished_signal.connect(self.finish_playing_alarm)
 
         self.alarm_timer = QTimer(self.main_window)
         self.alarm_timer.setSingleShot(True)
         self.alarm_timer.timeout.connect(self.play_alarm)
 
+        self.alarm_build_thread = AlarmWorker(self.alarm_player, task="build")
+        self.alarm_build_thread.build_finished_signal.connect(self.finish_building_alarm)
+
         self.alarm_build_timer = QTimer(self.main_window)
         self.alarm_build_timer.setSingleShot(True)
-        self.alarm_build_timer.timeout.connect(self.alarm_play_thread.build)
+        self.alarm_build_timer.timeout.connect(self.build_alarm)
 
+        # ... one more worker thread for building and playing an alarm from end to end
+        self.build_and_play_thread = AlarmWorker(self.alarm_player, task="build_and_play")
+        self.build_and_play_thread.build_finished_signal.connect(self.finish_building_alarm)
+        self.build_and_play_thread.play_finished_signal.connect(self.finish_playing_alarm)
+
+        # Set debug signal handlers for custom debug signal and keyboard event
+        signal.signal(signal.SIGUSR1, self._debug_signal_handler)
         self.main_window.keyPressEvent = self._debug_key_press_event
-        self.settings_window.keyPressEvent = self._debug_key_press_event
 
         if kwargs.get("fullscreen"):
             self.main_window.showFullScreen()
-            self.main_window.setCursor(Qt.BlankCursor)
-            self.settings_window.setCursor(Qt.BlankCursor)
+
+            # Hide mouse cursor unless in debug mode
+            if not kwargs.get("debug"):
+                self.main_window.setCursor(Qt.BlankCursor)
+                self.settings_window.setCursor(Qt.BlankCursor)
 
         if kwargs.get("debug"):
-            event_logger.debug("Disabling weather plugin")
-            self.config["content"]["openweathermap.org"]["enabled"] = False
+            self.config["radio"]["enabled"] = False
 
-            # Disable plugins if any listed in the configuration
-            try:
-                for key in self.config["plugins"]:
-                    event_logger.debug("Disabling %s", key)
-                    self.config["plugins"][key]["enabled"] = False
-            except KeyError:
-                pass
+            # Set special debug flags
+            self.config["debug"] = {
+                "DO_NOT_PLAY_ALARM": True
+            }
 
-            self.config.rpi_brightness_write_access = True  # Force enable brightness buttons
+            # Force enable brightness buttons
+            self.config.rpi_brightness_write_access = True
 
     def setup(self):
         """Setup various button handlers as well as weather and train data polling
@@ -86,7 +96,7 @@ class Clock:
         # Enable various plugin pollers if enabled in the config.
         # Note: plugins defined as instance variables to prevent
         # their pollers from being garbage collected.
-        if self.config["content"]["openweathermap.org"]["enabled"]:
+        if self.config["plugins"]["openweathermap.org"]["enabled"]:
             from src.plugins import weather
             self.weather_plugin = weather.WeatherPlugin(self)
             self.weather_plugin.create_widgets()
@@ -106,8 +116,8 @@ class Clock:
 
         # Set a higher row streches to the last used row to push elements
         # closer together
-        nrows = self.main_window.right_grid.rowCount()
-        self.main_window.right_grid.setRowStretch(nrows-1, 1)
+        nrows = self.main_window.right_plugin_grid.rowCount()
+        self.main_window.right_plugin_grid.setRowStretch(nrows-1, 1)
 
         # Setup settings window's checkbox initial values:
         tts_enabled = self.config["main"]["TTS"]
@@ -146,9 +156,9 @@ class Clock:
         self.blank_button = self.main_window.control_buttons["Blank"]
         self.close_button = self.main_window.control_buttons["Close"]
 
-        self.alarm_play_button = self.settings_window.control_buttons[0]
-        window_button = self.settings_window.control_buttons[1]
-        brightness_button = self.settings_window.control_buttons[2]
+        self.alarm_play_button = self.settings_window.control_buttons["Play Now"]
+        window_button = self.settings_window.control_buttons["Toggle\nWindow"]
+        brightness_button = self.settings_window.control_buttons["Toggle\nBrightness"]
 
         alarm_set_button = self.settings_window.numpad_buttons["set"]
         alarm_clear_button = self.settings_window.numpad_buttons["clear"]
@@ -220,6 +230,10 @@ class Clock:
         """
         self.screen_blank_timer.stop()
         self.settings_window.show()
+        # Ensure the window is raised in top, useful when main window is fullscreened
+        # and settings window is accidentally sent to the background
+        getattr(self.settings_window, "raise")()
+        self.settings_window.activateWindow()
         event_logger.debug("Settings window opened")
 
     def on_release_event_handler(self, event):
@@ -253,6 +267,7 @@ class Clock:
             # Update displayed alarm time settings and main window
             self.main_window.alarm_time_lcd.display(time_str)
             self.settings_window.set_alarm_input_success_message_with_time(time_str)
+            self.config["main"]["alarm_time"] = time_str
 
             # Set alarm play timer
             self.alarm_dt = utils.time_str_to_dt(time_str)
@@ -284,6 +299,7 @@ class Clock:
         event_logger.info("Alarm cleared")
         self.settings_window.clear_alarm()
         self.main_window.alarm_time_lcd.display("")
+        self.config["main"]["alarm_time"] = ""
 
     def get_current_active_alarm(self):
         """Check for existing running alarm timers and return alarm time in HH:MM format."""
@@ -326,7 +342,7 @@ class Clock:
             self.radio.stop()
 
     def play_alarm(self):
-        """Alarm timer callback - play alarm. Play a previously built alarm.
+        """Alarm timer callback: Play a previously built alarm.
         Clears alarm related labels from both windows.
         """
         # Update main display
@@ -340,12 +356,11 @@ class Clock:
         self.alarm_play_thread.start()
 
     def finish_playing_alarm(self):
-        """Slot function for finishing alarm play: re-enables the play button
+        """Slot for finishing alarm play: re-enable the play button
         and, if enabled, starts a separated cvlc process for the radio stream.
-        Called when the alarm thread emits its finished signal.
         """
         self.alarm_play_button.setEnabled(True)
-
+        
         if self.config["radio"]["enabled"]:
             # Toggle the radio button and pass the default stream
             # the radio player.
@@ -354,12 +369,26 @@ class Clock:
             url = self.radio_streams[default_station]
             self.play_radio(url=url)
 
-    def build_and_play_alarm(self):
-        """Button callback - play alarm. Generate and play an alarm.
-        Note that this uses the same alarm builder as any scheduled alarm.
+    def build_alarm(self):
+        """Alarm build timer callback: start building an alarm and display
+        loader icon.
         """
-        self.alarm_play_thread.build()
-        self.alarm_play_thread.start()
+        self.main_window.waiting_spinner.start()
+        self.alarm_build_thread.start()
+
+    def finish_building_alarm(self):
+        """Slot for finishing alarm build: stop the loading icon."""
+        self.main_window.waiting_spinner.stop()
+
+    def build_and_play_alarm(self):
+        """Button callback - play alarm. Generate and play an alarm."""
+        # Stop any playing radio stream
+        if self.radio_button.isChecked():
+            self.radio_button.click()
+
+        self.alarm_play_button.setEnabled(False)
+        self.main_window.waiting_spinner.start()
+        self.build_and_play_thread.start()
 
     def toggle_display_mode(self):
         """Button callback - toggle window. Change main window display mode between
@@ -440,55 +469,66 @@ class Clock:
         )
         return nightmode and is_nighttime
 
+    def _debug_signal_handler(self, sig, frame):
+        """Dump current state to file."""
+        OUTPUT_FILE = "debug_info.log"
+        app = QApplication.instance()
+
+        with open(OUTPUT_FILE, "w") as f:
+            f.write("config file: {}\n".format(self.config.path_to_config))
+            json.dump(self.config.config, f, indent=4)
+
+            f.write("\n{:15} {:9} {:12} {:14} {:11}".format("window", "isVisible", "isFullScreen", "isActiveWindow", "isEnabled"))
+            #for window in (self.main_window, self.settings_window):
+            for window in app.topLevelWidgets():
+                f.write("\n{:15} {:9} {:12} {:14} {:11}".format(
+                    window.__class__.__name__,
+                    window.isVisible(),
+                    window.isFullScreen(),
+                    window.isActiveWindow(),
+                    window.isEnabled()
+                ))
+
+        event_logger.info("Debug status written to %s", OUTPUT_FILE)      
+
     def _debug_key_press_event(self, event):
-        """Custom keyPressEvent handler for debuggin purposes: writes the current
-        alarm and window configuration to file.
-        """
+        """Keyboard event handler, run the debug signal handler when F2 is pressed."""
         if event.key() == Qt.Key_F2:
-            OUTPUT_FILE = "debug_info.log"
-            with open(OUTPUT_FILE, "w") as f:
-                f.write("config file: {}\n".format(self.config.path_to_config))
-                json.dump(self.config.config, f, indent=4)
+            self._debug_signal_handler(None, None)
 
-                f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
-                for window in (self.main_window, self.settings_window):
-                    f.write("\n{:60} {:9} {:12} {:14}".format(
-                        str(window),
-                        window.isVisible(),
-                        window.isFullScreen(),
-                        window.isActiveWindow()
-                    ))
+class AlarmWorker(QThread):
+    play_finished_signal = pyqtSignal(int)
+    build_finished_signal = pyqtSignal(int)
+    audio = None
 
-            event_logger.info("Debug status written to %s", OUTPUT_FILE)
-
-
-class AlarmPlayThread(QThread):
-    signal = pyqtSignal(int)
-
-    def __init__(self, builder):
+    def __init__(self, builder, *args, task):
         super().__init__()
         self.alarm_builder = builder
-        self.content = []
+        self.task = task
 
-    def build(self):
+    def _build(self):
         """Build and alarm."""
         event_logger.info("Building alarm")
-        self.content = self.alarm_builder.build()
+        AlarmWorker.audio = self.alarm_builder.build()
+
+    def _play(self):
+        """Play an existing alarm."""
+        # Play unless explicitely ignored in config
+        if not self.alarm_builder.config._get_debug_option("DO_NOT_PLAY_ALARM"):
+            self.alarm_builder.play(AlarmWorker.audio)      
 
     def run(self):
-        """Play pre-built alarm."""
-        # Re-generate greeting to get current time.
-        greeting = self.alarm_builder.generate_greeting()
-        try:
-            self.content[0] = greeting
-        except IndexError:
-            self.content = [greeting]
-
-        self.alarm_builder.play(self.content)
-
-        # inform the main thread that playing has finished
-        self.signal.emit(1)
-
+        if self.task == "build":
+            self._build()
+            self.build_finished_signal.emit(1)
+        elif self.task == "play":
+            self._play()
+            self.play_finished_signal.emit(1)
+        elif self.task == "build_and_play":
+            self._build()
+            self.build_finished_signal.emit(1)
+            self._play()
+            self.play_finished_signal.emit(1)
 
 class RadioStreamer:
     """Helper class for playing a radio stream via cvlc."""

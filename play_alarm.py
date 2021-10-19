@@ -23,5 +23,5 @@ if __name__ == "__main__":
 
     config = apconfig.AlarmConfig(args.config)
 
-    alarm = alarm_builder.Alarm(config)
+    alarm = alarm_builder.AlarmBuilder(config)
     alarm.build_and_play()

@@ -58,3 +58,6 @@ plugins:
   DHT22:
     enabled: false
     GPIO: 4
+
+  openweathermap.org:
+    enabled: false
