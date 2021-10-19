@@ -4,4 +4,4 @@ venv/
 *.mp3
 logs/*.log
 test_gcp_text_to_speech.py
-debug_info.log
+debug_info.txt
