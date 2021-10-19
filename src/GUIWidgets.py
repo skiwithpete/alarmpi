@@ -52,6 +52,25 @@ class AlarmWindow(QWidget):
         bottom_grid = QGridLayout()
         self.setAutoFillBackground(True)
 
+        # Left hand sidebar: subgrids for plugin (trains) and a small loader icon
+        loader_indicator_grid = QVBoxLayout()
+        loader_indicator = QLabel(self, objectName="loader_indicator")
+        self.waiting_spinner = WaitingSpinner(
+            loader_indicator,
+            roundness=70.0, opacity=15.0,
+            fade=70.0, radius=5.0, lines=12,
+            line_length=10.0, line_width=5.0,
+            speed=1.0, color=(255, 20, 20)
+        )
+        loader_indicator_grid.addWidget(loader_indicator)
+        self.waiting_spinner.start()
+        #self.waiting_spinner.hide()
+
+
+        self.left_plugin_grid = QVBoxLayout()
+        left_grid_container.addLayout(self.left_plugin_grid)
+        left_grid_container.addLayout(loader_indicator_grid)
+
         # ** Center grid: current and alarm time displays **
         # alarm_grid.setVerticalSpacing(0)
         self.clock_lcd = QLCDNumber(8, self)

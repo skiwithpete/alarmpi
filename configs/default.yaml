@@ -64,4 +64,8 @@ plugins:
   DHT22:
     enabled: false
     GPIO: 4               # GPIO pin the sensor is connected to
-    refresh_interval: 30  # seconds
+    refresh_interval: 30  # seconds 
+
+  openweathermap.org:
+    enabled: false
+    refresh_interval: 1800
