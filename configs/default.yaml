@@ -63,3 +63,4 @@ plugins:
 
   openweathermap.org:
     enabled: false
+    refresh_interval: 1800

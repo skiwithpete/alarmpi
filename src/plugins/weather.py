@@ -11,8 +11,8 @@ class WeatherPlugin:
     def __init__(self, parent):
         self.retry_flag = False
         self.parent = parent
-        config = parent.config["content"]["openweathermap.org"]
-        self.parser = get_weather.OpenWeatherMapClient(config)
+        config_data = parent.config["content"]["openweathermap.org"]
+        self.parser = get_weather.OpenWeatherMapClient(config_data)
 
     def create_widgets(self):
         """Create and set QLabels for displaying weather components."""
@@ -28,11 +28,11 @@ class WeatherPlugin:
         """Setup polling for updating the weather every 30 minutes."""
         self.update_weather()
 
-        _30_MINUTES = 30*60*1000
+        refresh_interval_msec = self.parent.config["plugins"]["openweathermap.org"]["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
-        _weather_update_slot = partial(self.run_with_retry, func=self.update_weather)
+        _weather_update_slot = partial(self.run_with_retry, func=self.update_weather, delay_ms=10000)
         _timer.timeout.connect(_weather_update_slot)
-        _timer.start(_30_MINUTES)
+        _timer.start(refresh_interval_msec)
 
     def update_weather(self):
         """Update the weather labels on the main window. Makes an API request to
@@ -70,7 +70,7 @@ class WeatherPlugin:
         pixmap = pixmap.scaledToWidth(64)
         self.icon_label.setPixmap(pixmap)
 
-    def run_with_retry(self, func, retry=120000):
+    def run_with_retry(self, func, delay_msec=120000):
         """Run func with single retry after a delay.
         Default delay is 2 minutes.
         """
@@ -80,4 +80,4 @@ class WeatherPlugin:
             _timer = QTimer(self.parent.main_window)
             _timer.setSingleShot(True)
             _timer.timeout.connect(func)
-            _timer.start(retry)
+            _timer.start(delay_msec)
