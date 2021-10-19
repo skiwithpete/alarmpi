@@ -66,10 +66,7 @@ class AlarmWindow(QWidget):
             speed=1.0, color=(255, 20, 20)
         )
         loader_indicator_grid.addWidget(loader_indicator)
-        self.waiting_spinner.start()
-        #self.waiting_spinner.hide()
-
-
+   
         self.left_plugin_grid = QVBoxLayout()
         left_grid_container.addLayout(self.left_plugin_grid)
         left_grid_container.addLayout(loader_indicator_grid)
