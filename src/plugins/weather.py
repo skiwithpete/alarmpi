@@ -4,15 +4,15 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QPixmap
 
 from src.handlers import get_weather
+from src import applugin
 
 
-class WeatherPlugin:
+class WeatherPlugin(applugin.AlarmpiPlugin):
 
     def __init__(self, parent):
-        self.retry_flag = False
-        self.parent = parent
         config_data = parent.config["content"]["openweathermap.org"]
         self.parser = get_weather.OpenWeatherMapClient(config_data)
+        super().__init__(parent)
 
     def create_widgets(self):
         """Create and set QLabels for displaying weather components."""
@@ -32,7 +32,7 @@ class WeatherPlugin:
 
         refresh_interval_msec = self.parent.config["plugins"]["openweathermap.org"]["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
-        _weather_update_slot = partial(self.run_with_retry, func=self.update_weather, delay_ms=10000)
+        _weather_update_slot = partial(self.run_with_retry, func=self.update_weather, delay_sec=10)
         _timer.timeout.connect(_weather_update_slot)
         _timer.start(refresh_interval_msec)
 
@@ -68,15 +68,3 @@ class WeatherPlugin:
         pixmap.loadFromData(weather["icon"])
         pixmap = pixmap.scaledToWidth(64)
         self.icon_label.setPixmap(pixmap)
-
-    def run_with_retry(self, func, delay_msec=120000):
-        """Run func with single retry after a delay.
-        Default delay is 2 minutes.
-        """
-        func()
-        if self.retry_flag:
-            self.retry_flag = False
-            _timer = QTimer(self.parent.main_window)
-            _timer.setSingleShot(True)
-            _timer.timeout.connect(func)
-            _timer.start(delay_msec)

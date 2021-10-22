@@ -114,7 +114,7 @@ class AlarmWindow(QWidget):
         self.radio_play_indicator = QLabel(self)
         radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
-        self.right_plugin_grid = QGridLayout() # QGridLayout for widget rows depend on enabled config items 
+        self.right_plugin_grid = QGridLayout() # QGridLayout for setting weather/DHT22 plugin items to fixed rows
         right_grid_container.addLayout(self.right_plugin_grid)
         right_grid_container.addLayout(radio_station_grid)
 

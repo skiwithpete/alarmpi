@@ -1,15 +1,17 @@
+from functools import partial
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import QTimer
 
 from src.handlers import get_next_trains
+from src import applugin
 
 
-class TrainPlugin:
+class TrainPlugin(applugin.AlarmpiPlugin):
 
     def __init__(self, parent):
-        self.parent = parent
         self.config_data = parent.config["plugins"]["HSL"]
         self.parser = get_next_trains.TrainParser(self.config_data)
+        super().__init__(parent)
 
     def create_widgets(self):
         """Create and set QLabels for displaying train components."""
@@ -32,6 +34,8 @@ class TrainPlugin:
         # Assume refresh interval in the config as seconds
         refresh_interval_msec = self.config_data["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
+        _trains_update_slot = partial(self.run_with_retry, func=self.update_trains, delay_sec=10)
+
         _timer.timeout.connect(self.update_trains)
         _timer.start(refresh_interval_msec)
 
@@ -41,6 +45,7 @@ class TrainPlugin:
 
         if trains is None:
             self.error_label.setText("<html><span style='font-size:14px'>! not refreshed</span></html>")
+            self.retry_flag = True
             return
 
         self.error_label.clear()
