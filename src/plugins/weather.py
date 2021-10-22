@@ -32,8 +32,8 @@ class WeatherPlugin(applugin.AlarmpiPlugin):
 
         refresh_interval_msec = self.parent.config["plugins"]["openweathermap.org"]["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
-        _weather_update_slot = partial(self.run_with_retry, func=self.update_weather, delay_sec=10)
-        _timer.timeout.connect(_weather_update_slot)
+        weather_update_slot = partial(self.run_with_retry, func=self.update_weather, delay_sec=10)
+        _timer.timeout.connect(weather_update_slot)
         _timer.start(refresh_interval_msec)
 
     def update_weather(self):

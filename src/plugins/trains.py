@@ -34,13 +34,13 @@ class TrainPlugin(applugin.AlarmpiPlugin):
         # Assume refresh interval in the config as seconds
         refresh_interval_msec = self.config_data["refresh_interval"] * 1000
         _timer = QTimer(self.parent.main_window)
-        _trains_update_slot = partial(self.run_with_retry, func=self.update_trains, delay_sec=10)
-
-        _timer.timeout.connect(self.update_trains)
+        trains_update_slot = partial(self.run_with_retry, func=self.update_trains, delay_sec=10)
+        _timer.timeout.connect(trains_update_slot)
         _timer.start(refresh_interval_msec)
 
     def update_trains(self):
         """Fetch new train data from DigiTraffic API and display on the right sidebar."""
+        self.retry_flag = False
         trains = self.parser.run()
 
         if trains is None:
