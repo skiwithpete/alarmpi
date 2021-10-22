@@ -14,13 +14,17 @@ class TrainPlugin:
     def create_widgets(self):
         """Create and set QLabels for displaying train components."""
         self.train_labels = []
-        MAX_NUMBER_OF_TRAINS = self.config_data["trains"]
+        self.error_label = QLabel(self.parent.main_window)
 
+        MAX_NUMBER_OF_TRAINS = self.config_data["trains"]
         for i in range(MAX_NUMBER_OF_TRAINS):
             label = QLabel(self.parent.main_window)
             self.parent.main_window.left_plugin_grid.addWidget(label)
             self.train_labels.append(label)
 
+        # Add a status label for error situations
+        self.parent.main_window.left_plugin_grid.addWidget(self.error_label)
+        
     def setup_polling(self):
         """Setup polling for next train departure."""
         self.update_trains()
@@ -36,10 +40,10 @@ class TrainPlugin:
         trains = self.parser.run()
 
         if trains is None:
-            for label in self.train_labels:
-                label.setText("ERR")
+            self.error_label.setText("<html><span style='font-size:14px'>! not refreshed</span></html>")
             return
 
+        self.error_label.clear()
         for i, label in enumerate(self.train_labels):
             try:
                 train = trains[i]

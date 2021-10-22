@@ -19,10 +19,12 @@ class WeatherPlugin:
         self.temperature_label = QLabel(self.parent.main_window)
         self.wind_label = QLabel(self.parent.main_window)
         self.icon_label = QLabel(self.parent.main_window)
+        self.error_label = QLabel(self.parent.main_window)
 
         self.parent.main_window.right_plugin_grid.addWidget(self.temperature_label, 0, 0, Qt.AlignRight)
         self.parent.main_window.right_plugin_grid.addWidget(self.wind_label, 1, 0, Qt.AlignRight)
         self.parent.main_window.right_plugin_grid.addWidget(self.icon_label, 2, 0, Qt.AlignRight | Qt.AlignTop)
+        self.parent.main_window.right_plugin_grid.addWidget(self.error_label, 3, 0, Qt.AlignRight | Qt.AlignTop)
 
     def setup_polling(self):
         """Setup polling for updating the weather every 30 minutes."""
@@ -42,14 +44,12 @@ class WeatherPlugin:
         weather = self.parser.fetch_and_format_weather()
         pixmap = QPixmap()
 
-        # Clear all labels if the call failed and set retry flag.
         if weather is None:
-            self.temperature_label.setText("ERR")
-            self.wind_label.setText("ERR")
-            self.icon_label.setPixmap(pixmap)
+            self.error_label.setText("<html><span style='font-size:14px'>! not refreshed</span></html>")
             self.retry_flag = True
             return
 
+        self.error_label.clear()
         temperature = weather["temp"]
         wind = weather["wind_speed_ms"]
 
@@ -62,7 +62,6 @@ class WeatherPlugin:
         # Weather icon is fetched via a separate API call which
         # may fail regardless of the main call.
         if weather["icon"] is None:
-            self.icon_label.setPixmap(pixmap)
             self.retry_flag = True
             return
 
