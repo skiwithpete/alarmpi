@@ -472,17 +472,21 @@ class Clock:
     def _debug_signal_handler(self, sig, frame):
         """Dump current state to file."""
         OUTPUT_FILE = "debug_info.txt"
+        app = QApplication.instance()
+
         with open(OUTPUT_FILE, "w") as f:
             f.write("config file: {}\n".format(self.config.path_to_config))
             json.dump(self.config.config, f, indent=4)
 
-            f.write("\n{:60} {:9} {:12} {:14}".format("window", "isVisible", "isFullScreen", "isActiveWindow"))
-            for window in (self.main_window, self.settings_window):
-                f.write("\n{:60} {:9} {:12} {:14}".format(
-                    str(window),
+            f.write("\n{:15} {:9} {:12} {:14} {:11}".format("window", "isVisible", "isFullScreen", "isActiveWindow", "isEnabled"))
+            #for window in (self.main_window, self.settings_window):
+            for window in app.topLevelWidgets():
+                f.write("\n{:15} {:9} {:12} {:14} {:11}".format(
+                    window.__class__.__name__,
                     window.isVisible(),
                     window.isFullScreen(),
-                    window.isActiveWindow()
+                    window.isActiveWindow(),
+                    window.isEnabled()
                 ))
 
         event_logger.info("Debug status written to %s", OUTPUT_FILE)      

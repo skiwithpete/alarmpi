@@ -68,7 +68,6 @@ if __name__ == "__main__":
         for handler in event_logger.handlers:
             handler.setLevel(logging.DEBUG)
 
-
     ex = clock.Clock(config, **kwargs)
     ex.setup()
     res = app.exec_()
