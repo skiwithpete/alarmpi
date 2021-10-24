@@ -2,13 +2,9 @@ import pytest
 import os.path
 import subprocess
 from unittest.mock import patch, Mock
-from PyQt5.QtWidgets import QApplication
 
 from src import clock
 
-
-# Create a gobal QApplication instance to handle windgets
-app = QApplication([])
 
 
 @pytest.fixture(scope="class")

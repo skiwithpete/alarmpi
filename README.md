@@ -127,5 +127,5 @@ optional arguments:
 ## Unit tests
 Unit tests can be run from the root folder with
 ```
-python -m pytest tests
+python -m pytest
 ```

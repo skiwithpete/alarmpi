@@ -1,12 +1,6 @@
 import pytest
 
-from PyQt5.QtWidgets import QApplication
-
 from src import GUIWidgets
-
-
-# Create a gobal QApplication instance to handle windgets
-app = QApplication([])
 
 
 @pytest.fixture
