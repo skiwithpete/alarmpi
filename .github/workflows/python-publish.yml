@@ -23,6 +23,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 pytest
         pip install -r requirements.txt
+        sudo apt-get update && apt-get install -y xvfb
 
     - name: Lint with flake8
       run: |
@@ -43,12 +44,7 @@ jobs:
           --statistics \
           --extend-exclude=venv
 
-    - name: Test with pytest
-      run: |
-        #python -m pytest tests/test_clock.py    # Need a graphical window manager to run these
-        #python -m pytest tests/test_GUIWidgets.py
-
-        python -m pytest tests/test_alarm_builder.py
-        python -m pytest tests/test_apconfig.py
-        python -m pytest tests/test_handlers.py
-        python -m pytest tests/test_utils.py
+    - name: Run headless unit test
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        run: python -m pytest
