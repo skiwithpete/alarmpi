@@ -1,5 +1,6 @@
 import subprocess
 import re
+import json
 import os.path
 from datetime import datetime, date, timedelta
 
@@ -9,34 +10,12 @@ from PyQt5.QtGui import QPixmap
 BASE = os.path.join(os.path.dirname(__file__), "..")
 
 
-def time_is_in(start, end):
-    """Check if current time is between start and end.
-    If end has already passed for current date, take it to be
-    the next day. Ie. time_is_in('22:00', '07:00') returns True
-    when called at 23:10.
-    Args:
-        start (str): start time in HH:MM
-        end (str): end time in HH:MM
-    """
-    now = datetime.now()
-    start_time = datetime.strptime(start, "%H:%M").time()
-    end_time = datetime.strptime(end, "%H:%M").time()
-
-    start = now.replace(
-        hour=start_time.hour,
-        minute=start_time.minute,
-        second=start_time.second
-    )
-    end = now.replace(
-        hour=end_time.hour,
-        minute=end_time.minute,
-        second=end_time.second
-    )
-
-    if now >= end:
-        end = end + timedelta(1)
-
-    return start <= now < end
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom json encoder handling datetime objcets."""
+    def default(self, z):
+        if isinstance(z, datetime):
+            return (str(z))
+        return super().default(z)
 
 def time_str_to_dt(s):
     """Convert a time string in HH:MM format to a datetime object. The date is set to

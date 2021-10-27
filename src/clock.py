@@ -2,12 +2,12 @@
 
 """A PyQt5 clock radio application."""
 
-import datetime
 import subprocess
 import logging
 import json
 import signal
 from functools import partial
+from datetime import datetime, timedelta
 
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication
@@ -125,6 +125,20 @@ class Clock:
 
         nightmode = self.config["main"]["nighttime"].get("enabled", False)
         self.settings_window.nightmode_checkbox.setChecked(nightmode)
+
+        # Store nighttime range as datetimes to config and set a date update timer
+        # to next nighttime end.
+        self.config["main"]["nighttime"]["start_dt"] = \
+            utils.time_str_to_dt(self.config["main"]["nighttime"]["start"])
+        self.config["main"]["nighttime"]["end_dt"] = \
+            utils.time_str_to_dt(self.config["main"]["nighttime"]["end"])
+
+        self.nighttime_update_timer = QTimer(self.main_window)
+        self.nighttime_update_timer.setSingleShot(True)
+        self.nighttime_update_timer.timeout.connect(self._update_nighttime_range)
+
+        DELAY_UNTIL_DAYTIME = (self.config["main"]["nighttime"]["end_dt"] - datetime.now()).seconds
+        self.nighttime_update_timer.start(DELAY_UNTIL_DAYTIME*1000)
 
         alarm_brightness_enabled = self.config["main"]["full_brightness_on_alarm"]
         self.settings_window.alarm_brightness_checkbox.setChecked(alarm_brightness_enabled)
@@ -271,8 +285,7 @@ class Clock:
 
             # Set alarm play timer
             self.alarm_dt = utils.time_str_to_dt(time_str)
-            now = datetime.datetime.now()
-            alarm_wait_ms = (self.alarm_dt - now).seconds * 1000
+            alarm_wait_ms = (self.alarm_dt - datetime.now()).seconds * 1000
 
             event_logger.info("Setting alarm for %s", time_str)
             self.alarm_timer.start(alarm_wait_ms)
@@ -281,7 +294,7 @@ class Clock:
             ALARM_BUILD_DELTA = 5 * 60 * 1000
             alarm_build_wait_ms = max((0, alarm_wait_ms - ALARM_BUILD_DELTA))  # 0 if not enough time
 
-            alarm_build_dt = self.alarm_dt - datetime.timedelta(minutes=5)
+            alarm_build_dt = self.alarm_dt - timedelta(minutes=5)
             event_logger.info("Setting alarm build for %s", alarm_build_dt.strftime("%H:%M"))
             self.alarm_build_timer.start(alarm_build_wait_ms)
 
@@ -463,11 +476,25 @@ class Clock:
     def _nightmode_active(self):
         """Helper function for checking if nightmode is enabled and it is currently nighttime."""
         nightmode = self.config["main"]["nighttime"].get("enabled")
-        is_nighttime = utils.time_is_in(
-            self.config["main"]["nighttime"]["start"],
-            self.config["main"]["nighttime"]["end"]
-        )
+
+        start_dt = self.config["main"]["nighttime"]["start_dt"]
+        end_dt = self.config["main"]["nighttime"]["end_dt"]
+
+        is_nighttime = start_dt <= datetime.now() <= end_dt
         return nightmode and is_nighttime
+
+    def _update_nighttime_range(self):
+        """Update current nighttime date range for current date."""
+        updated_start = self.config["main"]["nighttime"]["start_dt"] + timedelta(1)
+        updated_end = self.config["main"]["nighttime"]["end_dt"] + timedelta(1)
+        self.config["main"]["nighttime"]["start_dt"] = updated_start
+        self.config["main"]["nighttime"]["end_dt"] = updated_end
+
+        event_logger.info("Next nighttime range set to %s => %s", updated_start, updated_end)
+
+        # Reset the update timer to the next day time change
+        DELAY_UNTIL_DAYTIME = (updated_end - datetime.now()).seconds
+        self.nighttime_update_timer.start(DELAY_UNTIL_DAYTIME*1000)
 
     def _debug_signal_handler(self, sig, frame):
         """Dump current state to file."""
@@ -476,7 +503,7 @@ class Clock:
 
         with open(OUTPUT_FILE, "w") as f:
             f.write("config file: {}\n".format(self.config.path_to_config))
-            json.dump(self.config.config, f, indent=4)
+            json.dump(self.config.config, f, indent=4, cls=utils.DateTimeEncoder)
 
             f.write("\n{:15} {:9} {:12} {:14} {:11}".format("window", "isVisible", "isFullScreen", "isActiveWindow", "isEnabled"))
             #for window in (self.main_window, self.settings_window):

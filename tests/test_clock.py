@@ -2,20 +2,31 @@ import pytest
 import os.path
 import subprocess
 from unittest.mock import patch, Mock
+from datetime import datetime
+
+
+from freezegun import freeze_time
 
 from src import clock
 
 
-
-@pytest.fixture(scope="class")
 @patch("src.apconfig.AlarmConfig.get_config_file_path")
-def dummy_clock(mock_get_config_file_path):
+def create_clock(mock_get_config_file_path):
+    """Create a dummy Clock instance """
+    # Mock configuration file read and point to the test configuration file
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
-
-    # Create a Clock instance from the configuration above with empty string as dummy name
     dummy_clock = clock.Clock("")
     dummy_clock.setup()
     return dummy_clock
+
+@pytest.fixture(scope="class")
+def dummy_clock():
+    """Fixture for creating a Clock instance.
+    Separate from create_clock to allow overriding the fixture in cases
+    where a different configuration is required.
+    """
+    return create_clock()
+
 
 
 class TestClockCase():
@@ -130,13 +141,36 @@ class TestClockCase():
         # Since we want to intercept the AlarmConfig property rpi_brightness_write_access, create a
         # distinct Clock object separate from the fixture and force the value to False
         # before the button status is checked in setup()
-        mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
-        dummy_clock = clock.Clock("")
+        dummy_clock = create_clock()
         dummy_clock.config.rpi_brightness_write_access = False
-        dummy_clock.setup()
         
         assert not dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].isEnabled()
         assert not dummy_clock.main_window.control_buttons["Blank"].isEnabled()
+
+    @pytest.mark.parametrize("time", [
+        ("2021-07-30 22:10"),
+        ("2021-07-31 04:06")
+    ])
+    def test_nighttime_with_night_hour(self, time):
+        # Create a new clock instance with a set time so nighttime
+        # dates are frozen.
+        with freeze_time("2021-07-30 09:00"):
+            dummy_clock = create_clock()
+
+        with freeze_time(time):
+            assert dummy_clock._nightmode_active()
+
+    @pytest.mark.parametrize("time", [
+        ("2021-07-31 07:10"),
+        ("2021-07-31 21:39")
+    ])
+    def test_nighttime_with_day_hour(self, time):
+        with freeze_time("2021-07-30 09:00"):
+            dummy_clock = create_clock()
+
+        with freeze_time(time):
+            assert not dummy_clock._nightmode_active()
+
 
 
 @pytest.fixture
