@@ -11,7 +11,7 @@ BASE = os.path.join(os.path.dirname(__file__), "..")
 
 
 class DateTimeEncoder(json.JSONEncoder):
-    """Custom json encoder handling datetime objcets."""
+    """Custom json encoder handling datetime objects."""
     def default(self, z):
         if isinstance(z, datetime):
             return (str(z))
@@ -19,7 +19,7 @@ class DateTimeEncoder(json.JSONEncoder):
 
 def time_str_to_dt(s):
     """Convert a time string in HH:MM format to a datetime object. The date is set to
-    current date if the time has not yet occured or the next day if it has.
+    current date if the time has not yet occured for today, or to the next day if it has.
     """
     today = date.today()
     dummy_dt = datetime.strptime(s, "%H:%M")

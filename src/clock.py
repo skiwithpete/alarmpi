@@ -137,7 +137,7 @@ class Clock:
         self.nighttime_update_timer.setSingleShot(True)
         self.nighttime_update_timer.timeout.connect(self._update_nighttime_range)
 
-        DELAY_UNTIL_DAYTIME = (self.config["main"]["nighttime"]["end_dt"] - datetime.now()).seconds
+        DELAY_UNTIL_DAYTIME = int((self.config["main"]["nighttime"]["end_dt"] - datetime.now()).total_seconds())
         self.nighttime_update_timer.start(DELAY_UNTIL_DAYTIME*1000)
 
         alarm_brightness_enabled = self.config["main"]["full_brightness_on_alarm"]
@@ -484,16 +484,26 @@ class Clock:
         return nightmode and is_nighttime
 
     def _update_nighttime_range(self):
-        """Update current nighttime date range for current date."""
-        updated_start = self.config["main"]["nighttime"]["start_dt"] + timedelta(1)
-        updated_end = self.config["main"]["nighttime"]["end_dt"] + timedelta(1)
+        """Update nighttime date range: add 1 day to current
+        config values.
+        """
+        start_dt = self.config["main"]["nighttime"]["start_dt"]
+        end_dt = self.config["main"]["nighttime"]["end_dt"]
+
+        # Ensure nighttime values are modified only once per day.
+        # ie. do nothing if current start value is already in the future.
+        if start_dt > datetime.now():
+            return
+
+        updated_start = start_dt + timedelta(1)
+        updated_end = end_dt + timedelta(1)
         self.config["main"]["nighttime"]["start_dt"] = updated_start
         self.config["main"]["nighttime"]["end_dt"] = updated_end
 
         event_logger.info("Next nighttime range set to %s => %s", updated_start, updated_end)
 
-        # Reset the update timer to the next day time change
-        DELAY_UNTIL_DAYTIME = (updated_end - datetime.now()).seconds
+        # Reset the update timer to next nighttime end
+        DELAY_UNTIL_DAYTIME = int((updated_end - datetime.now()).total_seconds())
         self.nighttime_update_timer.start(DELAY_UNTIL_DAYTIME*1000)
 
     def _debug_signal_handler(self, sig, frame):
