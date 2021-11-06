@@ -4,7 +4,6 @@ import subprocess
 from unittest.mock import patch, Mock
 from datetime import datetime
 
-
 from freezegun import freeze_time
 
 from src import clock
@@ -152,8 +151,8 @@ class TestClockCase():
         ("2021-07-31 04:06")
     ])
     def test_nighttime_with_night_hour(self, time):
-        # Create a new clock instance with a set time so nighttime
-        # dates are frozen.
+        # Create a new clock instance with a set time outside nighttime
+        # hour so dates are frozen (start time: current date, end time: next date).
         with freeze_time("2021-07-30 09:00"):
             dummy_clock = create_clock()
 
