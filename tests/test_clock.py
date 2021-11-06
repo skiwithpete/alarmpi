@@ -11,7 +11,7 @@ from src import clock
 
 @patch("src.apconfig.AlarmConfig.get_config_file_path")
 def create_clock(mock_get_config_file_path):
-    """Create a dummy Clock instance """
+    """Create a dummy Clock instance using test_alarm.yaml"""
     # Mock configuration file read and point to the test configuration file
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
     dummy_clock = clock.Clock("")
@@ -151,8 +151,8 @@ class TestClockCase():
         ("2021-07-31 04:06")
     ])
     def test_nighttime_with_night_hour(self, time):
-        # Create a new clock instance with a set time outside nighttime
-        # hour so dates are frozen (start time: current date, end time: next date).
+        # Create a new clock instance with a set time outside of nighttime hours
+        # so dates are frozen as start time: current date, end time: next date.
         with freeze_time("2021-07-30 09:00"):
             dummy_clock = create_clock()
 
@@ -169,6 +169,28 @@ class TestClockCase():
 
         with freeze_time(time):
             assert not dummy_clock._nightmode_active()
+
+    def test_nightime_update(self,):
+        """Test nighttime range update: is 1 day added to the range the first time the method is called?"""
+        with freeze_time("2021-07-30 09:00"):
+            dummy_clock = create_clock()
+
+            # Check initial values
+            assert dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 30, 22, 0)
+            assert dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 7, 31, 7, 0)
+
+            # First call to _update_nighttime_range: is range incremented by 1 day?
+            dummy_clock._update_nighttime_range()
+            dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 31, 22, 0)
+            dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 8, 1, 7, 0)
+
+            # Call again and assert range is not updated
+            for _ in range(2):
+                dummy_clock._update_nighttime_range()
+
+            dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 31, 22, 0)
+            dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 8, 1, 7, 0)
+        
 
 
 
