@@ -18,16 +18,16 @@ class DateTimeEncoder(json.JSONEncoder):
         return super().default(z)
 
 def time_str_to_dt(s):
-    """Convert a time string in HH:MM format to a datetime object. The date is set to
-    current date if the time has not yet occured for today, or to the next day if it has.
+    """Convert a time string in HH:MM format to a datetime object.
+    By default the date is set to current date.
+    Args:
+        s (str): time string in %H:%M format
+        use_next_available_date (boolean): sets the date to tomorrow if the time
+            has already passed for the current date. 
     """
     today = date.today()
     dummy_dt = datetime.strptime(s, "%H:%M")
-
     dt = dummy_dt.replace(year=today.year, month=today.month, day=today.day)
-    if dt <= datetime.now():
-        dt = dt + timedelta(days=1)
-
     return dt
 
 def get_volume(card):

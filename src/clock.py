@@ -126,13 +126,20 @@ class Clock:
         nightmode = self.config["main"]["nighttime"].get("enabled", False)
         self.settings_window.nightmode_checkbox.setChecked(nightmode)
 
-        # Store nighttime range as datetimes to config and set a date update timer
-        # to next nighttime end.
-        self.config["main"]["nighttime"]["start_dt"] = \
-            utils.time_str_to_dt(self.config["main"]["nighttime"]["start"])
-        self.config["main"]["nighttime"]["end_dt"] = \
-            utils.time_str_to_dt(self.config["main"]["nighttime"]["end"])
+        # Store nighttime range as datetimes to config.
+        start_dt = utils.time_str_to_dt(self.config["main"]["nighttime"]["start"])
+        end_dt = utils.time_str_to_dt(self.config["main"]["nighttime"]["end"])
 
+        # Ensure start is before end 
+        if end_dt <= start_dt:
+            end_dt = end_dt + timedelta(1)
+
+        self.config["main"]["nighttime"].update({
+            "start_dt": start_dt,
+            "end_dt": end_dt
+        })
+
+        # Set a timer to update the range on next nighttime end
         self.nighttime_update_timer = QTimer(self.main_window)
         self.nighttime_update_timer.setSingleShot(True)
         self.nighttime_update_timer.timeout.connect(self._update_nighttime_range)

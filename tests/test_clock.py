@@ -146,38 +146,26 @@ class TestClockCase():
         assert not dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].isEnabled()
         assert not dummy_clock.main_window.control_buttons["Blank"].isEnabled()
 
-    @pytest.mark.parametrize("time", [
-        ("2021-07-30 22:10"),
-        ("2021-07-31 04:06")
+    @pytest.mark.parametrize("time,is_active", [
+        ("2021-07-30 09:00", False),
+        ("2021-07-30 23:20", True),
+        ("2021-07-30 00:32", False) # TODO: when initialized before start_dt, nighttime will be disabled
     ])
-    def test_nighttime_with_night_hour(self, time):
-        # Create a new clock instance with a set time outside of nighttime hours
-        # so dates are frozen as start time: current date, end time: next date.
-        with freeze_time("2021-07-30 09:00"):
-            dummy_clock = create_clock()
-
+    def test_nighttime_hours(self, time, is_active):
+        """Test nighttime range when Clock is created with different times with respect to
+        nighttime start time.
+        """
+        # Create a new clock instance with the time specified and check nighttime range values
         with freeze_time(time):
-            assert dummy_clock._nightmode_active()
-
-    @pytest.mark.parametrize("time", [
-        ("2021-07-31 07:10"),
-        ("2021-07-31 21:39")
-    ])
-    def test_nighttime_with_day_hour(self, time):
-        with freeze_time("2021-07-30 09:00"):
             dummy_clock = create_clock()
+            assert dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 30, 22, 0)
+            assert dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 7, 31, 7, 0)
+            assert dummy_clock._nightmode_active() == is_active
 
-        with freeze_time(time):
-            assert not dummy_clock._nightmode_active()
-
-    def test_nightime_update(self,):
+    def test_nightime_update(self):
         """Test nighttime range update: is 1 day added to the range the first time the method is called?"""
         with freeze_time("2021-07-30 09:00"):
             dummy_clock = create_clock()
-
-            # Check initial values
-            assert dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 30, 22, 0)
-            assert dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 7, 31, 7, 0)
 
             # First call to _update_nighttime_range: is range incremented by 1 day?
             dummy_clock._update_nighttime_range()
@@ -191,8 +179,6 @@ class TestClockCase():
             dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 31, 22, 0)
             dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 8, 1, 7, 0)
         
-
-
 
 @pytest.fixture
 def dummy_radio():
