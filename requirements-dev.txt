@@ -4,6 +4,7 @@ pydub
 PyQt5
 PyQt5-sip
 pytest
+pytest-xvfb
 requests
 python-dateutil
 num2words

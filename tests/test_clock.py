@@ -2,24 +2,30 @@ import pytest
 import os.path
 import subprocess
 from unittest.mock import patch, Mock
-from PyQt5.QtWidgets import QApplication
+from datetime import datetime
+
+from freezegun import freeze_time
 
 from src import clock
 
 
-# Create a gobal QApplication instance to handle windgets
-app = QApplication([])
-
-
-@pytest.fixture(scope="class")
 @patch("src.apconfig.AlarmConfig.get_config_file_path")
-def dummy_clock(mock_get_config_file_path):
+def create_clock(mock_get_config_file_path):
+    """Create a dummy Clock instance using test_alarm.yaml"""
+    # Mock configuration file read and point to the test configuration file
     mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
-
-    # Create a Clock instance from the configuration above with empty string as dummy name
     dummy_clock = clock.Clock("")
     dummy_clock.setup()
     return dummy_clock
+
+@pytest.fixture(scope="class")
+def dummy_clock():
+    """Fixture for creating a Clock instance.
+    Separate from create_clock to allow overriding the fixture in cases
+    where a different configuration is required.
+    """
+    return create_clock()
+
 
 
 class TestClockCase():
@@ -134,14 +140,45 @@ class TestClockCase():
         # Since we want to intercept the AlarmConfig property rpi_brightness_write_access, create a
         # distinct Clock object separate from the fixture and force the value to False
         # before the button status is checked in setup()
-        mock_get_config_file_path.return_value = os.path.join(os.path.dirname(__file__), "test_alarm.yaml")
-        dummy_clock = clock.Clock("")
+        dummy_clock = create_clock()
         dummy_clock.config.rpi_brightness_write_access = False
-        dummy_clock.setup()
         
         assert not dummy_clock.settings_window.control_buttons["Toggle\nBrightness"].isEnabled()
         assert not dummy_clock.main_window.control_buttons["Blank"].isEnabled()
 
+    @pytest.mark.parametrize("time,is_active", [
+        ("2021-07-30 09:00", False),
+        ("2021-07-30 23:20", True),
+        ("2021-07-30 00:32", False) # TODO: when initialized before start_dt, nighttime will be disabled
+    ])
+    def test_nighttime_hours(self, time, is_active):
+        """Test nighttime range when Clock is created with different times with respect to
+        nighttime start time.
+        """
+        # Create a new clock instance with the time specified and check nighttime range values
+        with freeze_time(time):
+            dummy_clock = create_clock()
+            assert dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 30, 22, 0)
+            assert dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 7, 31, 7, 0)
+            assert dummy_clock._nightmode_active() == is_active
+
+    def test_nightime_update(self):
+        """Test nighttime range update: is 1 day added to the range the first time the method is called?"""
+        with freeze_time("2021-07-30 09:00"):
+            dummy_clock = create_clock()
+
+            # First call to _update_nighttime_range: is range incremented by 1 day?
+            dummy_clock._update_nighttime_range()
+            dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 31, 22, 0)
+            dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 8, 1, 7, 0)
+
+            # Call again and assert range is not updated
+            for _ in range(2):
+                dummy_clock._update_nighttime_range()
+
+            dummy_clock.config["main"]["nighttime"]["start_dt"] == datetime(2021, 7, 31, 22, 0)
+            dummy_clock.config["main"]["nighttime"]["end_dt"] == datetime(2021, 8, 1, 7, 0)
+        
 
 @pytest.fixture
 def dummy_radio():

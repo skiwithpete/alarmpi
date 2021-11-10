@@ -7,6 +7,7 @@ import datetime
 import logging
 
 import requests
+from requests.exceptions import RequestException
 from dateutil import tz
 
 from src import apcontent
@@ -20,15 +21,12 @@ event_logger = logging.getLogger("eventLogger")
 class TrainParser(apcontent.AlarmpiContent):
 
     def run(self):
-        """Run the parser: either fetch the next departures or, in case of
-        requests errors, return a list of templated error dicts.
+        """Run the parser: fetch and format a list of next departures. Return
+        None if API call fails.
         """
-        try:
-            api_response = self.fetch_daily_train_data()
+        api_response = self.fetch_daily_train_data()
+        if api_response:
             return self.format_next_departures(api_response)
-        except requests.exceptions.RequestException as e:
-            event_logger.error(str(e))
-            return None
 
     def format_next_departures(self, api_response):
         """Format a list of API response departures to a list of dicts
@@ -78,13 +76,21 @@ class TrainParser(apcontent.AlarmpiContent):
         """API call to get the next local arrivivals."""
         URL = "https://rata.digitraffic.fi/api/v1/live-trains/station/{}".format(self.section_data["station_code"])
         params = {
-            "arrived_trains": 1,  # API minumum to already arrived and departed trains is 1
+            "arrived_trains": 1,  # API minimum
             "arriving_trains": 20,
             "departed_trains": 1
         }
 
-        r = requests.get(URL, params=params)
-        return r.json()
+        try:
+            r = requests.get(URL, params=params)
+        except RequestException as e:
+            event_logger.error(str(e))
+            return []
+        if r.status_code != 200:
+            event_logger.warning("Invalid API response: %s", r.text)
+            return []
+        else:
+            return r.json()
 
     def filter_commuter_trains(self, response):
         """Filter a list of API response trains to commuter trains heading towards Helsinki.

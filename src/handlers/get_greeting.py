@@ -1,13 +1,9 @@
 from datetime import datetime
-import locale
 
 import num2words
 
 from src import apcontent
 
-
-# Force the use of C locale for strftime calls
-locale.setlocale(locale.LC_TIME, "C")
 
 class Greeting(apcontent.AlarmpiContent):
     """Creates greeting messages based on current time of day."""

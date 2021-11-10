@@ -80,10 +80,10 @@ def test_alarm_time_override(dummy_alarm_builder):
     """Is alarm time overridden when value specified in config?"""
     dummy_alarm_builder.config["main"]["alarm_time"] = "20:21"
     greeting = dummy_alarm_builder.generate_greeting()
-    assert "The time is 08:21 PM" in greeting
+    assert "The time is 08:21" in greeting
 
 @freeze_time("2021-07-30 11:10")
 def test_alarm_time_without_override(dummy_alarm_builder):
     """Is alarm time current time?"""
     greeting = dummy_alarm_builder.generate_greeting()
-    assert "The time is 11:10 AM" in greeting
+    assert "The time is 11:10" in greeting

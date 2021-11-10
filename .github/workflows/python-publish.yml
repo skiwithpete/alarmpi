@@ -1,4 +1,4 @@
-name: Run pytest
+name: Test with pytest
 
 on:
   push:
@@ -8,20 +8,29 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python 3.8.5
+
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: '3.8.5'
+        python-version: '3.8'
+
     - name: Install dependencies
       run: |
+        sudo apt update && sudo apt install -y \
+          xvfb \
+          libxkbcommon-x11-0 \
+          pyqt5-dev-tools \
+          libasound2 \
+          alsa-utils \
+          alsa-oss
         python -m pip install --upgrade pip
-        pip install flake8 pytest
+        pip install wheel flake8
         pip install -r requirements.txt
+        
     - name: Lint with flake8
       run: |
         # Stop the build if there are Python syntax errors or undefined names
@@ -31,6 +40,7 @@ jobs:
           --show-source \
           --statistics \
           --extend-exclude=venv
+
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . \
           --count \
@@ -39,13 +49,7 @@ jobs:
           --max-line-length=127 \
           --statistics \
           --extend-exclude=venv
-    - name: Test with pytest
-      run: |
-        # Run tests individually, python -m pytest tests seems to occasionally cause segmentation fault
-        #python -m pytest tests/test_clock.py    # Need a graphical window manager to run these
-        #python -m pytest tests/test_GUIWidgets.py
-        python -m pytest tests/test_alarm_builder.py
-        python -m pytest tests/test_apconfig.py
-        python -m pytest tests/test_handlers.py
-        python -m pytest tests/test_utils.py
 
+    - name: Run headless unit test
+      run: |
+        pytest

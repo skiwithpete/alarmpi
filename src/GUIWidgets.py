@@ -65,8 +65,9 @@ class AlarmWindow(QWidget):
             line_length=10.0, line_width=5.0,
             speed=1.0, color=(255, 20, 20)
         )
-        loader_indicator_grid.addWidget(loader_indicator)
-   
+        loader_indicator_grid.addWidget(loader_indicator, alignment=Qt.AlignBottom | Qt.AlignLeft)
+        loader_indicator.setMinimumWidth(50)  # Force a minimum width to keep left alignment from covering part of the spinner
+
         self.left_plugin_grid = QVBoxLayout()
         left_grid_container.addLayout(self.left_plugin_grid)
         left_grid_container.addLayout(loader_indicator_grid)
@@ -113,7 +114,7 @@ class AlarmWindow(QWidget):
         self.radio_play_indicator = QLabel(self)
         radio_station_grid.addWidget(self.radio_play_indicator, 0, 0, Qt.AlignRight | Qt.AlignBottom)
 
-        self.right_plugin_grid = QGridLayout() # QGridLayout for widget rows depend on enabled config items 
+        self.right_plugin_grid = QGridLayout() # QGridLayout for setting weather/DHT22 plugin items to fixed rows
         right_grid_container.addLayout(self.right_plugin_grid)
         right_grid_container.addLayout(radio_station_grid)
 
