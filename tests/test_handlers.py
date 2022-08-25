@@ -11,16 +11,17 @@ def test_failed_train_api_request():
 
     # Error raised during request
     with patch("requests.get") as mock_get:
-        mock_get.side_effect = requests.exceptions.RequestException()
+        mock_get.side_effect = requests.exceptions.RequestException("Something went wrong")
         res = parser.run()
-        assert res is None
+        assert res == {"error": {"message": "Something went wrong", "status_code": 503}}
 
     # Invalid response
     with patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 500
+        mock_get.return_value.text = "Something went wrong"
         res = parser.run()
-        assert res is None
-    
+        assert res == {"error": {"message": "Something went wrong", "status_code": 500}}
+
 def test_failed_weather_api_request():
     """Does fetch_and_format_weather return None if API call fails"""
     # Mock opening non existing credentials file

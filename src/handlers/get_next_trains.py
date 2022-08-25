@@ -7,7 +7,6 @@ import datetime
 import logging
 
 import requests
-from requests.exceptions import RequestException
 from dateutil import tz
 
 from src import apcontent
@@ -25,8 +24,10 @@ class TrainParser(apcontent.AlarmpiContent):
         None if API call fails.
         """
         api_response = self.fetch_daily_train_data()
-        if api_response:
-            return self.format_next_departures(api_response)
+        if "error" in api_response:
+            return api_response
+
+        return self.format_next_departures(api_response)
 
     def format_next_departures(self, api_response):
         """Format a list of API response departures to a list of dicts
@@ -81,16 +82,18 @@ class TrainParser(apcontent.AlarmpiContent):
             "departed_trains": 1
         }
 
+        # Catch any network related errors from the request itself
         try:
             r = requests.get(URL, params=params)
-        except RequestException as e:
+        except Exception as e:
             event_logger.error(str(e))
-            return []
+            return {"error": {"message": str(e), "status_code": 503}}
+
+        # Catch errors from succesfully sent requests
         if r.status_code != 200:
-            event_logger.warning("Invalid API response: %s", r.text)
-            return []
-        else:
-            return r.json()
+            return {"error": {"message": r.text, "status_code": r.status_code}}
+
+        return r.json()
 
     def filter_commuter_trains(self, response):
         """Filter a list of API response trains to commuter trains heading towards Helsinki.
