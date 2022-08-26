@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
     QSlider
 )
 
-from pyqtspinner.spinner import WaitingSpinner
+from src.widgets.spinner import CustomWaitingSpinner as WaitingSpinner
 from src import utils
 
 
@@ -61,8 +61,8 @@ class AlarmWindow(QWidget):
         self.waiting_spinner = WaitingSpinner(
             loader_indicator,
             roundness=70.0, opacity=15.0,
-            fade=70.0, radius=5.0, lines=12,
-            line_length=10.0, line_width=5.0,
+            fade=70.0, radius=5, lines=12,
+            line_length=10, line_width=5,
             speed=1.0, color=(255, 20, 20)
         )
         loader_indicator_grid.addWidget(loader_indicator, alignment=Qt.AlignBottom | Qt.AlignLeft)
