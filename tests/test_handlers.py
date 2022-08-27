@@ -5,7 +5,7 @@ from src.handlers import get_weather, get_next_trains
 
 
 
-def test_failed_train_api_request():
+def test_failing_train_api_request():
     """Test responses sent on failing train API calls"""
     parser = get_next_trains.TrainParser({"station_code": "XYZ"})
 
@@ -22,7 +22,7 @@ def test_failed_train_api_request():
         res = parser.run()
         assert res == {"error": {"message": "Something went wrong", "status_code": 500}}
 
-def test_failed_weather_api_request():
+def test_failing_weather_api_request():
     """Test responses sent on failing weather API calls"""
     # Mock opening non existing credentials file
     section_data = {"credentials": None, "city_id": None, "units": None}
@@ -34,6 +34,10 @@ def test_failed_weather_api_request():
         mock_get.side_effect = requests.exceptions.RequestException("Network error")
         res = parser.fetch_and_format_weather()
         assert res == {"error": {"message": "Network error", "status_code": 503}}
+
+        # Is the TTS content set to a generic error message
+        parser.build()
+        parser.content = "Failed to read openweathermap.org. "
 
     # Invalid response
     with patch("requests.get") as mock_get:

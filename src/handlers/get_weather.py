@@ -31,7 +31,7 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
         api_response = self.get_weather()
         if "error" in api_response:
             self.content = "Failed to read openweathermap.org. "
-            return api_response
+            return
 
         weather = OpenWeatherMapClient.format_response(api_response)
         conditions = weather["conditions"]
