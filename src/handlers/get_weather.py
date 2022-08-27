@@ -28,28 +28,24 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             self.credentials = f.read().strip()
 
     def build(self):
-        try:
-            api_response = self.get_weather()
-            weather = OpenWeatherMapClient.format_response(api_response)
-
-            conditions = weather["conditions"]
-            temperature = int(weather["temp"])
-            wind_speed_kmh = weather["wind_speed_kmh"]
-            wind = weather["wind_speed_ms"]
-            wind_chill = weather["wind_chill"]
-            sunrise = weather["sunrise"]
-            sunset = weather["sunset"]
-
-        except requests.exceptions.RequestException as e:
-            self.content = "Failed to connect to openweathermap.org. "
-            event_logger.error(str(e))
-            return
-        except (TypeError, KeyError):
+        api_response = self.get_weather()
+        if "error" in api_response:
             self.content = "Failed to read openweathermap.org. "
-            return
+            return api_response
+
+        weather = OpenWeatherMapClient.format_response(api_response)
+        conditions = weather["conditions"]
+        temperature = int(weather["temp"])
+        wind_speed_kmh = weather["wind_speed_kmh"]
+        wind = weather["wind_speed_ms"]
+        wind_chill = weather["wind_chill"]
+        sunrise = weather["sunrise"]
+        sunset = weather["sunset"]
 
         weather_string = "Weather for today is {}. It is currently {} degrees ".format(
-            conditions, temperature)
+            conditions,
+            temperature
+        )
 
         # Wind uses the Beaufort scale
         if wind_speed_kmh < 1:
@@ -100,24 +96,26 @@ class OpenWeatherMapClient(apcontent.AlarmpiContent):
             "units": "metric"
         }
 
+        # Catch any network related errors from the request itself
         try:
             r = requests.get(URL, params=params)
-        except RequestException as e:
+        except Exception as e:
             event_logger.error(str(e))
-            return []
+            return {"error": {"message": str(e), "status_code": 503}}
+
+        # Catch errors from succesfully sent requests
         if r.status_code != 200:
-            event_logger.warning("Invalid API response: %s", r.text)
-            return []
-        else:
-            return r.json()
+            return {"error": {"message": r.text, "status_code": r.status_code}}
+
+        return r.json()
 
     def fetch_and_format_weather(self):
-        """Helper function for generating a formatted API response dict for clock.py
-        with error handling if API request failed.
-        """
+        """Fetch and format weather data."""
         api_response = self.get_weather()
-        if api_response:
-            return OpenWeatherMapClient.format_response(api_response)
+        if "error" in api_response:
+            return api_response
+
+        return OpenWeatherMapClient.format_response(api_response)
 
 
     @staticmethod

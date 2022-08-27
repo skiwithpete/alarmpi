@@ -44,8 +44,8 @@ class WeatherPlugin(applugin.AlarmpiPlugin):
         weather = self.parser.fetch_and_format_weather()
         pixmap = QPixmap()
 
-        if weather is None:
-            self.error_label.setText("<html><span style='font-size:14px'>! not refreshed</span></html>")
+        if "error" in weather:
+            self.error_label.setText("<html><span style='font-size:14px'>! not refreshed - {}</span></html>".format(weather["error"]["status_code"]))
             self.retry_flag = True
             return
 

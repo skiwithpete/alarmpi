@@ -6,7 +6,7 @@ from src.handlers import get_weather, get_next_trains
 
 
 def test_failed_train_api_request():
-    """Does get_next_trains.run return None if API call fails"""
+    """Test responses sent on failing train API calls"""
     parser = get_next_trains.TrainParser({"station_code": "XYZ"})
 
     # Error raised during request
@@ -15,7 +15,7 @@ def test_failed_train_api_request():
         res = parser.run()
         assert res == {"error": {"message": "Something went wrong", "status_code": 503}}
 
-    # Invalid response
+    # Unsuccesful response from the API
     with patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 500
         mock_get.return_value.text = "Something went wrong"
@@ -23,7 +23,7 @@ def test_failed_train_api_request():
         assert res == {"error": {"message": "Something went wrong", "status_code": 500}}
 
 def test_failed_weather_api_request():
-    """Does fetch_and_format_weather return None if API call fails"""
+    """Test responses sent on failing weather API calls"""
     # Mock opening non existing credentials file
     section_data = {"credentials": None, "city_id": None, "units": None}
     with patch("builtins.open", mock_open(read_data="data")) as mock_file:
@@ -31,12 +31,13 @@ def test_failed_weather_api_request():
 
     # Error raised during request
     with patch("requests.get") as mock_get:
-        mock_get.side_effect = requests.exceptions.RequestException()
+        mock_get.side_effect = requests.exceptions.RequestException("Network error")
         res = parser.fetch_and_format_weather()
-        assert res is None
+        assert res == {"error": {"message": "Network error", "status_code": 503}}
 
     # Invalid response
     with patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 500
+        mock_get.return_value.text = "Something went wrong"
         res = parser.fetch_and_format_weather()
-        assert res is None
+        assert res == {"error": {"message": "Something went wrong", "status_code": 500}}
