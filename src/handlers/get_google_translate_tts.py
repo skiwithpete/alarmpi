@@ -32,7 +32,7 @@ class GoogleTranslateTTSManager(aptts.AlarmpiTTS):
                 "ie": "UTF-8",
                 "q": part
             }
-            r = requests.get(url, params=params)  # response is an mp3 file as a byte string
+            r = requests.get(url, params=params)
             f = io.BytesIO(r.content)
             audio_part = pydub.AudioSegment.from_file(f, format="mp3")
             audio += audio_part
