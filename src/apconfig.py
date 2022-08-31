@@ -70,16 +70,6 @@ class AlarmConfig:
 
         raise FileNotFoundError("No valid configuration file found for {}".format(self.config_file))
 
-    def _testnet(self):
-        # Test for connectivity
-        host = "http://www.google.com"
-        try:
-            requests.get(host)
-            return True
-        except requests.RequestException:
-            logger.warning("Could not resolve '%s'. Assuming the network is down.", host)
-            return False
-
     def validate(self):
         """Validate configuration file: checks that
          * content and TTS sections have 'handler' key

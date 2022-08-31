@@ -1,6 +1,6 @@
 class AlarmpiContent:
-    """Base class for alarm content parsers. Defines functions for creating an actual
-    handler from a particular section read from the configuration file.
+    """Base class for alarm content parsers. Defines common methods for 
+    setting and getting alarm content to be played.
     """
 
     def __init__(self, section_data):
@@ -16,8 +16,12 @@ class AlarmpiContent:
 
     def build(self):
         """Builds this content. To be implemented in subclass.
-        This function should return a string which is to be passed to the TTS client
+        This function should set self.content to a string which is to be passed to the TTS client
         as part of the alarm.
+
+        This method should handle any exceptions potentially raised and ensure
+        something is set as the content, even a short message.
+
         For reference see, implementation in handlers/get_greeting.py.
         """
         raise NotImplementedError
