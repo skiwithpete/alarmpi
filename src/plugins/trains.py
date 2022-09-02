@@ -43,8 +43,8 @@ class TrainPlugin(applugin.AlarmpiPlugin):
         self.retry_flag = False
         trains = self.parser.run()
 
-        if trains is None:
-            self.error_label.setText("<html><span style='font-size:14px'>! not refreshed</span></html>")
+        if "error" in trains:
+            self.error_label.setText("<html><span style='font-size:14px'>! not refreshed - {}</span></html>".format(trains["error"]["status_code"]))
             self.retry_flag = True
             return
 
