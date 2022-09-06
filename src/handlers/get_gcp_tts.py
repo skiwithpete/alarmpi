@@ -24,16 +24,13 @@ class GoogleCloudTTS(aptts.AlarmpiTTS):
 
     def get_client(self):
         """Create an API client using a path to a service account key_file."""
-        try:
-            credentials = service_account.Credentials.from_service_account_file(self.credentials)
-            client = texttospeech.TextToSpeechClient(credentials=credentials)
-        except FileNotFoundError:
-            raise RuntimeError(
-                "Error using Google Speech: couldn't read keyfile {}".format(self.credentials))
+        credentials = service_account.Credentials.from_service_account_file(self.credentials)
+        client = texttospeech.TextToSpeechClient(credentials=credentials)
+
         return client
 
     def setup(self, text):
-        """Create a TTS client and speak input text using pydub."""
+        """Create a TTS client and convert input to pydub audio."""
         # Set the text input to be synthesized
         synthesis_input = texttospeech.SynthesisInput(text=text)
 

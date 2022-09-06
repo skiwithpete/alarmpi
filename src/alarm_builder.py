@@ -3,6 +3,9 @@ import importlib
 import os
 import inspect
 import logging
+import random
+import glob
+import requests.exceptions
 
 import pydub
 import pydub.playback
@@ -36,11 +39,8 @@ class AlarmBuilder:
             class_ = self.get_content_parser_class(content_sections[section])
             parser = class_(content_sections[section])
 
-            # call build to run the parser and store output
-            try:
-                parser.build()
-            except KeyError as e:
-                print("Error: missing key {} in configuration file.".format(e))
+            # build content
+            parser.build()
             contents.append(parser.get())
 
         # Add ending phrase from the config file
@@ -50,8 +50,8 @@ class AlarmBuilder:
             print(section)
 
         # Initialize TTS client with the generated content
-        content_text = "\n".join(contents)
         self.tts_client = self.get_tts_client()
+        content_text = "\n".join(contents)
         audio = self.tts_client.setup(content_text)
 
         return audio
@@ -62,18 +62,18 @@ class AlarmBuilder:
         Args:
             audio (pydub.AudioSegment): the alarm audio to play.
         """
-        # If no network connection is detected, or TTS is not enabled play beep
+        # Play a beep if TTS is not enabled
         tts_enabled = self.config["main"]["TTS"]
-        if not self.config._testnet() or not tts_enabled:
+        if not tts_enabled:
             AlarmBuilder.play_beep()
             return
 
-        # Play the alarm, either use the clients play method if it exists,
-        # or play via pydub.
         try:
             self.tts_client.play(audio)
-        except AttributeError:
-            pydub.playback.play(audio)
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError) as e:
+            event_logger.error(str(e))
+            event_logger.info("Defaulting to alarm sound effect")
+            AlarmBuilder.play_beep()
 
     def build_and_play(self):
         """Build and play an alarm.

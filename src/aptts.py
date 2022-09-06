@@ -1,3 +1,6 @@
+import pydub.playback
+
+
 class AlarmpiTTS:
     """Base class for TTS clients. Provide a common credentials argument
     and an abstract method for initializing the actual TTS client.
@@ -7,13 +10,18 @@ class AlarmpiTTS:
         self.credentials = credentials
 
     def setup(self, text):
-        """This function should make any required API setup, such as
-        TTS client creation as well as the actual API calls.
-        Once subclassed, this function should return something than can be passed
-        to pydub to play (ie. pydub.AudioSegment).
+        """Setup any TTS client and make requests to transform text as audio
+        content to be played.
         Args:
             text (string): the textual content to be processed by the actual TTS client.
         Return:
-            Audio content to be played. Something to pass to pydub, such as pydub.AudioSegment
+            Audio content to be played as pydub.AudioSegment
         """
         raise NotImplementedError
+
+    def play(self, audio):
+        """Play audio content.
+        Args:
+            audio (pydub.AudioSegment): prebuilt content to be played
+        """
+        pydub.playback.play(audio)

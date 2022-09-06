@@ -1,6 +1,7 @@
 import pytest
 import os.path
-from unittest.mock import patch
+import requests
+from unittest.mock import patch, Mock
 
 from freezegun import freeze_time
 
@@ -59,11 +60,11 @@ def test_correct_content_parser_chosen(dummy_alarm_builder):
         created_class = dummy_alarm_builder.get_content_parser_class({"handler": module})
         assert created_class == class_
 
-@patch("src.apconfig.AlarmConfig._testnet")
 @patch("src.alarm_builder.AlarmBuilder.play_beep")
-def test_beep_played_when_no_network(mock_play_beep, mock_testnet, dummy_alarm_builder):
+def test_beep_played_when_tts_fails(mock_play_beep, dummy_alarm_builder):
     """Is the beep played when no network connection is detected?"""
-    mock_testnet.return_value = False
+    dummy_alarm_builder.tts_client = Mock()
+    dummy_alarm_builder.tts_client.play.side_effect = requests.exceptions.HTTPError
 
     dummy_alarm_builder.play("dummy content")
     mock_play_beep.assert_called()
