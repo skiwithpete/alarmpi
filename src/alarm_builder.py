@@ -62,7 +62,8 @@ class AlarmBuilder:
         Args:
             audio (pydub.AudioSegment): the alarm audio to play.
         """
-        self.play_song()
+        if self.config["media"]["enabled"]:
+            self.play_song()
 
         # Play a beep if TTS is not enabled
         tts_enabled = self.config["main"]["TTS"]
@@ -148,7 +149,7 @@ class AlarmBuilder:
         subprocess.Popen(cmd)
 
     def play_song(self):
-        files = glob.glob("/media/lauri/Media/Musiikki/Red Hot Chili Peppers/Unlimited Love/*.mp3")
+        files = glob.glob(self.config["media"]["path"])
         path = random.choice(files)
         #audio = pydub.AudioSegment.from_mp3(path)
         #pydub.playback.play(audio)

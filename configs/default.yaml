@@ -49,6 +49,9 @@ radio:
   default: Radio Suomi
   args: ""
 
+media:
+  enabled: false
+
 plugins:
   HSL:
     enabled: false
